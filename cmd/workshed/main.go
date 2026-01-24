@@ -1,3 +1,12 @@
+// workshed is a CLI tool for managing intent-scoped local development workspaces.
+//
+// Usage:
+//
+//	workshed create --purpose "Debug payment timeout"
+//	workshed list
+//	workshed inspect aquatic-fish-motion
+//	workshed path aquatic-fish-motion
+//	workshed remove aquatic-fish-motion
 package main
 
 import (

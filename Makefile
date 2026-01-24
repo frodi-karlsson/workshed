@@ -1,4 +1,4 @@
-.PHONY: build test test-race test-integration install clean lint lint-fix install-hooks
+.PHONY: build test test-race test-integration test-all check install clean lint lint-fix install-hooks
 
 build:
 	@mkdir -p bin
@@ -11,6 +11,25 @@ test-race:
 	go test -race -v ./...
 
 test-integration:
+	go test -v -tags=integration ./...
+
+test-all:
+	@echo "Running unit tests..."
+	go test ./...
+	@echo ""
+	@echo "Running integration tests..."
+	go test -v -tags=integration ./...
+
+check:
+	@echo "Running all checks..."
+	@echo ""
+	@echo "--- Lint ---"
+	golangci-lint run ./...
+	@echo ""
+	@echo "--- Unit Tests ---"
+	go test ./...
+	@echo ""
+	@echo "--- Integration Tests ---"
 	go test -v -tags=integration ./...
 
 install:

@@ -6,18 +6,22 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json") // Use JSON logging for predictable output
 	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
 
 	// Reset CLI state
 	var outBuf, errBuf bytes.Buffer
@@ -27,10 +31,15 @@ func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *t
 	exitFunc = func(code int) {
 		exitCalled = true
 	}
+
+	// Configure logger to use the same output buffer for testing
+	logger.SetTestOutputWriter(&outBuf)
+
 	defer func() {
 		outWriter = os.Stdout
 		errWriter = os.Stderr
 		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
 	}()
 
 	// Create a workspace
@@ -43,17 +52,23 @@ func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *t
 	}
 
 	output := outBuf.String()
-	if !strings.Contains(output, "Created workspace:") {
-		t.Errorf("Create output should contain 'Created workspace:', got: %s", output)
+	if !strings.Contains(output, "workspace created") {
+		t.Errorf("Create output should contain 'workspace created', got: %s", output)
 	}
 
-	// Extract handle from output
+	// Extract handle from JSON log output
 	lines := strings.Split(output, "\n")
 	var handle string
 	for _, line := range lines {
-		if strings.HasPrefix(line, "Created workspace:") {
-			handle = strings.TrimSpace(strings.TrimPrefix(line, "Created workspace:"))
-			break
+		if strings.Contains(line, "workspace created") {
+			// Parse JSON to extract handle
+			var logData map[string]interface{}
+			if err := json.Unmarshal([]byte(line), &logData); err == nil {
+				if handleValue, ok := logData["handle"]; ok {
+					handle = handleValue.(string)
+					break
+				}
+			}
 		}
 	}
 
@@ -120,7 +135,9 @@ func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *t
 func TestCLICreateWithInvalidRepoURLShouldExitWithErrorForInvalidRepoURL(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json") // Use JSON logging for predictable output
 	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
 
 	// Reset CLI state
 	var outBuf, errBuf bytes.Buffer
@@ -130,10 +147,15 @@ func TestCLICreateWithInvalidRepoURLShouldExitWithErrorForInvalidRepoURL(t *test
 	exitFunc = func(code int) {
 		exitCalled = true
 	}
+
+	// Configure logger to use the same output buffer for testing
+	logger.SetTestOutputWriter(&outBuf)
+
 	defer func() {
 		outWriter = os.Stdout
 		errWriter = os.Stderr
 		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
 	}()
 
 	// Try to create with invalid repo URL
@@ -143,9 +165,8 @@ func TestCLICreateWithInvalidRepoURLShouldExitWithErrorForInvalidRepoURL(t *test
 		t.Error("Create should have exited with error")
 	}
 
-	errOutput := errBuf.String()
-	// Should contain git error with classification hint
-	if !strings.Contains(errOutput, "Error creating workspace") {
+	errOutput := outBuf.String()
+	if !strings.Contains(errOutput, "workspace creation failed") {
 		t.Errorf("Error output should mention workspace creation failed, got: %s", errOutput)
 	}
 }
@@ -153,7 +174,9 @@ func TestCLICreateWithInvalidRepoURLShouldExitWithErrorForInvalidRepoURL(t *test
 func TestCLICreateContextCancellationShouldRespectContextTimeout(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json")
 	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
 
 	store, err := workspace.NewFSStore(tmpDir)
 	if err != nil {
@@ -197,7 +220,9 @@ func TestCLICreateContextCancellationShouldRespectContextTimeout(t *testing.T) {
 func TestCLIListFilterIntegrationShouldFilterWorkspacesByPurpose(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json")
 	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
 
 	store, err := workspace.NewFSStore(tmpDir)
 	if err != nil {
@@ -226,10 +251,14 @@ func TestCLIListFilterIntegrationShouldFilterWorkspacesByPurpose(t *testing.T) {
 	outWriter = &outBuf
 	errWriter = &errBuf
 	exitFunc = func(code int) {}
+
+	logger.SetTestOutputWriter(&outBuf)
+
 	defer func() {
 		outWriter = os.Stdout
 		errWriter = os.Stderr
 		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
 	}()
 
 	// List all workspaces
@@ -258,7 +287,9 @@ func TestCLIListFilterIntegrationShouldFilterWorkspacesByPurpose(t *testing.T) {
 func TestCLIRemoveNonExistentShouldExitWithErrorForNonexistentWorkspace(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json")
 	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
 
 	var outBuf, errBuf bytes.Buffer
 	outWriter = &outBuf
@@ -267,10 +298,14 @@ func TestCLIRemoveNonExistentShouldExitWithErrorForNonexistentWorkspace(t *testi
 	exitFunc = func(code int) {
 		exitCalled = true
 	}
+
+	logger.SetTestOutputWriter(&outBuf)
+
 	defer func() {
 		outWriter = os.Stdout
 		errWriter = os.Stderr
 		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
 	}()
 
 	Remove([]string{"--force", "nonexistent-handle"})
@@ -279,8 +314,8 @@ func TestCLIRemoveNonExistentShouldExitWithErrorForNonexistentWorkspace(t *testi
 		t.Error("Remove should exit with error for nonexistent workspace")
 	}
 
-	errOutput := errBuf.String()
-	if !strings.Contains(errOutput, "not found") && !strings.Contains(errOutput, "Error") {
-		t.Errorf("Error output should mention workspace not found, got: %s", errOutput)
+	output := outBuf.String()
+	if !strings.Contains(output, "not found") && !strings.Contains(output, "Error") {
+		t.Errorf("Output should mention workspace not found, got: %s", output)
 	}
 }

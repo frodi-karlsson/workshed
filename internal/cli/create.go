@@ -60,6 +60,7 @@ func Create(args []string) {
 	if err != nil {
 		l.Error("workspace creation failed", "purpose", opts.Purpose, "error", err)
 		exitFunc(1)
+		return
 	}
 
 	l.Success("workspace created", "handle", ws.Handle, "path", ws.Path)

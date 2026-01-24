@@ -50,7 +50,6 @@ func List(args []string) {
 		return
 	}
 
-	// Create tabwriter for formatted output
 	w := tabwriter.NewWriter(outWriter, 0, 0, 2, ' ', 0)
 	logger.SafeFprintln(w, "HANDLE\tPURPOSE\tREPO\tCREATED")
 

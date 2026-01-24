@@ -5,7 +5,9 @@ import (
 	"time"
 )
 
-// Workspace represents a workshed workspace
+// Workspace represents an intent-scoped local development environment.
+// Each workspace has a unique handle, a human-readable purpose, optional
+// repository configuration, and a filesystem path on disk.
 type Workspace struct {
 	Version   int       `json:"version"`
 	Handle    string    `json:"handle"`

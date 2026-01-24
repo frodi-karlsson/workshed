@@ -3,6 +3,7 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -11,11 +12,11 @@ import (
 type LogLevel int
 
 const (
-	ERROR LogLevel = iota
+	DEBUG LogLevel = iota
 	INFO
 	HELP
 	SUCCESS
-	DEBUG
+	ERROR
 )
 
 type LogFormat int
@@ -35,6 +36,12 @@ type Logger struct {
 	timestamp bool
 }
 
+// Global variable for test output redirection
+// This allows tests to redirect logger output to buffers for validation
+var (
+	testOutputWriter io.Writer
+)
+
 // CommandContext provides command execution context
 type CommandContext struct {
 	Command string
@@ -53,44 +60,61 @@ func NewLogger(level LogLevel, command string) *Logger {
 		}
 	}
 
+	// Use test output writer if set (for testing), otherwise use os.Stdout
+	outputWriter := getOutputWriter()
+
 	return &Logger{
 		level:     level,
 		format:    format,
 		command:   command,
-		log:       log.New(os.Stdout, "", 0),
+		log:       log.New(outputWriter, "", 0),
 		timestamp: format == JSON,
 	}
 }
 
-// Error logs error messages
+// getOutputWriter returns the appropriate output writer for logging
+func getOutputWriter() io.Writer {
+	if testOutputWriter != nil {
+		return testOutputWriter
+	}
+	return os.Stdout
+}
+
+// SetTestOutputWriter configures the logger to use a specific writer for output
+// This is primarily used in testing to redirect output to buffers for validation
+func SetTestOutputWriter(writer io.Writer) {
+	testOutputWriter = writer
+}
+
+// ClearTestOutputWriter resets the logger to use os.Stdout
+func ClearTestOutputWriter() {
+	testOutputWriter = nil
+}
+
 func (l *Logger) Error(msg string, args ...interface{}) {
 	if l.level <= ERROR {
 		l.logMessage("ERROR", msg, args)
 	}
 }
 
-// Info logs informational messages
 func (l *Logger) Info(msg string, args ...interface{}) {
 	if l.level <= INFO {
 		l.logMessage("INFO", msg, args)
 	}
 }
 
-// Help logs usage/help messages
 func (l *Logger) Help(msg string, args ...interface{}) {
 	if l.level <= HELP {
 		l.logMessage("HELP", msg, args)
 	}
 }
 
-// Success logs success messages
 func (l *Logger) Success(msg string, args ...interface{}) {
 	if l.level <= SUCCESS {
 		l.logMessage("SUCCESS", msg, args)
 	}
 }
 
-// Debug logs debug messages
 func (l *Logger) Debug(msg string, args ...interface{}) {
 	if l.level <= DEBUG {
 		l.logMessage("DEBUG", msg, args)
@@ -111,7 +135,7 @@ func (l *Logger) logMessage(level, msg string, args []interface{}) {
 		l.logJSON(level, msg, args)
 	case RAW:
 		l.logRaw(level, msg, args)
-	default: // HUMAN
+	default:
 		l.logHuman(level, msg, args)
 	}
 }
@@ -149,7 +173,6 @@ func (l *Logger) logJSON(level, msg string, args []interface{}) {
 		entry["timestamp"] = time.Now().Format(time.RFC3339)
 	}
 
-	// Add context as key-value pairs
 	for i := 0; i < len(args); i += 2 {
 		if i+1 < len(args) {
 			entry[fmt.Sprintf("%v", args[i])] = args[i+1]
