@@ -2,12 +2,12 @@ package cli
 
 import (
 	"context"
-	"flag"
 	"strings"
 	"time"
 
 	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
+	flag "github.com/spf13/pflag"
 )
 
 const defaultCloneTimeout = 5 * time.Minute
@@ -17,8 +17,10 @@ func Create(args []string) {
 
 	fs := flag.NewFlagSet("create", flag.ExitOnError)
 	purpose := fs.String("purpose", "", "Purpose of the workspace (required)")
-	repoFlags := fs.String("repo", "", "Repository URL with optional ref (format: url@ref). Comma-separated for multiple repos.")
-	reposAlias := fs.String("repos", "", "Alias for --repo")
+	var repoFlags []string
+	fs.StringSliceVarP(&repoFlags, "repo", "r", nil, "Repository URL with optional ref (format: url@ref). Can be specified multiple times.")
+	var reposAlias []string
+	fs.StringSliceVarP(&reposAlias, "repos", "", nil, "Alias for --repo (can be specified multiple times)")
 
 	fs.Usage = func() {
 		logger.SafeFprintf(errWriter, "Usage: workshed create --purpose <purpose> [--repo url@ref]...\n\n")
@@ -37,9 +39,9 @@ func Create(args []string) {
 		exitFunc(1)
 	}
 
-	repos := *repoFlags
-	if *reposAlias != "" {
-		repos = *reposAlias
+	repos := repoFlags
+	if len(reposAlias) > 0 {
+		repos = reposAlias
 	}
 
 	opts := workspace.CreateOptions{
@@ -47,19 +49,16 @@ func Create(args []string) {
 		Repositories: []workspace.RepositoryOption{},
 	}
 
-	if repos != "" {
-		repoList := strings.Split(repos, ",")
-		for _, repo := range repoList {
-			repo = strings.TrimSpace(repo)
-			if repo == "" {
-				continue
-			}
-			url, ref := parseRepoFlag(repo)
-			opts.Repositories = append(opts.Repositories, workspace.RepositoryOption{
-				URL: url,
-				Ref: ref,
-			})
+	for _, repo := range repos {
+		repo = strings.TrimSpace(repo)
+		if repo == "" {
+			continue
 		}
+		url, ref := parseRepoFlag(repo)
+		opts.Repositories = append(opts.Repositories, workspace.RepositoryOption{
+			URL: url,
+			Ref: ref,
+		})
 	}
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())

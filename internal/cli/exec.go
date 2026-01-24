@@ -2,12 +2,12 @@ package cli
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 
 	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
+	flag "github.com/spf13/pflag"
 )
 
 func Exec(args []string) {

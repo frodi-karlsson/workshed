@@ -165,6 +165,32 @@ func TestCreate(t *testing.T) {
 			t.Errorf("List output should contain purpose with special chars, got: %s", listOutput)
 		}
 	})
+
+	t.Run("should create workspace with multiple repositories", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		repoURL1 := workspace.CreateLocalGitRepo(t, "api", map[string]string{"file.txt": "api content"})
+		repoURL2 := workspace.CreateLocalGitRepo(t, "worker", map[string]string{"file.txt": "worker content"})
+
+		env.ResetBuffers()
+		Create([]string{"--purpose", "Multi-repo test", "--repo", repoURL1, "--repo", repoURL2})
+
+		if env.ExitCalled() {
+			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should mention workspace created, got: %s", output)
+		}
+		if !strings.Contains(output, "api") {
+			t.Errorf("Create output should contain 'api' repo name, got: %s", output)
+		}
+		if !strings.Contains(output, "worker") {
+			t.Errorf("Create output should contain 'worker' repo name, got: %s", output)
+		}
+	})
 }
 
 func TestList(t *testing.T) {

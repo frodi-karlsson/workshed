@@ -41,7 +41,8 @@ If `git worktree` is about checking out another branch, Workshed is about groupi
 # Create a workspace for a specific task
 workshed create \
   --purpose "Debug payment timeout across services" \
-  --repos "git@github.com:org/api@main,git@github.com:org/worker@develop"
+  --repo git@github.com:org/api@main \
+  --repo git@github.com:org/worker@develop
 
 workshed list
 workshed list --purpose payment

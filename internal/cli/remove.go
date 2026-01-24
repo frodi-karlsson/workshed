@@ -3,12 +3,12 @@ package cli
 import (
 	"bufio"
 	"context"
-	"flag"
 	"fmt"
 	"strings"
 
 	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
+	flag "github.com/spf13/pflag"
 )
 
 // Remove deletes a workspace after optional confirmation.

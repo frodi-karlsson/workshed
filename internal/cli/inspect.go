@@ -2,10 +2,10 @@ package cli
 
 import (
 	"context"
-	"flag"
 
 	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
+	flag "github.com/spf13/pflag"
 )
 
 func Inspect(args []string) {
