@@ -315,9 +315,62 @@ func (s *FSStore) workspaceDir(handle string) string {
 	return filepath.Join(s.root, handle)
 }
 
+func isLocalPath(path string) bool {
+	if path == "" {
+		return false
+	}
+
+	if strings.HasPrefix(path, "git@") {
+		return false
+	}
+
+	schemeEnd := strings.Index(path, "://")
+	if schemeEnd != -1 {
+		return false
+	}
+
+	if strings.HasPrefix(path, "/") || strings.Contains(path, string(filepath.Separator)) {
+		return true
+	}
+
+	return false
+}
+
+func validateLocalRepository(path string) error {
+	if path == "" {
+		return errors.New("path cannot be empty")
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("path does not exist: %s", path)
+		}
+		return fmt.Errorf("accessing path: %w", err)
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("path is not a directory: %s", path)
+	}
+
+	gitDir := filepath.Join(path, ".git")
+	if _, err := os.Stat(gitDir); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("not a git repository (missing .git directory): %s", path)
+		}
+		return fmt.Errorf("checking .git directory: %w", err)
+	}
+
+	return nil
+}
+
 func validateRepoURL(url string) error {
 	if url == "" {
 		return errors.New("repository URL cannot be empty")
+	}
+
+	if isLocalPath(url) {
+		return validateLocalRepository(url)
 	}
 
 	if strings.HasPrefix(url, "git@") {
@@ -327,14 +380,14 @@ func validateRepoURL(url string) error {
 		return nil
 	}
 
-	validSchemes := []string{"https://", "http://", "git://", "ssh://", "file://"}
+	validSchemes := []string{"https://", "http://", "git://", "ssh://"}
 	for _, scheme := range validSchemes {
 		if strings.HasPrefix(url, scheme) {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("unsupported URL scheme (expected https://, git@, ssh://, git://, or file://)")
+	return fmt.Errorf("unsupported URL (expected https://, git@, ssh://, git://, or a local path)")
 }
 
 func validateRepositories(repos []RepositoryOption) error {
@@ -443,6 +496,10 @@ func classifyGitError(operation string, err error, output []byte) error {
 
 func extractRepoName(url string) string {
 	url = strings.TrimSuffix(url, ".git")
+
+	if isLocalPath(url) {
+		return filepath.Base(url)
+	}
 
 	if idx := strings.LastIndex(url, "/"); idx != -1 {
 		return url[idx+1:]

@@ -44,6 +44,12 @@ workshed create \
   --repo git@github.com:org/api@main \
   --repo git@github.com:org/worker@develop
 
+# Or use local repositories with direct paths
+workshed create \
+  --purpose "Local development" \
+  --repo /Users/dev/my-api \
+  --repo /Users/dev/my-worker
+
 workshed list
 workshed list --purpose payment
 

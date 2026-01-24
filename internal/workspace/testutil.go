@@ -171,7 +171,7 @@ func CreateLocalGitRepo(t *testing.T, name string, files map[string]string) stri
 		t.Fatalf("Failed to add initial commit: %v", err)
 	}
 
-	return "file://" + repoDir
+	return repoDir
 }
 
 func AddGitCommit(repoDir, message string, files map[string]string) error {

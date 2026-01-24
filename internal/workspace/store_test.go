@@ -2,6 +2,8 @@ package workspace
 
 import (
 	"context"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -45,8 +47,8 @@ func TestCreateValidation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error for invalid URL scheme")
 		}
-		if !strings.Contains(err.Error(), "unsupported URL scheme") {
-			t.Errorf("Expected URL scheme error, got: %v", err)
+		if !strings.Contains(err.Error(), "unsupported URL") {
+			t.Errorf("Expected URL error, got: %v", err)
 		}
 	})
 
@@ -127,6 +129,126 @@ func TestValidateRepoURL(t *testing.T) {
 			err := validateRepoURL(url)
 			if err == nil {
 				t.Error("Expected error for invalid URL")
+			}
+		})
+	}
+}
+
+func TestIsLocalPath(t *testing.T) {
+	localPaths := []string{
+		"/absolute/path/to/repo",
+		"./relative/path",
+		"../parent/path",
+		"path/without/prefix",
+		"/Users/test/repo",
+	}
+
+	for _, path := range localPaths {
+		t.Run(path, func(t *testing.T) {
+			if !isLocalPath(path) {
+				t.Errorf("Expected %q to be recognized as local path", path)
+			}
+		})
+	}
+
+	remoteURLs := []string{
+		"https://github.com/org/repo",
+		"git@github.com:org/repo",
+		"ssh://git@github.com/org/repo",
+		"git://github.com/org/repo",
+	}
+
+	for _, url := range remoteURLs {
+		t.Run(url, func(t *testing.T) {
+			if isLocalPath(url) {
+				t.Errorf("Expected %q to not be recognized as local path", url)
+			}
+		})
+	}
+}
+
+func TestValidateLocalRepository(t *testing.T) {
+	t.Run("should accept existing git repository", func(t *testing.T) {
+		repoDir := t.TempDir()
+
+		cmd := exec.Command("git", "init")
+		cmd.Dir = repoDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git init failed: %v\n%s", err, out)
+		}
+
+		err := validateLocalRepository(repoDir)
+		if err != nil {
+			t.Errorf("Expected valid repository, got error: %v", err)
+		}
+	})
+
+	t.Run("should reject non-existent path", func(t *testing.T) {
+		err := validateLocalRepository("/nonexistent/path/to/repo")
+		if err == nil {
+			t.Error("Expected error for non-existent path")
+		}
+		if !strings.Contains(err.Error(), "does not exist") {
+			t.Errorf("Expected 'does not exist' in error, got: %v", err)
+		}
+	})
+
+	t.Run("should reject non-directory path", func(t *testing.T) {
+		tmpFile := t.TempDir() + "/file.txt"
+		if err := os.WriteFile(tmpFile, []byte("test"), 0644); err != nil {
+			t.Fatalf("Failed to create temp file: %v", err)
+		}
+
+		err := validateLocalRepository(tmpFile)
+		if err == nil {
+			t.Error("Expected error for non-directory path")
+		}
+		if !strings.Contains(err.Error(), "not a directory") {
+			t.Errorf("Expected 'not a directory' in error, got: %v", err)
+		}
+	})
+
+	t.Run("should reject directory without .git", func(t *testing.T) {
+		dir := t.TempDir()
+
+		err := validateLocalRepository(dir)
+		if err == nil {
+			t.Error("Expected error for non-git directory")
+		}
+		if !strings.Contains(err.Error(), "not a git repository") {
+			t.Errorf("Expected 'not a git repository' in error, got: %v", err)
+		}
+	})
+
+	t.Run("should reject empty path", func(t *testing.T) {
+		err := validateLocalRepository("")
+		if err == nil {
+			t.Error("Expected error for empty path")
+		}
+		if !strings.Contains(err.Error(), "cannot be empty") {
+			t.Errorf("Expected 'cannot be empty' in error, got: %v", err)
+		}
+	})
+}
+
+func TestExtractRepoNameLocalPaths(t *testing.T) {
+	testCases := []struct {
+		path     string
+		expected string
+	}{
+		{"/absolute/path/to/repo", "repo"},
+		{"/Users/test/my-repo", "my-repo"},
+		{"./relative/path", "path"},
+		{"../parent/repo", "repo"},
+		{"path/without/prefix", "prefix"},
+		{"/repo.git", "repo"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.path, func(t *testing.T) {
+			name := extractRepoName(tc.path)
+			if name != tc.expected {
+				t.Errorf("Expected %q, got %q", tc.expected, name)
 			}
 		})
 	}
