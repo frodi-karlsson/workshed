@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/frodi/workshed/internal/testutil"
 )
 
 func TestGetWorkshedRootShouldReturnCustomPathWhenWORKSHED_ROOTEnvVarSet(t *testing.T) {
@@ -27,30 +29,17 @@ func TestGetWorkshedRootShouldReturnCustomPathWhenWORKSHED_ROOTEnvVarSet(t *test
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.envVar != "" {
-				if err := os.Setenv("WORKSHED_ROOT", tt.envVar); err != nil {
-					t.Errorf("Failed to set WORKSHED_ROOT: %v", err)
+			testutil.WithEnvVar(t, "WORKSHED_ROOT", tt.envVar, func() {
+				got := GetWorkshedRoot()
+
+				if tt.envVar != "" && got != tt.want {
+					t.Errorf("GetWorkshedRoot() = %v, want %v", got, tt.want)
 				}
-				defer func() {
-					if err := os.Unsetenv("WORKSHED_ROOT"); err != nil {
-						t.Errorf("Failed to unset WORKSHED_ROOT: %v", err)
-					}
-				}()
-			} else {
-				if err := os.Unsetenv("WORKSHED_ROOT"); err != nil {
-					t.Errorf("Failed to unset WORKSHED_ROOT: %v", err)
+
+				if tt.envVar == "" && !strings.Contains(got, ".workshed/workspaces") {
+					t.Errorf("GetWorkshedRoot() = %v, should contain .workshed/workspaces", got)
 				}
-			}
-
-			got := GetWorkshedRoot()
-
-			if tt.envVar != "" && got != tt.want {
-				t.Errorf("GetWorkshedRoot() = %v, want %v", got, tt.want)
-			}
-
-			if tt.envVar == "" && !strings.Contains(got, ".workshed/workspaces") {
-				t.Errorf("GetWorkshedRoot() = %v, should contain .workshed/workspaces", got)
-			}
+			})
 		})
 	}
 }

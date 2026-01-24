@@ -40,6 +40,11 @@ func NewFSStore(root string) (*FSStore, error) {
 	return &FSStore{root: absRoot}, nil
 }
 
+// Root returns the root directory for this store.
+func (s *FSStore) Root() string {
+	return s.root
+}
+
 // Create creates a new workspace with the given options and returns the workspace metadata.
 func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, error) {
 	if opts.Purpose == "" {

@@ -4,88 +4,39 @@
 package cli
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json") // Use JSON logging for predictable output
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	// Reset CLI state
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitCalled := false
-	exitFunc = func(code int) {
-		exitCalled = true
-	}
-
-	// Configure logger to use the same output buffer for testing
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
-
-	// Create a workspace
-	outBuf.Reset()
-	errBuf.Reset()
-	exitCalled = false
+	env.ResetBuffers()
 	Create([]string{"--purpose", "Test workspace"})
-	if exitCalled {
-		t.Fatalf("Create exited: %s", errBuf.String())
+	if env.ExitCalled() {
+		t.Fatalf("Create exited: %s", env.ErrorOutput())
 	}
 
-	output := outBuf.String()
+	output := env.Output()
 	if !strings.Contains(output, "workspace created") {
 		t.Errorf("Create output should contain 'workspace created', got: %s", output)
 	}
 
-	// Extract handle from JSON log output
-	lines := strings.Split(output, "\n")
-	var handle string
-	for _, line := range lines {
-		if strings.Contains(line, "workspace created") {
-			// Parse JSON to extract handle
-			var logData map[string]interface{}
-			if err := json.Unmarshal([]byte(line), &logData); err == nil {
-				if handleValue, ok := logData["handle"]; ok {
-					handle = handleValue.(string)
-					break
-				}
-			}
-		}
-	}
+	handle := ExtractHandleFromLog(t, output)
 
-	if handle == "" {
-		t.Fatal("Could not extract handle from create output")
-	}
-
-	// List workspaces
-	outBuf.Reset()
-	errBuf.Reset()
-	exitCalled = false
+	env.ResetBuffers()
 	List([]string{})
-	if exitCalled {
-		t.Fatalf("List exited: %s", errBuf.String())
+	if env.ExitCalled() {
+		t.Fatalf("List exited: %s", env.ErrorOutput())
 	}
 
-	output = outBuf.String()
+	output = env.Output()
 	if !strings.Contains(output, handle) {
 		t.Errorf("List output should contain handle %s, got: %s", handle, output)
 	}
@@ -93,16 +44,13 @@ func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *t
 		t.Errorf("List output should contain purpose, got: %s", output)
 	}
 
-	// Inspect workspace
-	outBuf.Reset()
-	errBuf.Reset()
-	exitCalled = false
+	env.ResetBuffers()
 	Inspect([]string{handle})
-	if exitCalled {
-		t.Fatalf("Inspect exited: %s", errBuf.String())
+	if env.ExitCalled() {
+		t.Fatalf("Inspect exited: %s", env.ErrorOutput())
 	}
 
-	output = outBuf.String()
+	output = env.Output()
 	if !strings.Contains(output, handle) {
 		t.Errorf("Inspect output should contain handle, got: %s", output)
 	}
@@ -110,17 +58,13 @@ func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *t
 		t.Errorf("Inspect output should contain purpose, got: %s", output)
 	}
 
-	// Remove workspace
-	outBuf.Reset()
-	errBuf.Reset()
-	exitCalled = false
+	env.ResetBuffers()
 	Remove([]string{"--force", handle})
-	if exitCalled {
-		t.Fatalf("Remove exited: %s", errBuf.String())
+	if env.ExitCalled() {
+		t.Fatalf("Remove exited: %s", env.ErrorOutput())
 	}
 
-	// Verify workspace is gone
-	store, err := workspace.NewFSStore(tmpDir)
+	store, err := workspace.NewFSStore(env.TempDir)
 	if err != nil {
 		t.Fatalf("Failed to create store: %v", err)
 	}
@@ -133,65 +77,39 @@ func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *t
 }
 
 func TestCLICreateWithInvalidRepoURLShouldExitWithErrorForInvalidRepoURL(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json") // Use JSON logging for predictable output
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	// Reset CLI state
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitCalled := false
-	exitFunc = func(code int) {
-		exitCalled = true
-	}
-
-	// Configure logger to use the same output buffer for testing
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
-
-	// Try to create with invalid repo URL
+	env.ResetBuffers()
 	Create([]string{"--purpose", "Test", "--repo", "https://github.com/nonexistent/repo12345@main"})
 
-	if !exitCalled {
+	if !env.ExitCalled() {
 		t.Error("Create should have exited with error")
 	}
 
-	errOutput := outBuf.String()
+	errOutput := env.Output()
 	if !strings.Contains(errOutput, "workspace creation failed") {
 		t.Errorf("Error output should mention workspace creation failed, got: %s", errOutput)
 	}
 }
 
 func TestCLICreateContextCancellationShouldRespectContextTimeout(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json")
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	store, err := workspace.NewFSStore(tmpDir)
+	store, err := workspace.NewFSStore(env.TempDir)
 	if err != nil {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	// Create context with very short timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()
 
-	time.Sleep(10 * time.Millisecond) // Ensure context is cancelled
+	time.Sleep(10 * time.Millisecond)
 
 	opts := workspace.CreateOptions{
 		Purpose: "Test timeout",
-		RepoURL: "https://github.com/torvalds/linux", // Large repo
+		RepoURL: "https://github.com/torvalds/linux",
 		RepoRef: "master",
 	}
 
@@ -204,8 +122,7 @@ func TestCLICreateContextCancellationShouldRespectContextTimeout(t *testing.T) {
 		t.Logf("Expected context/signal error, got: %v", err)
 	}
 
-	// Verify no workspace directory was left behind
-	entries, err := os.ReadDir(tmpDir)
+	entries, err := os.ReadDir(env.TempDir)
 	if err != nil {
 		t.Fatalf("Failed to read tmpDir: %v", err)
 	}
@@ -218,20 +135,16 @@ func TestCLICreateContextCancellationShouldRespectContextTimeout(t *testing.T) {
 }
 
 func TestCLIListFilterIntegrationShouldFilterWorkspacesByPurpose(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json")
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	store, err := workspace.NewFSStore(tmpDir)
+	store, err := workspace.NewFSStore(env.TempDir)
 	if err != nil {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
 	ctx := context.Background()
 
-	// Create multiple workspaces
 	_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Debug payment flow"})
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
@@ -247,32 +160,16 @@ func TestCLIListFilterIntegrationShouldFilterWorkspacesByPurpose(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitFunc = func(code int) {}
-
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
-
-	// List all workspaces
-	outBuf.Reset()
+	env.ResetBuffers()
 	List([]string{})
-	output := outBuf.String()
+	output := env.Output()
 	if strings.Count(output, "Debug") != 2 {
 		t.Errorf("Should show 2 debug workspaces, got: %s", output)
 	}
 
-	// Filter by purpose
-	outBuf.Reset()
+	env.ResetBuffers()
 	List([]string{"--purpose", "debug"})
-	output = outBuf.String()
+	output = env.Output()
 	if !strings.Contains(output, "payment") {
 		t.Errorf("Filtered list should contain 'payment', got: %s", output)
 	}
@@ -285,229 +182,106 @@ func TestCLIListFilterIntegrationShouldFilterWorkspacesByPurpose(t *testing.T) {
 }
 
 func TestCLIRemoveNonExistentShouldExitWithErrorForNonexistentWorkspace(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json")
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitCalled := false
-	exitFunc = func(code int) {
-		exitCalled = true
-	}
-
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
-
+	env.ResetBuffers()
 	Remove([]string{"--force", "nonexistent-handle"})
 
-	if !exitCalled {
+	if !env.ExitCalled() {
 		t.Error("Remove should exit with error for nonexistent workspace")
 	}
 
-	output := outBuf.String()
-	if !strings.Contains(output, "not found") && !strings.Contains(output, "Error") {
-		t.Errorf("Output should mention workspace not found, got: %s", output)
+	output := env.Output()
+	if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
+		t.Errorf("Output should mention workspace not found or failed to get, got: %s", output)
 	}
 }
 
 func TestCLICreateInReadOnlyDirectoryShouldExitWithError(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json")
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	if err := os.Chmod(tmpDir, 0555); err != nil {
+	if err := os.Chmod(env.TempDir, 0555); err != nil {
 		t.Skipf("Cannot make directory read-only, skipping test: %v", err)
 	}
 
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitCalled := false
-	exitFunc = func(code int) {
-		exitCalled = true
-	}
-
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		os.Chmod(tmpDir, 0755)
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
-
+	env.ResetBuffers()
 	Create([]string{"--purpose", "Test workspace"})
 
-	if !exitCalled {
+	if !env.ExitCalled() {
 		t.Error("Create should exit with error in read-only directory")
 	}
 }
 
 func TestCLICreateWithSpecialCharactersInPurposeShouldWork(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json")
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
-
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitCalled := false
-	exitFunc = func(code int) {
-		exitCalled = true
-	}
-
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
 	purpose := "Debug: payment flow with café and naïve users"
+	env.ResetBuffers()
 	Create([]string{"--purpose", purpose})
 
-	if exitCalled {
-		t.Fatalf("Create exited unexpectedly: %s", errBuf.String())
+	if env.ExitCalled() {
+		t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
 	}
 
-	output := outBuf.String()
+	output := env.Output()
 	if !strings.Contains(output, "workspace created") {
 		t.Errorf("Create output should mention workspace created, got: %s", output)
 	}
 
-	var outBuf2, errBuf2 bytes.Buffer
-	outWriter = &outBuf2
-	errWriter = &errBuf2
-	exitCalled = false
-	exitFunc = func(code int) {
-		exitCalled = true
-	}
-
+	env.ResetBuffers()
 	List([]string{})
 
-	if exitCalled {
-		t.Fatalf("List exited unexpectedly: %s", errBuf2.String())
-	}
-
-	listOutput := outBuf2.String()
+	listOutput := env.Output()
 	if !strings.Contains(listOutput, purpose) {
 		t.Errorf("List output should contain purpose with special chars, got: %s", listOutput)
 	}
 }
 
 func TestCLIListEmptyDirectoryShouldHandleGracefully(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json")
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitFunc = func(code int) {}
-
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
-
+	env.ResetBuffers()
 	List([]string{})
 
-	output := outBuf.String()
+	output := env.Output()
 	if !strings.Contains(output, "no workspaces") {
 		t.Errorf("List should mention no workspaces found, got: %s", output)
 	}
 }
 
 func TestCLIInspectWithNonexistentWorkspaceShouldFailCleanly(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json")
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitCalled := false
-	exitFunc = func(code int) {
-		exitCalled = true
-	}
-
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
-
+	env.ResetBuffers()
 	Inspect([]string{"nonexistent-handle"})
 
-	if !exitCalled {
+	if !env.ExitCalled() {
 		t.Error("Inspect should exit with error for nonexistent workspace")
 	}
 
-	output := outBuf.String()
+	output := env.Output()
 	if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
 		t.Errorf("Inspect output should mention workspace not found or failed to get, got: %s", output)
 	}
 }
 
 func TestCLIPathWithNonexistentWorkspaceShouldFailCleanly(t *testing.T) {
-	tmpDir := t.TempDir()
-	os.Setenv("WORKSHED_ROOT", tmpDir)
-	os.Setenv("WORKSHED_LOG_FORMAT", "json")
-	defer os.Unsetenv("WORKSHED_ROOT")
-	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+	env := NewCLITestEnvironment(t)
+	defer env.Cleanup()
 
-	var outBuf, errBuf bytes.Buffer
-	outWriter = &outBuf
-	errWriter = &errBuf
-	exitCalled := false
-	exitFunc = func(code int) {
-		exitCalled = true
-	}
-
-	logger.SetTestOutputWriter(&outBuf)
-
-	defer func() {
-		outWriter = os.Stdout
-		errWriter = os.Stderr
-		exitFunc = os.Exit
-		logger.ClearTestOutputWriter()
-	}()
-
+	env.ResetBuffers()
 	Path([]string{"nonexistent-handle"})
 
-	if !exitCalled {
+	if !env.ExitCalled() {
 		t.Error("Path should exit with error for nonexistent workspace")
 	}
 
-	output := outBuf.String()
+	output := env.Output()
 	if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
 		t.Errorf("Path output should mention workspace not found or failed to get, got: %s", output)
 	}

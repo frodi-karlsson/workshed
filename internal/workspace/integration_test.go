@@ -27,24 +27,9 @@ func TestCreateAtomicBehaviorShouldMaintainAtomicBehaviorDuringWorkspaceCreation
 			t.Fatalf("Create failed: %v", err)
 		}
 
-		entries, err := os.ReadDir(root)
-		if err != nil {
-			t.Fatalf("ReadDir failed: %v", err)
-		}
-
-		for _, entry := range entries {
-			if strings.HasPrefix(entry.Name(), ".tmp-") {
-				t.Errorf("Temp directory %q found after successful creation", entry.Name())
-			}
-		}
-
-		if !fileExists(ws.Path) {
-			t.Error("Workspace directory does not exist")
-		}
-
-		if !fileExists(filepath.Join(ws.Path, metadataFileName)) {
-			t.Error("Metadata file does not exist")
-		}
+		MustNotHaveTempDirs(t, root)
+		MustHaveFile(t, ws.Path)
+		MustHaveFile(t, filepath.Join(ws.Path, metadataFileName))
 	})
 
 	t.Run("invalid repo URL leaves no artifacts", func(t *testing.T) {
@@ -73,11 +58,7 @@ func TestCreateAtomicBehaviorShouldMaintainAtomicBehaviorDuringWorkspaceCreation
 			t.Errorf("Directory count changed: before=%d, after=%d", len(beforeEntries), len(afterEntries))
 		}
 
-		for _, entry := range afterEntries {
-			if strings.HasPrefix(entry.Name(), ".tmp-") {
-				t.Errorf("Temp directory %q not cleaned up after failure", entry.Name())
-			}
-		}
+		MustNotHaveTempDirs(t, root)
 	})
 
 	t.Run("validation happens before filesystem operations", func(t *testing.T) {
@@ -113,67 +94,40 @@ func TestCreateAtomicBehaviorShouldMaintainAtomicBehaviorDuringWorkspaceCreation
 }
 
 func TestWorkspaceCorruptedMetadataShouldHandleGracefully(t *testing.T) {
-	root := t.TempDir()
-	store, err := NewFSStore(root)
-	if err != nil {
-		t.Fatalf("NewFSStore failed: %v", err)
-	}
-
+	store, _ := CreateTestStore(t)
 	ctx := context.Background()
-	opts := CreateOptions{
-		Purpose: "Test workspace",
-	}
 
-	ws, err := store.Create(ctx, opts)
-	if err != nil {
-		t.Fatalf("Create failed: %v", err)
-	}
+	ws := store.CreateMust(ctx, "Test workspace")
 
 	metaPath := filepath.Join(ws.Path, metadataFileName)
 	if err := os.WriteFile(metaPath, []byte("invalid json {{{"), 0644); err != nil {
 		t.Fatalf("Failed to corrupt metadata: %v", err)
 	}
 
-	_, err = store.Get(ctx, ws.Handle)
+	_, err := store.Get(ctx, ws.Handle)
 	if err == nil {
 		t.Error("Expected error when reading corrupted metadata")
 	}
 }
 
 func TestWorkspaceMalformedStructureShouldBeDetected(t *testing.T) {
-	root := t.TempDir()
-	store, err := NewFSStore(root)
-	if err != nil {
-		t.Fatalf("NewFSStore failed: %v", err)
-	}
-
+	store, _ := CreateTestStore(t)
 	ctx := context.Background()
-	opts := CreateOptions{
-		Purpose: "Test workspace",
-	}
 
-	ws, err := store.Create(ctx, opts)
-	if err != nil {
-		t.Fatalf("Create failed: %v", err)
-	}
+	ws := store.CreateMust(ctx, "Test workspace")
 
 	if err := os.RemoveAll(ws.Path); err != nil {
 		t.Fatalf("Failed to remove workspace directory: %v", err)
 	}
 
-	_, err = store.Get(ctx, ws.Handle)
+	_, err := store.Get(ctx, ws.Handle)
 	if err == nil {
 		t.Error("Expected error when workspace directory is missing")
 	}
 }
 
 func TestWorkspaceWithSpecialCharactersInPurposeShouldWork(t *testing.T) {
-	root := t.TempDir()
-	store, err := NewFSStore(root)
-	if err != nil {
-		t.Fatalf("NewFSStore failed: %v", err)
-	}
-
+	store, _ := CreateTestStore(t)
 	ctx := context.Background()
 
 	testCases := []struct {
@@ -189,11 +143,7 @@ func TestWorkspaceWithSpecialCharactersInPurposeShouldWork(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			opts := CreateOptions{
-				Purpose: tc.purpose,
-			}
-
-			ws, err := store.Create(ctx, opts)
+			ws, err := store.Create(ctx, CreateOptions{Purpose: tc.purpose})
 			if err != nil {
 				t.Fatalf("Create failed for purpose %q: %v", tc.purpose, err)
 			}
@@ -211,12 +161,7 @@ func TestWorkspaceWithSpecialCharactersInPurposeShouldWork(t *testing.T) {
 }
 
 func TestConcurrentWorkspaceCreationShouldAvoidCollisions(t *testing.T) {
-	root := t.TempDir()
-	store, err := NewFSStore(root)
-	if err != nil {
-		t.Fatalf("NewFSStore failed: %v", err)
-	}
-
+	store, _ := CreateTestStore(t)
 	ctx := context.Background()
 	numWorkspaces := 10
 
@@ -230,10 +175,7 @@ func TestConcurrentWorkspaceCreationShouldAvoidCollisions(t *testing.T) {
 
 	for i := 0; i < numWorkspaces; i++ {
 		go func(idx int) {
-			opts := CreateOptions{
-				Purpose: "Concurrent workspace",
-			}
-			ws, err := store.Create(ctx, opts)
+			ws, err := store.Create(ctx, CreateOptions{Purpose: "Concurrent workspace"})
 			results <- result{ws, err, idx}
 		}(i)
 	}
@@ -263,22 +205,17 @@ func TestConcurrentWorkspaceCreationShouldAvoidCollisions(t *testing.T) {
 }
 
 func TestWorkspaceCloneWithInvalidAuthShouldClassifyCorrectly(t *testing.T) {
-	root := t.TempDir()
-	store, err := NewFSStore(root)
-	if err != nil {
-		t.Fatalf("NewFSStore failed: %v", err)
-	}
-
+	store, _ := CreateTestStore(t)
 	ctx := context.Background()
-	opts := CreateOptions{
+
+	ws, err := store.Create(ctx, CreateOptions{
 		Purpose: "Test private repo",
 		RepoURL: "https://github.com/this-repo-does-not-exist-12345/private-repo.git",
 		RepoRef: "main",
-	}
+	})
 
-	ws, err := store.Create(ctx, opts)
 	if err == nil {
-		if ws != nil && fileExists(ws.Path) {
+		if ws != nil && FileExists(ws.Path) {
 			t.Log("Warning: clone succeeded unexpectedly (repo may be public)")
 			if err := store.Remove(ctx, ws.Handle); err != nil {
 				t.Logf("Warning: failed to cleanup: %v", err)
@@ -301,34 +238,28 @@ func TestWorkspaceCloneTimeoutShouldCleanUpProperly(t *testing.T) {
 		t.Skip("Skipping timeout test in short mode")
 	}
 
-	root := t.TempDir()
-	store, err := NewFSStore(root)
-	if err != nil {
-		t.Fatalf("NewFSStore failed: %v", err)
-	}
+	store, _ := CreateTestStore(t)
 
 	cancelCtx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	opts := CreateOptions{
+	_, err := store.Create(cancelCtx, CreateOptions{
 		Purpose: "Test timeout cleanup",
 		RepoURL: "https://github.com/torvalds/linux",
 		RepoRef: "master",
-	}
+	})
 
-	_, err = store.Create(cancelCtx, opts)
 	if err == nil {
 		t.Skip("Clone succeeded before timeout, skipping cleanup verification")
 	}
 
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		t.Fatalf("ReadDir failed: %v", err)
-	}
+	MustNotHaveTempDirs(t, store.Root())
+}
 
-	for _, entry := range entries {
-		if entry.IsDir() && strings.HasPrefix(entry.Name(), ".tmp-") {
-			t.Errorf("Temp directory %q was not cleaned up after timeout", entry.Name())
-		}
+func (s *FSStore) CreateMust(ctx context.Context, purpose string) *Workspace {
+	ws, err := s.Create(ctx, CreateOptions{Purpose: purpose})
+	if err != nil {
+		panic(err)
 	}
+	return ws
 }
