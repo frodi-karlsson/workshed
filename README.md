@@ -50,21 +50,18 @@ workshed create \
   --repo /Users/dev/my-api \
   --repo /Users/dev/my-worker
 
+# Or create a workspace using current directory (no cloning)
+cd /path/to/your/project
+workshed create --purpose "Quick exploration"
+
+# Commands can use current directory to discover workspace
+workshed exec -- make test          # Runs in workspace (auto-discovered)
+workshed inspect                    # Shows workspace details
+workshed path                       # Prints workspace path
+workshed update --purpose "New focus"  # Updates workspace purpose
+workshed remove                     # Removes workspace (with confirmation)
+
 workshed list
-workshed list --purpose payment
-
-cd $(workshed path aquatic-fish-motion)
-
-# Run command in all repositories
-workshed exec aquatic-fish-motion -- make test
-
-# Run command in specific repository
-workshed exec aquatic-fish-motion --repo api -- git status
-
-# Update workspace purpose
-workshed update --purpose "Debugging authentication issue" aquatic-fish-motion
-
-workshed remove aquatic-fish-motion
 ```
 
 This creates a directory containing cloned repositories and a small metadata file describing the workspace.
@@ -86,6 +83,20 @@ If the directory exists, the workspace exists.
 ### Multiple repositories
 Repositories are cloned into subdirectories of the workspace. They are not coupled beyond being colocated.
 
+### Current directory workspace
+If no `--repo` is provided when creating a workspace, the current directory is used as the repository. This is useful for exploring existing projects without cloning.
+
+### Auto-discovery
+Most commands (`exec`, `inspect`, `path`, `update`, `remove`) can automatically find the workspace containing the current directory when no handle is provided. This means you can run commands directly from within a workspace without needing to remember or look up the handle.
+
+```bash
+# From within a workspace directory
+workshed exec -- make test
+workshed inspect
+workshed path
+workshed update --purpose "New focus"
+```
+
 ### Batch execution (`exec`)
 `workshed exec` runs a command in each repository:
 
@@ -94,18 +105,20 @@ Repositories are cloned into subdirectories of the workspace. They are not coupl
 - Each command runs from the repository root
 - Use `--repo <name>` to target a specific repository
 - Use `--repo all` to run in all repositories (default)
+- Use `--repo root` to run in workspace root
 - Output is streamed with repository headers
 - Execution stops on the first non-zero exit code
+- If no handle is provided, uses the workspace containing the current directory
 
 ```bash
-# Run in all repositories
-workshed exec aquatic-fish-motion -- make test
+# Run in all repositories (auto-discovers workspace from current directory)
+workshed exec -- make test
 
 # Run in specific repository
-workshed exec aquatic-fish-motion --repo api -- make build
+workshed exec --repo api -- make build
 
 # Run in workspace root
-workshed exec aquatic-fish-motion -- make setup
+workshed exec --repo root -- make setup
 ```
 
 There is no rollback, retry logic, or interpretation of results.
@@ -114,13 +127,13 @@ There is no rollback, retry logic, or interpretation of results.
 
 ## Commands
 
-- `create` — Create a workspace (requires `--purpose`)
+- `create` — Create a workspace (requires `--purpose`, repos optional, defaults to current directory)
 - `list` — List workspaces with optional filtering
-- `inspect` — Show workspace metadata and repositories
-- `path` — Print the workspace path (for `cd $(...)`)
-- `exec` — Run a command in each repository
-- `remove` — Delete a workspace
-- `update` — Update workspace purpose
+- `inspect` — Show workspace details (handle optional, auto-discovers from current directory)
+- `path` — Print the workspace path (handle optional, auto-discovers from current directory)
+- `exec` — Run a command in repositories (handle optional, auto-discovers from current directory)
+- `remove` — Delete a workspace (handle optional, auto-discovers from current directory)
+- `update` — Update workspace purpose (handle optional, auto-discovers from current directory)
 - `version` / `--version` — Show version information
 
 ---

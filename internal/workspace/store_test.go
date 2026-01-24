@@ -310,7 +310,8 @@ func TestExec(t *testing.T) {
 
 		ctx := context.Background()
 		ws, err := store.Create(ctx, CreateOptions{
-			Purpose: "Test workspace",
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
 		})
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -343,7 +344,8 @@ func TestExec(t *testing.T) {
 
 		ctx := context.Background()
 		ws, err := store.Create(ctx, CreateOptions{
-			Purpose: "Test workspace",
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
 		})
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -372,7 +374,8 @@ func TestExecInRepository(t *testing.T) {
 
 		ctx := context.Background()
 		ws, err := store.Create(ctx, CreateOptions{
-			Purpose: "Test workspace",
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
 		})
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -399,7 +402,8 @@ func TestUpdatePurpose(t *testing.T) {
 
 		ctx := context.Background()
 		ws, err := store.Create(ctx, CreateOptions{
-			Purpose: "Original purpose",
+			Purpose:      "Original purpose",
+			Repositories: []RepositoryOption{},
 		})
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -428,7 +432,8 @@ func TestUpdatePurpose(t *testing.T) {
 
 		ctx := context.Background()
 		ws, err := store.Create(ctx, CreateOptions{
-			Purpose: "Test workspace",
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
 		})
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)

@@ -268,9 +268,9 @@ func TestUpdate(t *testing.T) {
 			t.Error("Update should exit with error when handle is missing")
 		}
 
-		errOutput := env.ErrorOutput()
-		if !strings.Contains(errOutput, "handle") {
-			t.Errorf("Error output should mention handle argument, got: %s", errOutput)
+		output := env.Output()
+		if !strings.Contains(output, "workspace") {
+			t.Errorf("Output should mention workspace, got: %s", output)
 		}
 	})
 

@@ -14,21 +14,13 @@ func Inspect(args []string) {
 	fs := flag.NewFlagSet("inspect", flag.ExitOnError)
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed inspect <handle>\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed inspect [<handle>]\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
 		exitFunc(1)
 	}
-
-	if fs.NArg() < 1 {
-		l.Error("missing required argument", "argument", "handle")
-		fs.Usage()
-		exitFunc(1)
-	}
-
-	handle := fs.Arg(0)
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
 	if err != nil {
@@ -37,6 +29,20 @@ func Inspect(args []string) {
 	}
 
 	ctx := context.Background()
+
+	var handle string
+	if fs.NArg() >= 1 {
+		handle = fs.Arg(0)
+	} else {
+		ws, err := store.FindWorkspace(ctx, ".")
+		if err != nil {
+			l.Error("failed to find workspace", "error", err)
+			exitFunc(1)
+			return
+		}
+		handle = ws.Handle
+	}
+
 	ws, err := store.Get(ctx, handle)
 	if err != nil {
 		l.Error("failed to get workspace", "handle", handle, "error", err)

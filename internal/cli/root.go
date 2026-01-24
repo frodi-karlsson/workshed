@@ -50,16 +50,21 @@ Environment:
   WORKSHED_LOG_FORMAT  Output format (human|json|raw, default: human)
 
 Examples:
-  workshed create --purpose "Debug payment timeout" \
-    --repo git@github.com:org/api@main \
-    --repo git@github.com:org/worker@develop
-  workshed list
-  workshed list --purpose debug
-  workshed inspect aquatic-fish-motion
-  workshed exec aquatic-fish-motion -- make test
-  workshed exec aquatic-fish-motion --repo api -- git status
-  workshed remove aquatic-fish-motion
-  workshed update --purpose "Debugging authentication" aquatic-fish-motion
+# Create a workspace for a specific task
+workshed create --purpose "Debug payment timeout" \
+  --repo git@github.com:org/api@main \
+  --repo git@github.com:org/worker@develop
+
+# Create a workspace using current directory
+workshed create --purpose "Local exploration"
+
+# Commands can use current directory to find workspace
+workshed exec -- make test
+workshed inspect
+workshed path
+workshed update --purpose "New purpose"
+workshed remove
+workshed list
 `, version)
 
 	// These output operations should never fail in practice

@@ -15,7 +15,7 @@ func Update(args []string) {
 	purpose := fs.String("purpose", "", "New purpose for the workspace (required)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed update --purpose <purpose> <handle>\n\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed update --purpose <purpose> [<handle>]\n\n")
 		logger.SafeFprintf(errWriter, "Flags:\n")
 		fs.PrintDefaults()
 	}
@@ -29,15 +29,8 @@ func Update(args []string) {
 		l.Error("missing required flag", "flag", "--purpose")
 		fs.Usage()
 		exitFunc(1)
+		return
 	}
-
-	if fs.NArg() < 1 {
-		l.Error("missing required argument", "argument", "handle")
-		fs.Usage()
-		exitFunc(1)
-	}
-
-	handle := fs.Arg(0)
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
 	if err != nil {
@@ -46,6 +39,20 @@ func Update(args []string) {
 	}
 
 	ctx := context.Background()
+
+	var handle string
+	if fs.NArg() >= 1 {
+		handle = fs.Arg(0)
+	} else {
+		ws, err := store.FindWorkspace(ctx, ".")
+		if err != nil {
+			l.Error("failed to find workspace", "error", err)
+			exitFunc(1)
+			return
+		}
+		handle = ws.Handle
+	}
+
 	if err := store.UpdatePurpose(ctx, handle, *purpose); err != nil {
 		l.Error("failed to update workspace purpose", "handle", handle, "error", err)
 		exitFunc(1)

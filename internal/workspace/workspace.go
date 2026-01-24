@@ -52,4 +52,5 @@ type Store interface {
 	Remove(ctx context.Context, handle string) error
 	Path(ctx context.Context, handle string) (string, error)
 	UpdatePurpose(ctx context.Context, handle string, purpose string) error
+	FindWorkspace(ctx context.Context, dir string) (*Workspace, error)
 }

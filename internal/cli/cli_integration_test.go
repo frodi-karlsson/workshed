@@ -86,7 +86,7 @@ func TestCreate(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Test", "--repo", "https://github.com/nonexistent/repo12345@main"})
+		Create([]string{"--purpose", "Test", "--repo", "/nonexistent/local/repo"})
 
 		if !env.ExitCalled() {
 			t.Error("Create should have exited with error")

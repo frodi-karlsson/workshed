@@ -17,7 +17,7 @@ func Exec(args []string) {
 	target := fs.String("repo", "", "Target repository name (default: all repositories)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed exec <handle> -- <command>...\n\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed exec [<handle>] -- <command>...\n\n")
 		logger.SafeFprintf(errWriter, "Flags:\n")
 		fs.PrintDefaults()
 	}
@@ -26,14 +26,6 @@ func Exec(args []string) {
 		l.Error("failed to parse flags", "error", err)
 		exitFunc(1)
 	}
-
-	if fs.NArg() < 1 {
-		l.Error("missing required argument", "argument", "handle")
-		fs.Usage()
-		exitFunc(1)
-	}
-
-	handle := fs.Arg(0)
 
 	sepIdx := -1
 	for i, arg := range args {
@@ -64,16 +56,18 @@ func Exec(args []string) {
 	}
 
 	ctx := context.Background()
-	ws, err := store.Get(ctx, handle)
-	if err != nil {
-		l.Error("failed to get workspace", "handle", handle, "error", err)
-		exitFunc(1)
-		return
-	}
 
-	if len(ws.Repositories) == 0 {
-		l.Error("workspace has no repositories")
-		exitFunc(1)
+	var handle string
+	if fs.NArg() >= 1 {
+		handle = fs.Arg(0)
+	} else {
+		ws, err := store.FindWorkspace(ctx, ".")
+		if err != nil {
+			l.Error("failed to find workspace", "error", err)
+			exitFunc(1)
+			return
+		}
+		handle = ws.Handle
 	}
 
 	opts := workspace.ExecOptions{

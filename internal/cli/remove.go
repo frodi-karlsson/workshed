@@ -19,7 +19,7 @@ func Remove(args []string) {
 	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed remove <handle> [--force]\n\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed remove [<handle>] [--force]\n\n")
 		logger.SafeFprintf(errWriter, "Flags:\n")
 		fs.PrintDefaults()
 	}
@@ -29,14 +29,6 @@ func Remove(args []string) {
 		exitFunc(1)
 	}
 
-	if fs.NArg() < 1 {
-		l.Error("missing required argument", "argument", "handle")
-		fs.Usage()
-		exitFunc(1)
-	}
-
-	handle := fs.Arg(0)
-
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
 	if err != nil {
 		l.Error("failed to create workspace store", "error", err)
@@ -44,6 +36,20 @@ func Remove(args []string) {
 	}
 
 	ctx := context.Background()
+
+	var handle string
+	if fs.NArg() >= 1 {
+		handle = fs.Arg(0)
+	} else {
+		ws, err := store.FindWorkspace(ctx, ".")
+		if err != nil {
+			l.Error("failed to find workspace", "error", err)
+			exitFunc(1)
+			return
+		}
+		handle = ws.Handle
+	}
+
 	ws, err := store.Get(ctx, handle)
 	if err != nil {
 		l.Error("workspace not found", "handle", handle, "error", err)

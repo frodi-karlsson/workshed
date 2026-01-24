@@ -51,8 +51,21 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		return nil, errors.New("purpose is required")
 	}
 
-	if len(opts.Repositories) > 0 {
-		if err := validateRepositories(opts.Repositories); err != nil {
+	repos := opts.Repositories
+
+	// If no repositories provided, use current directory
+	if repos == nil {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("getting current directory: %w", err)
+		}
+		repos = []RepositoryOption{
+			{URL: cwd, Ref: ""},
+		}
+	}
+
+	if len(repos) > 0 {
+		if err := validateRepositories(repos); err != nil {
 			return nil, fmt.Errorf("invalid repositories: %w", err)
 		}
 	}
@@ -66,9 +79,9 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		return nil, fmt.Errorf("generating handle: %w", err)
 	}
 
-	repos := make([]Repository, len(opts.Repositories))
-	for i, opt := range opts.Repositories {
-		repos[i] = Repository{
+	clonedRepos := make([]Repository, len(repos))
+	for i, opt := range repos {
+		clonedRepos[i] = Repository{
 			URL:  opt.URL,
 			Ref:  opt.Ref,
 			Name: extractRepoName(opt.URL),
@@ -79,7 +92,7 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		Version:      CurrentMetadataVersion,
 		Handle:       h,
 		Purpose:      opts.Purpose,
-		Repositories: repos,
+		Repositories: clonedRepos,
 		CreatedAt:    time.Now(),
 	}
 
@@ -105,7 +118,7 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		return nil, fmt.Errorf("writing metadata: %w", err)
 	}
 
-	if err := s.cloneRepositories(ctx, repos, tmpDir); err != nil {
+	if err := s.cloneRepositories(ctx, clonedRepos, tmpDir); err != nil {
 		if cleanupErr != nil {
 			return nil, fmt.Errorf("cloning repositories: %w; %v", err, cleanupErr)
 		}
@@ -222,6 +235,30 @@ func (s *FSStore) UpdatePurpose(ctx context.Context, handle string, purpose stri
 	return nil
 }
 
+// FindWorkspace finds the workspace that contains the given directory.
+// It walks up the directory tree looking for a .workshed.json file.
+func (s *FSStore) FindWorkspace(ctx context.Context, dir string) (*Workspace, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("getting absolute path: %w", err)
+	}
+
+	for {
+		metaPath := filepath.Join(absDir, metadataFileName)
+		if _, err := os.Stat(metaPath); err == nil {
+			return s.Get(ctx, filepath.Base(absDir))
+		} else if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("checking for workspace: %w", err)
+		}
+
+		parent := filepath.Dir(absDir)
+		if parent == absDir {
+			return nil, errors.New("not in a workspace directory")
+		}
+		absDir = parent
+	}
+}
+
 type ExecOptions struct {
 	Target   string
 	Command  []string
@@ -242,6 +279,10 @@ func (s *FSStore) Exec(ctx context.Context, handle string, opts ExecOptions) ([]
 	}
 
 	var results []ExecResult
+
+	if opts.Target == "" && len(ws.Repositories) == 0 {
+		opts.Target = "root"
+	}
 
 	switch opts.Target {
 	case "", "all":
