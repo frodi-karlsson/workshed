@@ -2,7 +2,10 @@
 
 Workshed is a tool for creating temporary, intent-scoped workspaces that bundle one or more Git repositories into a single directory.
 
-You can think of it as a way to create ad-hoc monorepos for focused work that spans more than one repository.
+One recommended use case is creating ad-hoc monorepos for focused work that spans multiple repositories.
+
+Another is creating a clean, disposable workspace for a specific task without cluttering your main development directories. This is useful for exploratory work, refactors, and agent-driven development, where isolation and clear task boundaries matter more than long-lived branches.
+
 
 ---
 
