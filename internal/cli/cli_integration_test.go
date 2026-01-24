@@ -319,3 +319,196 @@ func TestCLIRemoveNonExistentShouldExitWithErrorForNonexistentWorkspace(t *testi
 		t.Errorf("Output should mention workspace not found, got: %s", output)
 	}
 }
+
+func TestCLICreateInReadOnlyDirectoryShouldExitWithError(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json")
+	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+
+	if err := os.Chmod(tmpDir, 0555); err != nil {
+		t.Skipf("Cannot make directory read-only, skipping test: %v", err)
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	outWriter = &outBuf
+	errWriter = &errBuf
+	exitCalled := false
+	exitFunc = func(code int) {
+		exitCalled = true
+	}
+
+	logger.SetTestOutputWriter(&outBuf)
+
+	defer func() {
+		os.Chmod(tmpDir, 0755)
+		outWriter = os.Stdout
+		errWriter = os.Stderr
+		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
+	}()
+
+	Create([]string{"--purpose", "Test workspace"})
+
+	if !exitCalled {
+		t.Error("Create should exit with error in read-only directory")
+	}
+}
+
+func TestCLICreateWithSpecialCharactersInPurposeShouldWork(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json")
+	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+
+	var outBuf, errBuf bytes.Buffer
+	outWriter = &outBuf
+	errWriter = &errBuf
+	exitCalled := false
+	exitFunc = func(code int) {
+		exitCalled = true
+	}
+
+	logger.SetTestOutputWriter(&outBuf)
+
+	defer func() {
+		outWriter = os.Stdout
+		errWriter = os.Stderr
+		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
+	}()
+
+	purpose := "Debug: payment flow with café and naïve users"
+	Create([]string{"--purpose", purpose})
+
+	if exitCalled {
+		t.Fatalf("Create exited unexpectedly: %s", errBuf.String())
+	}
+
+	output := outBuf.String()
+	if !strings.Contains(output, "workspace created") {
+		t.Errorf("Create output should mention workspace created, got: %s", output)
+	}
+
+	var outBuf2, errBuf2 bytes.Buffer
+	outWriter = &outBuf2
+	errWriter = &errBuf2
+	exitCalled = false
+	exitFunc = func(code int) {
+		exitCalled = true
+	}
+
+	List([]string{})
+
+	if exitCalled {
+		t.Fatalf("List exited unexpectedly: %s", errBuf2.String())
+	}
+
+	listOutput := outBuf2.String()
+	if !strings.Contains(listOutput, purpose) {
+		t.Errorf("List output should contain purpose with special chars, got: %s", listOutput)
+	}
+}
+
+func TestCLIListEmptyDirectoryShouldHandleGracefully(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json")
+	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+
+	var outBuf, errBuf bytes.Buffer
+	outWriter = &outBuf
+	errWriter = &errBuf
+	exitFunc = func(code int) {}
+
+	logger.SetTestOutputWriter(&outBuf)
+
+	defer func() {
+		outWriter = os.Stdout
+		errWriter = os.Stderr
+		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
+	}()
+
+	List([]string{})
+
+	output := outBuf.String()
+	if !strings.Contains(output, "no workspaces") {
+		t.Errorf("List should mention no workspaces found, got: %s", output)
+	}
+}
+
+func TestCLIInspectWithNonexistentWorkspaceShouldFailCleanly(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json")
+	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+
+	var outBuf, errBuf bytes.Buffer
+	outWriter = &outBuf
+	errWriter = &errBuf
+	exitCalled := false
+	exitFunc = func(code int) {
+		exitCalled = true
+	}
+
+	logger.SetTestOutputWriter(&outBuf)
+
+	defer func() {
+		outWriter = os.Stdout
+		errWriter = os.Stderr
+		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
+	}()
+
+	Inspect([]string{"nonexistent-handle"})
+
+	if !exitCalled {
+		t.Error("Inspect should exit with error for nonexistent workspace")
+	}
+
+	output := outBuf.String()
+	if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
+		t.Errorf("Inspect output should mention workspace not found or failed to get, got: %s", output)
+	}
+}
+
+func TestCLIPathWithNonexistentWorkspaceShouldFailCleanly(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Setenv("WORKSHED_ROOT", tmpDir)
+	os.Setenv("WORKSHED_LOG_FORMAT", "json")
+	defer os.Unsetenv("WORKSHED_ROOT")
+	defer os.Unsetenv("WORKSHED_LOG_FORMAT")
+
+	var outBuf, errBuf bytes.Buffer
+	outWriter = &outBuf
+	errWriter = &errBuf
+	exitCalled := false
+	exitFunc = func(code int) {
+		exitCalled = true
+	}
+
+	logger.SetTestOutputWriter(&outBuf)
+
+	defer func() {
+		outWriter = os.Stdout
+		errWriter = os.Stderr
+		exitFunc = os.Exit
+		logger.ClearTestOutputWriter()
+	}()
+
+	Path([]string{"nonexistent-handle"})
+
+	if !exitCalled {
+		t.Error("Path should exit with error for nonexistent workspace")
+	}
+
+	output := outBuf.String()
+	if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
+		t.Errorf("Path output should mention workspace not found or failed to get, got: %s", output)
+	}
+}

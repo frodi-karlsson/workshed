@@ -1,4 +1,4 @@
-.PHONY: build test test-race test-integration test-all check install clean lint lint-fix install-hooks
+.PHONY: build test test-race test-integration test-all check help install clean lint lint-fix install-hooks
 
 build:
 	@mkdir -p bin
@@ -32,6 +32,23 @@ check:
 	@echo "--- Integration Tests ---"
 	go test -v -tags=integration ./...
 
+help:
+	@echo "Available targets:"
+	@echo ""
+	@echo "  build          Build the workshed binary"
+	@echo "  test           Run unit tests"
+	@echo "  test-race      Run unit tests with race detector"
+	@echo "  test-integration   Run integration tests"
+	@echo "  test-all       Run unit and integration tests"
+	@echo "  check          Run lint, unit tests, and integration tests"
+	@echo "  install        Install workshed to \$$GOPATH/bin"
+	@echo "  clean          Remove build artifacts"
+	@echo "  lint           Run golangci-lint"
+	@echo "  lint-fix       Run golangci-lint with auto-fixes"
+	@echo "  install-hooks  Install pre-commit hook"
+	@echo ""
+	@echo "  help           Show this help message"
+
 install:
 	go install ./cmd/workshed
 
@@ -58,4 +75,4 @@ install-hooks:
 	@chmod +x .git/hooks/pre-commit
 	@echo "✅ Pre-commit hook installed"
 
-.DEFAULT_GOAL := build
+.DEFAULT_GOAL := help

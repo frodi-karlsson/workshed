@@ -133,6 +133,37 @@ Workshed does not try to understand your code or your workflow. It only manages 
 
 ---
 
+## Development
+
+### Build
+```bash
+make build
+./bin/workshed --help
+```
+
+### Test
+```bash
+make test          # unit tests
+make test-integration      # integration tests
+make test-all    # all tests
+make check       # lint + all tests
+```
+
+### Lint
+```bash
+make lint         # check
+make lint-fix     # auto-fix issues
+```
+
+### Environment Variables
+- `WORKSHED_ROOT` — workspace directory (default: `~/.workshed/workspaces`)
+- `WORKSHED_LOG_FORMAT` — output format: `human`, `json`, or `raw` (default: `human`)
+
+### Metadata
+Workspaces are stored as directories containing a `.workshed.json` metadata file with workspace metadata (handle, purpose, repository URL, reference, creation time).
+
+---
+
 ## Summary
 
 Workshed is a small tool for organizing temporary, multi-repository work. It’s useful when a task spans several repositories and you want a clean, disposable workspace to work in.

@@ -43,6 +43,7 @@ func List(args []string) {
 	if err != nil {
 		l.Error("failed to list workspaces", "error", err)
 		exitFunc(1)
+		return
 	}
 
 	if len(workspaces) == 0 {

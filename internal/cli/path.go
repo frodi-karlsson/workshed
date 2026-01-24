@@ -42,6 +42,7 @@ func Path(args []string) {
 	if err != nil {
 		l.Error("failed to get workspace path", "handle", handle, "error", err)
 		exitFunc(1)
+		return
 	}
 
 	l.Info("workspace path", "path", path)

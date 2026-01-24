@@ -48,6 +48,7 @@ func Remove(args []string) {
 	if err != nil {
 		l.Error("workspace not found", "handle", handle, "error", err)
 		exitFunc(1)
+		return
 	}
 
 	if !*force {

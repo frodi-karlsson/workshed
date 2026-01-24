@@ -42,6 +42,7 @@ func Inspect(args []string) {
 	if err != nil {
 		l.Error("failed to get workspace", "handle", handle, "error", err)
 		exitFunc(1)
+		return
 	}
 
 	l.Info("workspace details", "handle", ws.Handle, "purpose", ws.Purpose, "created", ws.CreatedAt.Format("2006-01-02 15:04:05"), "path", ws.Path)
