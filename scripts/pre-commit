@@ -36,7 +36,7 @@ fi
 PACKAGES=$(echo "$CHANGED_FILES" | xargs dirname | sort | uniq)
 if [ -n "$PACKAGES" ]; then
     for package in $PACKAGES; do
-        golangci-lint run --fix "$package/..." 2>/dev/null || true
+        golangci-lint run --fix "$package/..."
     done
 fi
 

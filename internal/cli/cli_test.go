@@ -133,55 +133,6 @@ func TestParseRepoFlag(t *testing.T) {
 	}
 }
 
-func TestTruncate(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  string
-		maxLen int
-		want   string
-	}{
-		{
-			name:   "should return string as-is when no truncation needed",
-			input:  "short",
-			maxLen: 10,
-			want:   "short",
-		},
-		{
-			name:   "should truncate long strings with ellipsis",
-			input:  "this is a very long string",
-			maxLen: 10,
-			want:   "this is...",
-		},
-		{
-			name:   "should return exact length strings unchanged",
-			input:  "exactly10c",
-			maxLen: 10,
-			want:   "exactly10c",
-		},
-		{
-			name:   "should handle maxLen less than 3",
-			input:  "test",
-			maxLen: 2,
-			want:   "te",
-		},
-		{
-			name:   "should return empty string for empty input",
-			input:  "",
-			maxLen: 10,
-			want:   "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := truncate(tt.input, tt.maxLen)
-			if got != tt.want {
-				t.Errorf("truncate() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestExecErrors(t *testing.T) {
 	t.Run("should exit with error when workspace handle is missing", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)

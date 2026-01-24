@@ -14,8 +14,7 @@ const version = "0.2.0"
 var (
 	exitFunc = os.Exit
 
-	// Legacy variables for gradual migration - will be removed after all files are updated
-	// These are settable for testing purposes
+	// Settable for testing purposes
 	outWriter io.Writer = os.Stdout
 	errWriter io.Writer = os.Stderr
 

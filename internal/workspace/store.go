@@ -280,6 +280,10 @@ func (s *FSStore) Exec(ctx context.Context, handle string, opts ExecOptions) ([]
 
 	var results []ExecResult
 
+	if len(opts.Command) == 0 {
+		return nil, errors.New("command cannot be empty")
+	}
+
 	if opts.Target == "" && len(ws.Repositories) == 0 {
 		opts.Target = "root"
 	}
@@ -335,6 +339,10 @@ func (s *FSStore) Exec(ctx context.Context, handle string, opts ExecOptions) ([]
 }
 
 func (s *FSStore) execInRepository(ctx context.Context, repo Repository, wsPath string, cmdArgs []string) (ExecResult, error) {
+	if len(cmdArgs) == 0 {
+		return ExecResult{}, errors.New("command cannot be empty")
+	}
+
 	repoDir := filepath.Join(wsPath, repo.Name)
 	result := ExecResult{
 		Repository: repo.Name,
@@ -552,7 +560,7 @@ func classifyGitError(operation string, err error, output []byte) error {
 		return fmt.Errorf("git %s failed (%s): %s", operation, hint, outputStr)
 	}
 
-	return fmt.Errorf("git %s failed: %w\n%s", operation, err, outputStr)
+	return fmt.Errorf("git %s failed: %w", operation, err)
 }
 
 func extractRepoName(url string) string {
