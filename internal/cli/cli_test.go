@@ -28,10 +28,18 @@ func TestGetWorkshedRootShouldReturnCustomPathWhenWORKSHED_ROOTEnvVarSet(t *test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envVar != "" {
-				os.Setenv("WORKSHED_ROOT", tt.envVar)
-				defer os.Unsetenv("WORKSHED_ROOT")
+				if err := os.Setenv("WORKSHED_ROOT", tt.envVar); err != nil {
+					t.Errorf("Failed to set WORKSHED_ROOT: %v", err)
+				}
+				defer func() {
+					if err := os.Unsetenv("WORKSHED_ROOT"); err != nil {
+						t.Errorf("Failed to unset WORKSHED_ROOT: %v", err)
+					}
+				}()
 			} else {
-				os.Unsetenv("WORKSHED_ROOT")
+				if err := os.Unsetenv("WORKSHED_ROOT"); err != nil {
+					t.Errorf("Failed to unset WORKSHED_ROOT: %v", err)
+				}
 			}
 
 			got := GetWorkshedRoot()
@@ -63,6 +71,9 @@ func TestUsageShouldPrintUsageInformationToStderr(t *testing.T) {
 	if !strings.Contains(output, "list") {
 		t.Errorf("Usage() should contain 'list', got: %s", output)
 	}
+
+	// Reset to default
+	errWriter = os.Stderr
 }
 
 func TestVersionShouldPrintVersionToStdout(t *testing.T) {
@@ -78,6 +89,9 @@ func TestVersionShouldPrintVersionToStdout(t *testing.T) {
 	if !strings.Contains(output, ".") {
 		t.Errorf("Version() should contain version number with dot, got: %s", output)
 	}
+
+	// Reset to default
+	outWriter = os.Stdout
 }
 
 func TestParseRepoFlagShouldParseRepositoryURLsWithRefsCorrectly(t *testing.T) {

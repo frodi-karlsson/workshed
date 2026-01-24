@@ -3,23 +3,28 @@ package cli
 import (
 	"context"
 	"flag"
-	"fmt"
 
+	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 // Path prints the filesystem path for a workspace.
 func Path(args []string) {
+	l := logger.NewLogger(logger.INFO, "path")
+
 	fs := flag.NewFlagSet("path", flag.ExitOnError)
 
 	fs.Usage = func() {
-		fmt.Fprintf(errWriter, "Usage: workshed path <handle>\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed path <handle>\n")
 	}
 
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		l.Error("failed to parse flags", "error", err)
+		exitFunc(1)
+	}
 
 	if fs.NArg() < 1 {
-		fmt.Fprintf(errWriter, "Error: handle is required\n\n")
+		l.Error("missing required argument", "argument", "handle")
 		fs.Usage()
 		exitFunc(1)
 	}
@@ -28,16 +33,16 @@ func Path(args []string) {
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: %v\n", err)
+		l.Error("failed to create workspace store", "error", err)
 		exitFunc(1)
 	}
 
 	ctx := context.Background()
 	path, err := store.Path(ctx, handle)
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: %v\n", err)
+		l.Error("failed to get workspace path", "handle", handle, "error", err)
 		exitFunc(1)
 	}
 
-	fmt.Fprintln(outWriter, path)
+	l.Info("workspace path", "path", path)
 }

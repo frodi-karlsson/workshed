@@ -7,24 +7,30 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 // Remove deletes a workspace after optional confirmation.
 func Remove(args []string) {
+	l := logger.NewLogger(logger.INFO, "remove")
+
 	fs := flag.NewFlagSet("remove", flag.ExitOnError)
 	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
-		fmt.Fprintf(errWriter, "Usage: workshed remove <handle> [--force]\n\n")
-		fmt.Fprintf(errWriter, "Flags:\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed remove <handle> [--force]\n\n")
+		logger.SafeFprintf(errWriter, "Flags:\n")
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		l.Error("failed to parse flags", "error", err)
+		exitFunc(1)
+	}
 
 	if fs.NArg() < 1 {
-		fmt.Fprintf(errWriter, "Error: handle is required\n\n")
+		l.Error("missing required argument", "argument", "handle")
 		fs.Usage()
 		exitFunc(1)
 	}
@@ -33,39 +39,41 @@ func Remove(args []string) {
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: %v\n", err)
+		l.Error("failed to create workspace store", "error", err)
 		exitFunc(1)
 	}
 
 	ctx := context.Background()
 	ws, err := store.Get(ctx, handle)
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: %v\n", err)
+		l.Error("workspace not found", "handle", handle, "error", err)
 		exitFunc(1)
 	}
 
 	if !*force {
-		fmt.Fprintf(outWriter, "Remove workspace %q (%s)? [y/N]: ", ws.Handle, ws.Purpose)
+		prompt := fmt.Sprintf("Remove workspace %q (%s)? [y/N]: ", ws.Handle, ws.Purpose)
+		logger.SafeFprintf(outWriter, "%s", prompt)
+
 		reader := bufio.NewReader(inReader)
 		response, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Fprintf(errWriter, "Error reading input: %v\n", err)
+			l.Error("failed to read user input", "error", err)
 			exitFunc(1)
 		}
 
 		response = strings.TrimSpace(strings.ToLower(response))
 		if response != "y" && response != "yes" {
-			fmt.Fprintln(outWriter, "Cancelled")
+			l.Info("operation cancelled")
 			return
 		}
 	}
 
 	if err := store.Remove(ctx, handle); err != nil {
-		fmt.Fprintf(errWriter, "Error removing workspace: %v\n", err)
+		l.Error("failed to remove workspace", "handle", handle, "error", err)
 		exitFunc(1)
 	}
 
 	if !*force {
-		fmt.Fprintf(outWriter, "Removed workspace: %s\n", handle)
+		l.Success("workspace removed", "handle", handle)
 	}
 }

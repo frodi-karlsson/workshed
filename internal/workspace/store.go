@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/frodi/workshed/internal/handle"
+	"github.com/frodi/workshed/internal/logger"
 )
 
 const metadataFileName = ".workshed.json"
@@ -75,24 +76,37 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 	}
 
 	success := false
+	var cleanupErr error
 	defer func() {
 		if !success {
-			os.RemoveAll(tmpDir)
+			if err := os.RemoveAll(tmpDir); err != nil {
+				// Store the cleanup error - we'll combine it with the main error
+				cleanupErr = fmt.Errorf("cleanup of temp directory %s failed: %w", tmpDir, err)
+			}
 		}
 	}()
 
 	if err := s.writeMetadataToDir(ws, tmpDir); err != nil {
+		if cleanupErr != nil {
+			return nil, fmt.Errorf("writing metadata: %w; %v", err, cleanupErr)
+		}
 		return nil, fmt.Errorf("writing metadata: %w", err)
 	}
 
 	if opts.RepoURL != "" {
 		if err := s.cloneRepo(ctx, ws, tmpDir); err != nil {
+			if cleanupErr != nil {
+				return nil, fmt.Errorf("cloning repository: %w; %v", err, cleanupErr)
+			}
 			return nil, fmt.Errorf("cloning repository: %w", err)
 		}
 	}
 
 	finalDir := s.workspaceDir(h)
 	if err := os.Rename(tmpDir, finalDir); err != nil {
+		if cleanupErr != nil {
+			return nil, fmt.Errorf("finalizing workspace: %w; %v", err, cleanupErr)
+		}
 		return nil, fmt.Errorf("finalizing workspace: %w", err)
 	}
 
@@ -132,6 +146,7 @@ func (s *FSStore) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 		return nil, fmt.Errorf("reading workspaces directory: %w", err)
 	}
 
+	l := logger.NewLogger(logger.ERROR, "workspace")
 	var workspaces []*Workspace
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -140,6 +155,7 @@ func (s *FSStore) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 
 		ws, err := s.Get(ctx, entry.Name())
 		if err != nil {
+			l.Error("skipping corrupted workspace directory", "handle", entry.Name(), "error", err)
 			continue
 		}
 
@@ -200,10 +216,6 @@ func validateRepoURL(url string) error {
 	}
 
 	return fmt.Errorf("unsupported URL scheme (expected https://, git@, ssh://, or git://)")
-}
-
-func (s *FSStore) writeMetadata(ws *Workspace) error {
-	return s.writeMetadataToDir(ws, s.workspaceDir(ws.Handle))
 }
 
 func (s *FSStore) writeMetadataToDir(ws *Workspace, dir string) error {

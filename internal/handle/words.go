@@ -11,8 +11,8 @@ var adjectives = []string{
 	"simple", "sleek", "slim", "slow", "smooth", "soft", "solid", "sound",
 	"spare", "steady", "steep", "still", "strong", "subtle", "swift", "tame",
 	"tidy", "tiny", "true", "vast", "vivid", "warm", "wild", "wise", "young",
-	"agile", "amber", "ancient", "arctic", "autumn", "azure", "bronze", "clever",
-	"crimson", "crystal", "dawn", "dusk", "emerald", "frosty", "gentle", "golden",
+	"agile", "amber", "ancient", "arctic", "autumn", "azure", "bronze",
+	"crimson", "crystal", "dawn", "dusk", "emerald", "frosty", "golden",
 	"graceful", "jade", "lunar", "mystic", "ocean", "silver", "solar", "stellar",
 	"stormy", "summer", "twilight", "winter",
 }
@@ -46,7 +46,7 @@ var verbs = []string{
 	"splash", "spring", "sprint", "stalk", "stand", "stream", "stride", "strike",
 	"surge", "sweep", "swim", "swing", "swirl", "trace", "trail", "trek",
 	"turn", "vault", "wake", "walk", "wander", "wave", "weave", "whirl",
-	"whisk", "wind", "zoom", "ascend", "blaze", "cascade", "descend", "emerge",
+	"whisk", "wind", "zoom", "ascend", "cascade", "descend", "emerge",
 	"evolve", "expand", "explore", "flourish", "ignite", "illuminate", "journey", "navigate",
-	"orbit", "radiate", "resonate", "ripple", "shimmer", "spark", "transcend", "traverse",
+	"orbit", "radiate", "resonate", "ripple", "shimmer", "transcend", "traverse",
 }

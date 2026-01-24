@@ -6,25 +6,31 @@ import (
 	"fmt"
 	"text/tabwriter"
 
+	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 // List displays all workspaces with optional filtering by purpose.
 func List(args []string) {
+	l := logger.NewLogger(logger.INFO, "list")
+
 	fs := flag.NewFlagSet("list", flag.ExitOnError)
 	purposeFilter := fs.String("purpose", "", "Filter by purpose (case-insensitive substring match)")
 
 	fs.Usage = func() {
-		fmt.Fprintf(errWriter, "Usage: workshed list [--purpose <filter>]\n\n")
-		fmt.Fprintf(errWriter, "Flags:\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed list [--purpose <filter>]\n\n")
+		logger.SafeFprintf(errWriter, "Flags:\n")
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		l.Error("failed to parse flags", "error", err)
+		exitFunc(1)
+	}
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: %v\n", err)
+		l.Error("failed to create workspace store", "error", err)
 		exitFunc(1)
 	}
 
@@ -35,25 +41,31 @@ func List(args []string) {
 	ctx := context.Background()
 	workspaces, err := store.List(ctx, opts)
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error listing workspaces: %v\n", err)
+		l.Error("failed to list workspaces", "error", err)
 		exitFunc(1)
 	}
 
 	if len(workspaces) == 0 {
-		fmt.Fprintln(outWriter, "No workspaces found")
+		l.Info("no workspaces found")
 		return
 	}
 
+	// Create tabwriter for formatted output
 	w := tabwriter.NewWriter(outWriter, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "HANDLE\tPURPOSE\tREPO\tCREATED")
+	logger.SafeFprintln(w, "HANDLE\tPURPOSE\tREPO\tCREATED")
 
 	for _, ws := range workspaces {
 		repo := truncate(ws.RepoURL, 40)
 		created := ws.CreatedAt.Format("2006-01-02 15:04")
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ws.Handle, ws.Purpose, repo, created)
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ws.Handle, ws.Purpose, repo, created); err != nil {
+			l.Error("failed to write workspace line", "error", err)
+			break
+		}
 	}
 
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		l.Error("failed to flush output", "error", err)
+	}
 }
 
 func truncate(s string, maxLen int) string {

@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"context"
 	"time"
 )
 
@@ -29,4 +30,13 @@ type CreateOptions struct {
 // ListOptions contains options for listing workspaces
 type ListOptions struct {
 	PurposeFilter string
+}
+
+// Store defines the interface for workspace storage operations
+type Store interface {
+	Create(ctx context.Context, opts CreateOptions) (*Workspace, error)
+	Get(ctx context.Context, handle string) (*Workspace, error)
+	List(ctx context.Context, opts ListOptions) ([]*Workspace, error)
+	Remove(ctx context.Context, handle string) error
+	Path(ctx context.Context, handle string) (string, error)
 }

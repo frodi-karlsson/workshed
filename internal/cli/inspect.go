@@ -3,23 +3,28 @@ package cli
 import (
 	"context"
 	"flag"
-	"fmt"
 
+	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 // Inspect displays detailed information about a workspace.
 func Inspect(args []string) {
+	l := logger.NewLogger(logger.INFO, "inspect")
+
 	fs := flag.NewFlagSet("inspect", flag.ExitOnError)
 
 	fs.Usage = func() {
-		fmt.Fprintf(errWriter, "Usage: workshed inspect <handle>\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed inspect <handle>\n")
 	}
 
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		l.Error("failed to parse flags", "error", err)
+		exitFunc(1)
+	}
 
 	if fs.NArg() < 1 {
-		fmt.Fprintf(errWriter, "Error: handle is required\n\n")
+		l.Error("missing required argument", "argument", "handle")
 		fs.Usage()
 		exitFunc(1)
 	}
@@ -28,26 +33,23 @@ func Inspect(args []string) {
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: %v\n", err)
+		l.Error("failed to create workspace store", "error", err)
 		exitFunc(1)
 	}
 
 	ctx := context.Background()
 	ws, err := store.Get(ctx, handle)
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: %v\n", err)
+		l.Error("failed to get workspace", "handle", handle, "error", err)
 		exitFunc(1)
 	}
 
-	fmt.Fprintf(outWriter, "Handle:   %s\n", ws.Handle)
-	fmt.Fprintf(outWriter, "Purpose:  %s\n", ws.Purpose)
-	fmt.Fprintf(outWriter, "Created:  %s\n", ws.CreatedAt.Format("2006-01-02 15:04:05"))
-	fmt.Fprintf(outWriter, "Path:     %s\n", ws.Path)
+	l.Info("workspace details", "handle", ws.Handle, "purpose", ws.Purpose, "created", ws.CreatedAt.Format("2006-01-02 15:04:05"), "path", ws.Path)
 
 	if ws.RepoURL != "" {
-		fmt.Fprintf(outWriter, "Repo:     %s\n", ws.RepoURL)
+		l.Info("repository info", "repo", ws.RepoURL)
 		if ws.RepoRef != "" {
-			fmt.Fprintf(outWriter, "Ref:      %s\n", ws.RepoRef)
+			l.Info("reference", "ref", ws.RepoRef)
 		}
 	}
 }

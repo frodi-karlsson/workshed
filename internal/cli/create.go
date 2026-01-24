@@ -3,29 +3,36 @@ package cli
 import (
 	"context"
 	"flag"
-	"fmt"
 	"strings"
 	"time"
 
+	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
+const defaultCloneTimeout = 5 * time.Minute
+
 // Create creates a new workspace with the specified purpose and optional repository.
 func Create(args []string) {
+	l := logger.NewLogger(logger.INFO, "create")
+
 	fs := flag.NewFlagSet("create", flag.ExitOnError)
 	purpose := fs.String("purpose", "", "Purpose of the workspace (required)")
 	repo := fs.String("repo", "", "Repository URL with optional ref (format: url@ref)")
 
 	fs.Usage = func() {
-		fmt.Fprintf(errWriter, "Usage: workshed create --purpose <purpose> [--repo url@ref]\n\n")
-		fmt.Fprintf(errWriter, "Flags:\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed create --purpose <purpose> [--repo url@ref]\n\n")
+		logger.SafeFprintf(errWriter, "Flags:\n")
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		l.Error("failed to parse flags", "error", err)
+		exitFunc(1)
+	}
 
 	if *purpose == "" {
-		fmt.Fprintf(errWriter, "Error: --purpose is required\n\n")
+		l.Error("missing required flag", "flag", "--purpose")
 		fs.Usage()
 		exitFunc(1)
 	}
@@ -42,22 +49,20 @@ func Create(args []string) {
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: %v\n", err)
+		l.Error("failed to create workspace store", "error", err)
 		exitFunc(1)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCloneTimeout)
 	defer cancel()
 
 	ws, err := store.Create(ctx, opts)
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error creating workspace: %v\n", err)
+		l.Error("workspace creation failed", "purpose", opts.Purpose, "error", err)
 		exitFunc(1)
-		return
 	}
 
-	fmt.Fprintf(outWriter, "Created workspace: %s\n", ws.Handle)
-	fmt.Fprintf(outWriter, "Path: %s\n", ws.Path)
+	l.Success("workspace created", "handle", ws.Handle, "path", ws.Path)
 }
 
 func parseRepoFlag(repo string) (url, ref string) {

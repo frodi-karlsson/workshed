@@ -5,20 +5,30 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/frodi/workshed/internal/logger"
 )
 
 const version = "0.1.0"
 
 var (
-	exitFunc            = os.Exit
-	inReader  io.Reader = os.Stdin
+	exitFunc = os.Exit
+
+	// Legacy variables for gradual migration - will be removed after all files are updated
+	// These are settable for testing purposes
 	outWriter io.Writer = os.Stdout
 	errWriter io.Writer = os.Stderr
+
+	// inReader is used for dependency injection in tests
+	// Use os.Stdin directly in production, bufio.NewReader(inReader) for testing
+	inReader = os.Stdin
 )
 
 // Usage prints the usage information to stderr.
 func Usage() {
-	fmt.Fprintf(errWriter, `workshed v%s - Intent-scoped local workspaces
+	// Use errWriter for backward compatibility with tests
+	// In a production CLI, this would typically go to stderr
+	msg := fmt.Sprintf(`workshed v%s - Intent-scoped local workspaces
 
 Usage:
   workshed <command> [flags]
@@ -35,6 +45,7 @@ Flags:
 
 Environment:
   WORKSHED_ROOT  Root directory for workspaces (default: ~/.workshed/workspaces)
+  WORKSHED_LOG_FORMAT  Output format (human|json|raw, default: human)
 
 Examples:
   workshed create --purpose "Debug payment timeout"
@@ -45,11 +56,16 @@ Examples:
   cd $(workshed path aquatic-fish-motion)
   workshed remove aquatic-fish-motion
 `, version)
+
+	// These output operations should never fail in practice
+	logger.SafeFprintf(errWriter, "%s\n", msg)
 }
 
 // Version prints the current version to stdout.
 func Version() {
-	fmt.Fprintln(outWriter, version)
+	// Use outWriter for backward compatibility with tests
+	// These output operations should never fail in practice
+	logger.SafeFprintf(outWriter, "%s\n", version)
 }
 
 // GetWorkshedRoot returns the root directory for workspaces, from WORKSHED_ROOT env var or default.
@@ -60,7 +76,8 @@ func GetWorkshedRoot() string {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Fprintf(errWriter, "Error: could not determine home directory: %v\n", err)
+		l := logger.NewLogger(logger.ERROR, "workshed")
+		l.Error("failed to determine home directory", "error", err)
 		exitFunc(1)
 	}
 

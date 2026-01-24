@@ -51,43 +51,73 @@ fi
 echo ""
 echo "🔧 Stage 2: Running golangci-lint with auto-fixes..."
 
-# Run golangci-lint with auto-fixes on individual files
-FAILED=0
-for file in $CHANGED_FILES; do
-    if ! golangci-lint run --fix "$file" 2>/dev/null; then
-        FAILED=1
+# Get unique directories from changed files and run golangci-lint on packages
+PACKAGES=$(echo "$CHANGED_FILES" | xargs dirname | sort | uniq)
+if [ -n "$PACKAGES" ]; then
+    echo "  Running linting on $(echo "$PACKAGES" | wc -w) packages..."
+    echo "$PACKAGES" | sed 's/^/  - /'
+    
+    # Run golangci-lint with auto-fixes on each package
+    FAILED=0
+    for package in $PACKAGES; do
+        if ! golangci-lint run --fix "$package/..." 2>/dev/null; then
+            FAILED=1
+        fi
+    done
+    
+    if [ $FAILED -eq 0 ]; then
+        echo "  ✅ Auto-fixes applied successfully"
+    else
+        echo "  ⚠️  Some issues couldn't be auto-fixed"
     fi
-done
-
-if [ $FAILED -eq 0 ]; then
-    echo "  ✅ Auto-fixes applied successfully"
 else
-    echo "  ⚠️  Some issues couldn't be auto-fixed"
+    echo "  ✅ No packages to lint"
 fi
 
 echo ""
 echo "🧐 Stage 3: Checking for remaining issues..."
 
-# Run final linter check
-if echo "$CHANGED_FILES" | xargs golangci-lint run; then
-    echo "  ✅ All linting checks passed!"
+# Final validation - run on all packages together for comprehensive checking
+if [ -n "$PACKAGES" ]; then
+    # Build the package path for final check
+    PACKAGE_PATHS=""
+    for package in $PACKAGES; do
+        if [ -d "$package" ]; then
+            if [[ "$package" == "./"* ]]; then
+                PACKAGE_PATHS="$PACKAGE_PATHS $package/..."
+            else
+                PACKAGE_PATHS="$PACKAGE_PATHS ./$package/..."
+            fi
+        fi
+    done
+    
+    if [ -n "$PACKAGE_PATHS" ]; then
+        echo "  Running final validation on $(echo $PACKAGE_PATHS | wc -w) package patterns..."
+        if golangci-lint run $PACKAGE_PATHS; then
+            echo "  ✅ All linting checks passed!"
+        else
+            echo ""
+            echo "❌ Linting failed with remaining issues."
+            echo ""
+            echo "💡 To fix these issues:"
+            echo "   1. Review the errors above"
+            echo "   2. Make necessary changes to your code"
+            echo "   3. Re-stage your changes: git add <files>"
+            echo "   4. Try committing again"
+            echo ""
+            echo "⚠️  To bypass this hook (emergency only):"
+            echo "   git commit --no-verify"
+            echo ""
+            echo "📋 To run linter manually:"
+            echo "   make lint-fix  # Auto-fix issues"
+            echo "   make lint      # Show issues without fixing"
+            exit 1
+        fi
+    else
+        echo "  ✅ No valid packages to check"
+    fi
 else
-    echo ""
-    echo "❌ Linting failed with remaining issues."
-    echo ""
-    echo "💡 To fix these issues:"
-    echo "   1. Review the errors above"
-    echo "   2. Make necessary changes to your code"
-    echo "   3. Re-stage your changes: git add <files>"
-    echo "   4. Try committing again"
-    echo ""
-    echo "⚠️  To bypass this hook (emergency only):"
-    echo "   git commit --no-verify"
-    echo ""
-    echo "📋 To run linter manually:"
-    echo "   make lint-fix  # Auto-fix issues"
-    echo "   make lint      # Show issues without fixing"
-    exit 1
+    echo "  ✅ No packages to check"
 fi
 
 # Re-stage any auto-fixes made by the linter
