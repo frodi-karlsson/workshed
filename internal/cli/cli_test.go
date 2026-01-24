@@ -9,7 +9,7 @@ import (
 	"github.com/frodi/workshed/internal/testutil"
 )
 
-func TestGetWorkshedRootShouldReturnCustomPathWhenWORKSHED_ROOTEnvVarSet(t *testing.T) {
+func TestGetWorkshedRoot(t *testing.T) {
 	tests := []struct {
 		name    string
 		envVar  string
@@ -17,12 +17,12 @@ func TestGetWorkshedRootShouldReturnCustomPathWhenWORKSHED_ROOTEnvVarSet(t *test
 		wantErr bool
 	}{
 		{
-			name:   "env var set",
+			name:   "should return custom path when env var is set",
 			envVar: "/custom/path",
 			want:   "/custom/path",
 		},
 		{
-			name:   "env var not set",
+			name:   "should return default path when env var is not set",
 			envVar: "",
 		},
 	}
@@ -44,46 +44,50 @@ func TestGetWorkshedRootShouldReturnCustomPathWhenWORKSHED_ROOTEnvVarSet(t *test
 	}
 }
 
-func TestUsageShouldPrintUsageInformationToStderr(t *testing.T) {
-	var buf bytes.Buffer
-	errWriter = &buf
+func TestUsage(t *testing.T) {
+	t.Run("should print usage information to stderr", func(t *testing.T) {
+		var buf bytes.Buffer
+		errWriter = &buf
 
-	Usage()
+		Usage()
 
-	output := buf.String()
-	if !strings.Contains(output, "workshed") {
-		t.Errorf("Usage() should contain 'workshed', got: %s", output)
-	}
-	if !strings.Contains(output, "create") {
-		t.Errorf("Usage() should contain 'create', got: %s", output)
-	}
-	if !strings.Contains(output, "list") {
-		t.Errorf("Usage() should contain 'list', got: %s", output)
-	}
+		output := buf.String()
+		if !strings.Contains(output, "workshed") {
+			t.Errorf("Usage() should contain 'workshed', got: %s", output)
+		}
+		if !strings.Contains(output, "create") {
+			t.Errorf("Usage() should contain 'create', got: %s", output)
+		}
+		if !strings.Contains(output, "list") {
+			t.Errorf("Usage() should contain 'list', got: %s", output)
+		}
 
-	// Reset to default
-	errWriter = os.Stderr
+		// Reset to default
+		errWriter = os.Stderr
+	})
 }
 
-func TestVersionShouldPrintVersionToStdout(t *testing.T) {
-	var buf bytes.Buffer
-	outWriter = &buf
+func TestVersion(t *testing.T) {
+	t.Run("should print version to stdout", func(t *testing.T) {
+		var buf bytes.Buffer
+		outWriter = &buf
 
-	Version()
+		Version()
 
-	output := buf.String()
-	if output == "" {
-		t.Error("Version() should output version string")
-	}
-	if !strings.Contains(output, ".") {
-		t.Errorf("Version() should contain version number with dot, got: %s", output)
-	}
+		output := buf.String()
+		if output == "" {
+			t.Error("Version() should output version string")
+		}
+		if !strings.Contains(output, ".") {
+			t.Errorf("Version() should contain version number with dot, got: %s", output)
+		}
 
-	// Reset to default
-	outWriter = os.Stdout
+		// Reset to default
+		outWriter = os.Stdout
+	})
 }
 
-func TestParseRepoFlagShouldParseRepositoryURLsWithRefsCorrectly(t *testing.T) {
+func TestParseRepoFlag(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
@@ -91,25 +95,25 @@ func TestParseRepoFlagShouldParseRepositoryURLsWithRefsCorrectly(t *testing.T) {
 		wantRef string
 	}{
 		{
-			name:    "url only",
+			name:    "should parse URL without ref",
 			input:   "https://github.com/org/repo",
 			wantURL: "https://github.com/org/repo",
 			wantRef: "",
 		},
 		{
-			name:    "url with ref",
+			name:    "should parse URL with ref",
 			input:   "https://github.com/org/repo@main",
 			wantURL: "https://github.com/org/repo",
 			wantRef: "main",
 		},
 		{
-			name:    "ssh url with ref",
+			name:    "should parse SSH URL with ref",
 			input:   "git@github.com:org/repo.git@v1.2.3",
 			wantURL: "git@github.com:org/repo.git",
 			wantRef: "v1.2.3",
 		},
 		{
-			name:    "url with tag",
+			name:    "should parse URL with branch ref",
 			input:   "https://github.com/org/repo@feature/branch",
 			wantURL: "https://github.com/org/repo",
 			wantRef: "feature/branch",
@@ -129,7 +133,7 @@ func TestParseRepoFlagShouldParseRepositoryURLsWithRefsCorrectly(t *testing.T) {
 	}
 }
 
-func TestTruncateShouldTruncateStringsToSpecifiedLength(t *testing.T) {
+func TestTruncate(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  string
@@ -137,31 +141,31 @@ func TestTruncateShouldTruncateStringsToSpecifiedLength(t *testing.T) {
 		want   string
 	}{
 		{
-			name:   "no truncation needed",
+			name:   "should return string as-is when no truncation needed",
 			input:  "short",
 			maxLen: 10,
 			want:   "short",
 		},
 		{
-			name:   "truncation needed",
+			name:   "should truncate long strings with ellipsis",
 			input:  "this is a very long string",
 			maxLen: 10,
 			want:   "this is...",
 		},
 		{
-			name:   "exact length",
+			name:   "should return exact length strings unchanged",
 			input:  "exactly10c",
 			maxLen: 10,
 			want:   "exactly10c",
 		},
 		{
-			name:   "maxLen less than 3",
+			name:   "should handle maxLen less than 3",
 			input:  "test",
 			maxLen: 2,
 			want:   "te",
 		},
 		{
-			name:   "empty string",
+			name:   "should return empty string for empty input",
 			input:  "",
 			maxLen: 10,
 			want:   "",

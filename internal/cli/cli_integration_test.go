@@ -13,276 +13,286 @@ import (
 	"github.com/frodi/workshed/internal/workspace"
 )
 
-func TestCLICreateListRemoveWorkflowShouldExecuteCompleteWorkspaceLifecycle(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
+func TestCreate(t *testing.T) {
+	t.Run("should execute complete workspace lifecycle", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
 
-	env.ResetBuffers()
-	Create([]string{"--purpose", "Test workspace"})
-	if env.ExitCalled() {
-		t.Fatalf("Create exited: %s", env.ErrorOutput())
-	}
-
-	output := env.Output()
-	if !strings.Contains(output, "workspace created") {
-		t.Errorf("Create output should contain 'workspace created', got: %s", output)
-	}
-
-	handle := ExtractHandleFromLog(t, output)
-
-	env.ResetBuffers()
-	List([]string{})
-	if env.ExitCalled() {
-		t.Fatalf("List exited: %s", env.ErrorOutput())
-	}
-
-	output = env.Output()
-	if !strings.Contains(output, handle) {
-		t.Errorf("List output should contain handle %s, got: %s", handle, output)
-	}
-	if !strings.Contains(output, "Test workspace") {
-		t.Errorf("List output should contain purpose, got: %s", output)
-	}
-
-	env.ResetBuffers()
-	Inspect([]string{handle})
-	if env.ExitCalled() {
-		t.Fatalf("Inspect exited: %s", env.ErrorOutput())
-	}
-
-	output = env.Output()
-	if !strings.Contains(output, handle) {
-		t.Errorf("Inspect output should contain handle, got: %s", output)
-	}
-	if !strings.Contains(output, "Test workspace") {
-		t.Errorf("Inspect output should contain purpose, got: %s", output)
-	}
-
-	env.ResetBuffers()
-	Remove([]string{"--force", handle})
-	if env.ExitCalled() {
-		t.Fatalf("Remove exited: %s", env.ErrorOutput())
-	}
-
-	store, err := workspace.NewFSStore(env.TempDir)
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-
-	ctx := context.Background()
-	_, err = store.Get(ctx, handle)
-	if err == nil {
-		t.Error("Workspace should have been removed")
-	}
-}
-
-func TestCLICreateWithInvalidRepoURLShouldExitWithErrorForInvalidRepoURL(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
-
-	env.ResetBuffers()
-	Create([]string{"--purpose", "Test", "--repo", "https://github.com/nonexistent/repo12345@main"})
-
-	if !env.ExitCalled() {
-		t.Error("Create should have exited with error")
-	}
-
-	errOutput := env.Output()
-	if !strings.Contains(errOutput, "workspace creation failed") {
-		t.Errorf("Error output should mention workspace creation failed, got: %s", errOutput)
-	}
-}
-
-func TestCLICreateContextCancellationShouldRespectContextTimeout(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
-
-	store, err := workspace.NewFSStore(env.TempDir)
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
-	defer cancel()
-
-	time.Sleep(10 * time.Millisecond)
-
-	opts := workspace.CreateOptions{
-		Purpose: "Test timeout",
-		RepoURL: "https://github.com/torvalds/linux",
-		RepoRef: "master",
-	}
-
-	_, err = store.Create(ctx, opts)
-	if err == nil {
-		t.Error("Create should fail with cancelled context")
-	}
-
-	if !strings.Contains(err.Error(), "context") && !strings.Contains(err.Error(), "signal") {
-		t.Logf("Expected context/signal error, got: %v", err)
-	}
-
-	entries, err := os.ReadDir(env.TempDir)
-	if err != nil {
-		t.Fatalf("Failed to read tmpDir: %v", err)
-	}
-
-	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), ".tmp-") {
-			t.Errorf("Temporary directory not cleaned up: %s", entry.Name())
+		env.ResetBuffers()
+		Create([]string{"--purpose", "Test workspace"})
+		if env.ExitCalled() {
+			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
-	}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should contain 'workspace created', got: %s", output)
+		}
+
+		handle := ExtractHandleFromLog(t, output)
+
+		env.ResetBuffers()
+		List([]string{})
+		if env.ExitCalled() {
+			t.Fatalf("List exited: %s", env.ErrorOutput())
+		}
+
+		output = env.Output()
+		if !strings.Contains(output, handle) {
+			t.Errorf("List output should contain handle %s, got: %s", handle, output)
+		}
+		if !strings.Contains(output, "Test workspace") {
+			t.Errorf("List output should contain purpose, got: %s", output)
+		}
+
+		env.ResetBuffers()
+		Inspect([]string{handle})
+		if env.ExitCalled() {
+			t.Fatalf("Inspect exited: %s", env.ErrorOutput())
+		}
+
+		output = env.Output()
+		if !strings.Contains(output, handle) {
+			t.Errorf("Inspect output should contain handle, got: %s", output)
+		}
+		if !strings.Contains(output, "Test workspace") {
+			t.Errorf("Inspect output should contain purpose, got: %s", output)
+		}
+
+		env.ResetBuffers()
+		Remove([]string{"--force", handle})
+		if env.ExitCalled() {
+			t.Fatalf("Remove exited: %s", env.ErrorOutput())
+		}
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		_, err = store.Get(ctx, handle)
+		if err == nil {
+			t.Error("Workspace should have been removed")
+		}
+	})
+
+	t.Run("should exit with error for invalid repo URL", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		Create([]string{"--purpose", "Test", "--repo", "https://github.com/nonexistent/repo12345@main"})
+
+		if !env.ExitCalled() {
+			t.Error("Create should have exited with error")
+		}
+
+		errOutput := env.Output()
+		if !strings.Contains(errOutput, "workspace creation failed") {
+			t.Errorf("Error output should mention workspace creation failed, got: %s", errOutput)
+		}
+	})
+
+	t.Run("should respect context timeout", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+
+		time.Sleep(10 * time.Millisecond)
+
+		opts := workspace.CreateOptions{
+			Purpose: "Test timeout",
+			RepoURL: "https://github.com/torvalds/linux",
+			RepoRef: "master",
+		}
+
+		_, err = store.Create(ctx, opts)
+		if err == nil {
+			t.Error("Create should fail with cancelled context")
+		}
+
+		if !strings.Contains(err.Error(), "context") && !strings.Contains(err.Error(), "signal") {
+			t.Logf("Expected context/signal error, got: %v", err)
+		}
+
+		entries, err := os.ReadDir(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to read tmpDir: %v", err)
+		}
+
+		for _, entry := range entries {
+			if strings.HasPrefix(entry.Name(), ".tmp-") {
+				t.Errorf("Temporary directory not cleaned up: %s", entry.Name())
+			}
+		}
+	})
+
+	t.Run("should exit with error in read-only directory", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		if err := os.Chmod(env.TempDir, 0555); err != nil {
+			t.Skipf("Cannot make directory read-only, skipping test: %v", err)
+		}
+
+		env.ResetBuffers()
+		Create([]string{"--purpose", "Test workspace"})
+
+		if !env.ExitCalled() {
+			t.Error("Create should exit with error in read-only directory")
+		}
+	})
+
+	t.Run("should handle special characters in purpose", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		purpose := "Debug: payment flow with café and naïve users"
+		env.ResetBuffers()
+		Create([]string{"--purpose", purpose})
+
+		if env.ExitCalled() {
+			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should mention workspace created, got: %s", output)
+		}
+
+		env.ResetBuffers()
+		List([]string{})
+
+		listOutput := env.Output()
+		if !strings.Contains(listOutput, purpose) {
+			t.Errorf("List output should contain purpose with special chars, got: %s", listOutput)
+		}
+	})
 }
 
-func TestCLIListFilterIntegrationShouldFilterWorkspacesByPurpose(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
+func TestList(t *testing.T) {
+	t.Run("should filter workspaces by purpose", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
 
-	store, err := workspace.NewFSStore(env.TempDir)
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
 
-	ctx := context.Background()
+		ctx := context.Background()
 
-	_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Debug payment flow"})
-	if err != nil {
-		t.Fatalf("Failed to create workspace: %v", err)
-	}
+		_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Debug payment flow"})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
 
-	_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Add login feature"})
-	if err != nil {
-		t.Fatalf("Failed to create workspace: %v", err)
-	}
+		_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Add login feature"})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
 
-	_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Debug checkout bug"})
-	if err != nil {
-		t.Fatalf("Failed to create workspace: %v", err)
-	}
+		_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Debug checkout bug"})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
 
-	env.ResetBuffers()
-	List([]string{})
-	output := env.Output()
-	if strings.Count(output, "Debug") != 2 {
-		t.Errorf("Should show 2 debug workspaces, got: %s", output)
-	}
+		env.ResetBuffers()
+		List([]string{})
+		output := env.Output()
+		if strings.Count(output, "Debug") != 2 {
+			t.Errorf("Should show 2 debug workspaces, got: %s", output)
+		}
 
-	env.ResetBuffers()
-	List([]string{"--purpose", "debug"})
-	output = env.Output()
-	if !strings.Contains(output, "payment") {
-		t.Errorf("Filtered list should contain 'payment', got: %s", output)
-	}
-	if !strings.Contains(output, "checkout") {
-		t.Errorf("Filtered list should contain 'checkout', got: %s", output)
-	}
-	if strings.Contains(output, "login") {
-		t.Errorf("Filtered list should not contain 'login', got: %s", output)
-	}
+		env.ResetBuffers()
+		List([]string{"--purpose", "debug"})
+		output = env.Output()
+		if !strings.Contains(output, "payment") {
+			t.Errorf("Filtered list should contain 'payment', got: %s", output)
+		}
+		if !strings.Contains(output, "checkout") {
+			t.Errorf("Filtered list should contain 'checkout', got: %s", output)
+		}
+		if strings.Contains(output, "login") {
+			t.Errorf("Filtered list should not contain 'login', got: %s", output)
+		}
+	})
+
+	t.Run("should handle empty directory gracefully", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		List([]string{})
+
+		output := env.Output()
+		if !strings.Contains(output, "no workspaces") {
+			t.Errorf("List should mention no workspaces found, got: %s", output)
+		}
+	})
 }
 
-func TestCLIRemoveNonExistentShouldExitWithErrorForNonexistentWorkspace(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
+func TestRemove(t *testing.T) {
+	t.Run("should exit with error for nonexistent workspace", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
 
-	env.ResetBuffers()
-	Remove([]string{"--force", "nonexistent-handle"})
+		env.ResetBuffers()
+		Remove([]string{"--force", "nonexistent-handle"})
 
-	if !env.ExitCalled() {
-		t.Error("Remove should exit with error for nonexistent workspace")
-	}
+		if !env.ExitCalled() {
+			t.Error("Remove should exit with error for nonexistent workspace")
+		}
 
-	output := env.Output()
-	if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
-		t.Errorf("Output should mention workspace not found or failed to get, got: %s", output)
-	}
+		output := env.Output()
+		if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
+			t.Errorf("Output should mention workspace not found or failed to get, got: %s", output)
+		}
+	})
 }
 
-func TestCLICreateInReadOnlyDirectoryShouldExitWithError(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
+func TestInspect(t *testing.T) {
+	t.Run("should fail cleanly for nonexistent workspace", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
 
-	if err := os.Chmod(env.TempDir, 0555); err != nil {
-		t.Skipf("Cannot make directory read-only, skipping test: %v", err)
-	}
+		env.ResetBuffers()
+		Inspect([]string{"nonexistent-handle"})
 
-	env.ResetBuffers()
-	Create([]string{"--purpose", "Test workspace"})
+		if !env.ExitCalled() {
+			t.Error("Inspect should exit with error for nonexistent workspace")
+		}
 
-	if !env.ExitCalled() {
-		t.Error("Create should exit with error in read-only directory")
-	}
+		output := env.Output()
+		if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
+			t.Errorf("Inspect output should mention workspace not found or failed to get, got: %s", output)
+		}
+	})
 }
 
-func TestCLICreateWithSpecialCharactersInPurposeShouldWork(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
+func TestPath(t *testing.T) {
+	t.Run("should fail cleanly for nonexistent workspace", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
 
-	purpose := "Debug: payment flow with café and naïve users"
-	env.ResetBuffers()
-	Create([]string{"--purpose", purpose})
+		env.ResetBuffers()
+		Path([]string{"nonexistent-handle"})
 
-	if env.ExitCalled() {
-		t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
-	}
+		if !env.ExitCalled() {
+			t.Error("Path should exit with error for nonexistent workspace")
+		}
 
-	output := env.Output()
-	if !strings.Contains(output, "workspace created") {
-		t.Errorf("Create output should mention workspace created, got: %s", output)
-	}
-
-	env.ResetBuffers()
-	List([]string{})
-
-	listOutput := env.Output()
-	if !strings.Contains(listOutput, purpose) {
-		t.Errorf("List output should contain purpose with special chars, got: %s", listOutput)
-	}
-}
-
-func TestCLIListEmptyDirectoryShouldHandleGracefully(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
-
-	env.ResetBuffers()
-	List([]string{})
-
-	output := env.Output()
-	if !strings.Contains(output, "no workspaces") {
-		t.Errorf("List should mention no workspaces found, got: %s", output)
-	}
-}
-
-func TestCLIInspectWithNonexistentWorkspaceShouldFailCleanly(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
-
-	env.ResetBuffers()
-	Inspect([]string{"nonexistent-handle"})
-
-	if !env.ExitCalled() {
-		t.Error("Inspect should exit with error for nonexistent workspace")
-	}
-
-	output := env.Output()
-	if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
-		t.Errorf("Inspect output should mention workspace not found or failed to get, got: %s", output)
-	}
-}
-
-func TestCLIPathWithNonexistentWorkspaceShouldFailCleanly(t *testing.T) {
-	env := NewCLITestEnvironment(t)
-	defer env.Cleanup()
-
-	env.ResetBuffers()
-	Path([]string{"nonexistent-handle"})
-
-	if !env.ExitCalled() {
-		t.Error("Path should exit with error for nonexistent workspace")
-	}
-
-	output := env.Output()
-	if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
-		t.Errorf("Path output should mention workspace not found or failed to get, got: %s", output)
-	}
+		output := env.Output()
+		if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
+			t.Errorf("Path output should mention workspace not found or failed to get, got: %s", output)
+		}
+	})
 }
