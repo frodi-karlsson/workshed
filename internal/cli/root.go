@@ -9,7 +9,7 @@ import (
 	"github.com/frodi/workshed/internal/logger"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 var (
 	exitFunc = os.Exit
@@ -40,6 +40,7 @@ Commands:
   path      Show workspace path
   exec      Run a command in repositories
   remove    Remove a workspace
+  update    Update workspace purpose
 
 Flags:
   -h, --help     Show help
@@ -58,6 +59,7 @@ Examples:
   workshed exec aquatic-fish-motion -- make test
   workshed exec aquatic-fish-motion --repo api -- git status
   workshed remove aquatic-fish-motion
+  workshed update --purpose "Debugging authentication" aquatic-fish-motion
 `, version)
 
 	// These output operations should never fail in practice

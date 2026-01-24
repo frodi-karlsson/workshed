@@ -51,4 +51,5 @@ type Store interface {
 	List(ctx context.Context, opts ListOptions) ([]*Workspace, error)
 	Remove(ctx context.Context, handle string) error
 	Path(ctx context.Context, handle string) (string, error)
+	UpdatePurpose(ctx context.Context, handle string, purpose string) error
 }

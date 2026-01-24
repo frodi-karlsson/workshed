@@ -238,3 +238,93 @@ func TestExecErrors(t *testing.T) {
 		errWriter = os.Stderr
 	})
 }
+
+func TestUpdate(t *testing.T) {
+	t.Run("should exit with error when purpose is missing", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		Update([]string{})
+
+		if !env.ExitCalled() {
+			t.Error("Update should exit with error when purpose is missing")
+		}
+
+		errOutput := env.ErrorOutput()
+		if !strings.Contains(errOutput, "--purpose") {
+			t.Errorf("Error output should mention --purpose flag, got: %s", errOutput)
+		}
+	})
+
+	t.Run("should exit with error when handle is missing", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		Update([]string{"--purpose", "New purpose"})
+
+		if !env.ExitCalled() {
+			t.Error("Update should exit with error when handle is missing")
+		}
+
+		errOutput := env.ErrorOutput()
+		if !strings.Contains(errOutput, "handle") {
+			t.Errorf("Error output should mention handle argument, got: %s", errOutput)
+		}
+	})
+
+	t.Run("should exit with error when workspace does not exist", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		Update([]string{"--purpose", "New purpose", "nonexistent-handle"})
+
+		if !env.ExitCalled() {
+			t.Error("Update should exit with error when workspace does not exist")
+		}
+	})
+
+	t.Run("should update purpose successfully", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		Create([]string{"--purpose", "Original purpose"})
+
+		if !env.ExitCalled() {
+			handle := ExtractHandleFromLog(t, env.Output())
+			if handle != "" {
+				env.ResetBuffers()
+				Update([]string{"--purpose", "Updated purpose", handle})
+
+				if env.ExitCalled() {
+					t.Errorf("Update should succeed, but got error: %s", env.ErrorOutput())
+				}
+
+				output := env.Output()
+				if !strings.Contains(output, "purpose updated") {
+					t.Errorf("Output should contain 'purpose updated', got: %s", output)
+				}
+				if !strings.Contains(output, "Updated purpose") {
+					t.Errorf("Output should contain new purpose, got: %s", output)
+				}
+			}
+		}
+	})
+
+	t.Run("should show update in usage", func(t *testing.T) {
+		var buf bytes.Buffer
+		errWriter = &buf
+
+		Usage()
+
+		output := buf.String()
+		if !strings.Contains(output, "update") {
+			t.Errorf("Usage() should contain 'update', got: %s", output)
+		}
+
+		errWriter = os.Stderr
+	})
+}

@@ -61,6 +61,9 @@ workshed exec aquatic-fish-motion -- make test
 # Run command in specific repository
 workshed exec aquatic-fish-motion --repo api -- git status
 
+# Update workspace purpose
+workshed update --purpose "Debugging authentication issue" aquatic-fish-motion
+
 workshed remove aquatic-fish-motion
 ```
 
@@ -117,6 +120,7 @@ There is no rollback, retry logic, or interpretation of results.
 - `path` — Print the workspace path (for `cd $(...)`)
 - `exec` — Run a command in each repository
 - `remove` — Delete a workspace
+- `update` — Update workspace purpose
 - `version` / `--version` — Show version information
 
 ---
@@ -135,18 +139,16 @@ Workshed does not try to understand your code or your workflow. It only manages 
 
 ## Development Status
 
-### Implemented (v0.1.0)
+### Implemented (v0.2.0)
 - Workspace creation with required purpose
 - Multiple repositories per workspace
 - `exec` for sequential batch commands
 - Listing and filtering by purpose
 - Workspace inspection and path lookup
 - Filesystem-backed storage
+- Updating workspace purpose
 
 ### Planned
-
-**Later**
-- Updating workspace purpose
 - Templates for workspace setup
 - Additional filtering and discovery
 - Optional concurrent execution

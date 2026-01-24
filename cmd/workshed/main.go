@@ -37,6 +37,8 @@ func main() {
 		cli.Exec(os.Args[2:])
 	case "remove":
 		cli.Remove(os.Args[2:])
+	case "update":
+		cli.Update(os.Args[2:])
 	case "version", "-v", "--version":
 		cli.Version()
 	case "help", "-h", "--help":

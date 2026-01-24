@@ -388,3 +388,75 @@ func TestExecInRepository(t *testing.T) {
 		}
 	})
 }
+
+func TestUpdatePurpose(t *testing.T) {
+	t.Run("should update purpose successfully", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Original purpose",
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.UpdatePurpose(ctx, ws.Handle, "Updated purpose")
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		ws, err = store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Get failed: %v", err)
+		}
+		if ws.Purpose != "Updated purpose" {
+			t.Errorf("Expected purpose 'Updated purpose', got: %s", ws.Purpose)
+		}
+	})
+
+	t.Run("should return error for empty purpose", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.UpdatePurpose(ctx, ws.Handle, "")
+		if err == nil {
+			t.Error("Expected error for empty purpose")
+		}
+		if err.Error() != "purpose cannot be empty" {
+			t.Errorf("Expected 'purpose cannot be empty' error, got: %v", err)
+		}
+	})
+
+	t.Run("should return error for nonexistent workspace", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		err = store.UpdatePurpose(ctx, "nonexistent-handle", "New purpose")
+		if err == nil {
+			t.Error("Expected error for nonexistent workspace")
+		}
+		if !strings.Contains(err.Error(), "workspace not found") {
+			t.Errorf("Expected 'workspace not found' error, got: %v", err)
+		}
+	})
+}

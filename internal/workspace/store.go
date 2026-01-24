@@ -202,6 +202,26 @@ func (s *FSStore) Path(ctx context.Context, handle string) (string, error) {
 	return ws.Path, nil
 }
 
+// UpdatePurpose updates the purpose of an existing workspace.
+func (s *FSStore) UpdatePurpose(ctx context.Context, handle string, purpose string) error {
+	if purpose == "" {
+		return errors.New("purpose cannot be empty")
+	}
+
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return err
+	}
+
+	ws.Purpose = purpose
+
+	if err := s.writeMetadataToDir(ws, ws.Path); err != nil {
+		return fmt.Errorf("updating purpose: %w", err)
+	}
+
+	return nil
+}
+
 type ExecOptions struct {
 	Target   string
 	Command  []string
