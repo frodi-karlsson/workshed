@@ -5,36 +5,46 @@ import (
 	"time"
 )
 
-// Workspace represents an intent-scoped local development environment.
-// Each workspace has a unique handle, a human-readable purpose, optional
-// repository configuration, and a filesystem path on disk.
+const CurrentMetadataVersion = 1
+
+type Repository struct {
+	URL  string `json:"url"`
+	Ref  string `json:"ref,omitempty"`
+	Name string `json:"name"`
+}
+
+type RepositoryOption struct {
+	URL string
+	Ref string
+}
+
 type Workspace struct {
-	Version   int       `json:"version"`
-	Handle    string    `json:"handle"`
-	Purpose   string    `json:"purpose"`
-	RepoURL   string    `json:"repo_url,omitempty"`
-	RepoRef   string    `json:"repo_ref,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	Path      string    `json:"-"` // computed, not stored
+	Version      int          `json:"version"`
+	Handle       string       `json:"handle"`
+	Purpose      string       `json:"purpose"`
+	Repositories []Repository `json:"repositories"`
+	CreatedAt    time.Time    `json:"created_at"`
+	Path         string       `json:"-"`
 }
 
-const (
-	CurrentMetadataVersion = 1
-)
+func (ws *Workspace) GetRepositoryByName(name string) *Repository {
+	for i := range ws.Repositories {
+		if ws.Repositories[i].Name == name {
+			return &ws.Repositories[i]
+		}
+	}
+	return nil
+}
 
-// CreateOptions contains options for creating a workspace
 type CreateOptions struct {
-	Purpose string
-	RepoURL string
-	RepoRef string
+	Purpose      string
+	Repositories []RepositoryOption
 }
 
-// ListOptions contains options for listing workspaces
 type ListOptions struct {
 	PurposeFilter string
 }
 
-// Store defines the interface for workspace storage operations
 type Store interface {
 	Create(ctx context.Context, opts CreateOptions) (*Workspace, error)
 	Get(ctx context.Context, handle string) (*Workspace, error)

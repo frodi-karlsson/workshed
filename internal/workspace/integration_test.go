@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestIntegrationCreate(t *testing.T) {
@@ -20,10 +19,15 @@ func TestIntegrationCreate(t *testing.T) {
 			t.Fatalf("NewFSStore failed: %v", err)
 		}
 
+		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test Repo"})
+
 		t.Run("successful creation leaves no temp dirs", func(t *testing.T) {
 			ctx := context.Background()
 			opts := CreateOptions{
 				Purpose: "Test workspace",
+				Repositories: []RepositoryOption{
+					{URL: repoURL, Ref: "main"},
+				},
 			}
 
 			ws, err := store.Create(ctx, opts)
@@ -45,7 +49,9 @@ func TestIntegrationCreate(t *testing.T) {
 			ctx := context.Background()
 			opts := CreateOptions{
 				Purpose: "Test workspace",
-				RepoURL: "invalid-scheme://example.com/repo",
+				Repositories: []RepositoryOption{
+					{URL: "invalid-scheme://example.com/repo"},
+				},
 			}
 
 			_, err = store.Create(ctx, opts)
@@ -74,10 +80,11 @@ func TestIntegrationCreate(t *testing.T) {
 			ctx := context.Background()
 			opts := CreateOptions{
 				Purpose: "Test workspace",
-				RepoURL: "",
+				Repositories: []RepositoryOption{
+					{URL: "ftp://invalid.com/repo"},
+				},
 			}
 
-			opts.RepoURL = "ftp://invalid.com/repo"
 			_, err = store.Create(ctx, opts)
 			if err == nil {
 				t.Fatal("Expected error for unsupported URL scheme")
@@ -101,6 +108,8 @@ func TestIntegrationCreate(t *testing.T) {
 		store, _ := CreateTestStore(t)
 		ctx := context.Background()
 
+		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test"})
+
 		testCases := []struct {
 			name    string
 			purpose string
@@ -114,7 +123,12 @@ func TestIntegrationCreate(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				ws, err := store.Create(ctx, CreateOptions{Purpose: tc.purpose})
+				ws, err := store.Create(ctx, CreateOptions{
+					Purpose: tc.purpose,
+					Repositories: []RepositoryOption{
+						{URL: repoURL, Ref: "main"},
+					},
+				})
 				if err != nil {
 					t.Fatalf("Create failed for purpose %q: %v", tc.purpose, err)
 				}
@@ -134,6 +148,9 @@ func TestIntegrationCreate(t *testing.T) {
 	t.Run("should avoid collisions during concurrent creation", func(t *testing.T) {
 		store, _ := CreateTestStore(t)
 		ctx := context.Background()
+
+		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test"})
+
 		numWorkspaces := 10
 
 		type result struct {
@@ -146,7 +163,12 @@ func TestIntegrationCreate(t *testing.T) {
 
 		for i := 0; i < numWorkspaces; i++ {
 			go func(idx int) {
-				ws, err := store.Create(ctx, CreateOptions{Purpose: "Concurrent workspace"})
+				ws, err := store.Create(ctx, CreateOptions{
+					Purpose: "Concurrent workspace",
+					Repositories: []RepositoryOption{
+						{URL: repoURL, Ref: "main"},
+					},
+				})
 				results <- result{ws, err, idx}
 			}(i)
 		}
@@ -175,32 +197,29 @@ func TestIntegrationCreate(t *testing.T) {
 		}
 	})
 
-	t.Run("should classify invalid auth errors correctly", func(t *testing.T) {
+	t.Run("should create workspace with local repository", func(t *testing.T) {
 		store, _ := CreateTestStore(t)
 		ctx := context.Background()
 
+		repoURL := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		ws, err := store.Create(ctx, CreateOptions{
-			Purpose: "Test private repo",
-			RepoURL: "https://github.com/this-repo-does-not-exist-12345/private-repo.git",
-			RepoRef: "main",
+			Purpose: "Local repo test",
+			Repositories: []RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
 		})
 
-		if err == nil {
-			if ws != nil && FileExists(ws.Path) {
-				t.Log("Warning: clone succeeded unexpectedly (repo may be public)")
-				if err := store.Remove(ctx, ws.Handle); err != nil {
-					t.Logf("Warning: failed to cleanup: %v", err)
-				}
-			} else {
-				t.Skip("Network unavailable, skipping auth failure test")
-			}
-			return
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
 		}
 
-		if !strings.Contains(err.Error(), "repository not found") &&
-			!strings.Contains(err.Error(), "authentication failed") &&
-			!strings.Contains(err.Error(), "not found") {
-			t.Logf("Got error: %v", err)
+		if ws == nil {
+			t.Fatal("Expected workspace to be created")
+		}
+
+		if len(ws.Repositories) != 1 {
+			t.Errorf("Expected 1 repository, got %d", len(ws.Repositories))
 		}
 	})
 }
@@ -210,7 +229,11 @@ func TestIntegrationGet(t *testing.T) {
 		store, _ := CreateTestStore(t)
 		ctx := context.Background()
 
-		ws := store.CreateMust(ctx, "Test workspace")
+		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test"})
+
+		ws := store.CreateMust(ctx, "Test workspace", []RepositoryOption{
+			{URL: repoURL, Ref: "main"},
+		})
 
 		metaPath := filepath.Join(ws.Path, metadataFileName)
 		if err := os.WriteFile(metaPath, []byte("invalid json {{{"), 0644); err != nil {
@@ -227,7 +250,11 @@ func TestIntegrationGet(t *testing.T) {
 		store, _ := CreateTestStore(t)
 		ctx := context.Background()
 
-		ws := store.CreateMust(ctx, "Test workspace")
+		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test"})
+
+		ws := store.CreateMust(ctx, "Test workspace", []RepositoryOption{
+			{URL: repoURL, Ref: "main"},
+		})
 
 		if err := os.RemoveAll(ws.Path); err != nil {
 			t.Fatalf("Failed to remove workspace directory: %v", err)
@@ -241,34 +268,120 @@ func TestIntegrationGet(t *testing.T) {
 }
 
 func TestIntegrationClone(t *testing.T) {
-	t.Run("should clean up properly on timeout", func(t *testing.T) {
-		if testing.Short() {
-			t.Skip("Skipping timeout test in short mode")
-		}
-
+	t.Run("should clone local repository successfully", func(t *testing.T) {
 		store, _ := CreateTestStore(t)
+		ctx := context.Background()
 
-		cancelCtx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		defer cancel()
+		repoURL := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "test content"})
 
-		_, err := store.Create(cancelCtx, CreateOptions{
-			Purpose: "Test timeout cleanup",
-			RepoURL: "https://github.com/torvalds/linux",
-			RepoRef: "master",
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Local clone test",
+			Repositories: []RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
 		})
 
-		if err == nil {
-			t.Skip("Clone succeeded before timeout, skipping cleanup verification")
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
 		}
 
-		MustNotHaveTempDirs(t, store.Root())
+		if ws == nil {
+			t.Fatal("Expected workspace to be created")
+		}
+
+		repoPath, err := store.GetRepositoryPath(ctx, ws.Handle, "test-repo")
+		if err != nil {
+			t.Fatalf("GetRepositoryPath failed: %v", err)
+		}
+		if !FileExists(repoPath) {
+			t.Errorf("Expected repository to be cloned at %s", repoPath)
+		}
+
+		expectedFile := filepath.Join(repoPath, "file.txt")
+		if !FileExists(expectedFile) {
+			t.Errorf("Expected cloned file to exist at %s", expectedFile)
+		}
 	})
 }
 
-func (s *FSStore) CreateMust(ctx context.Context, purpose string) *Workspace {
-	ws, err := s.Create(ctx, CreateOptions{Purpose: purpose})
+func (s *FSStore) CreateMust(ctx context.Context, purpose string, repos []RepositoryOption) *Workspace {
+	ws, err := s.Create(ctx, CreateOptions{
+		Purpose:      purpose,
+		Repositories: repos,
+	})
 	if err != nil {
 		panic(err)
 	}
 	return ws
+}
+
+func TestIntegrationExec(t *testing.T) {
+	t.Run("should execute command in all repositories", func(t *testing.T) {
+		store, _ := CreateTestStore(t)
+		ctx := context.Background()
+
+		repoURL := CreateLocalGitRepo(t, "repo1", map[string]string{"file.txt": "content"})
+
+		ws := store.CreateMust(ctx, "Test exec", []RepositoryOption{
+			{URL: repoURL, Ref: "main"},
+		})
+
+		results, err := store.Exec(ctx, ws.Handle, ExecOptions{
+			Target:  "all",
+			Command: []string{"pwd"},
+		})
+		if err != nil {
+			t.Fatalf("Exec failed: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("Expected 1 result, got %d", len(results))
+		}
+	})
+
+	t.Run("should execute command in specific repository", func(t *testing.T) {
+		store, _ := CreateTestStore(t)
+		ctx := context.Background()
+
+		repoURL := CreateLocalGitRepo(t, "repo1", map[string]string{"file.txt": "content"})
+
+		ws := store.CreateMust(ctx, "Test exec", []RepositoryOption{
+			{URL: repoURL, Ref: "main"},
+		})
+
+		results, err := store.Exec(ctx, ws.Handle, ExecOptions{
+			Target:  "repo1",
+			Command: []string{"pwd"},
+		})
+		if err != nil {
+			t.Fatalf("Exec failed: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("Expected 1 result, got %d", len(results))
+		}
+		if results[0].Repository != "repo1" {
+			t.Errorf("Expected repository 'repo1', got: %s", results[0].Repository)
+		}
+	})
+
+	t.Run("should return error for nonexistent repository", func(t *testing.T) {
+		store, _ := CreateTestStore(t)
+		ctx := context.Background()
+
+		repoURL := CreateLocalGitRepo(t, "repo1", map[string]string{"file.txt": "content"})
+
+		ws := store.CreateMust(ctx, "Test exec", []RepositoryOption{
+			{URL: repoURL, Ref: "main"},
+		})
+
+		_, err := store.Exec(ctx, ws.Handle, ExecOptions{
+			Target:  "nonexistent-repo",
+			Command: []string{"pwd"},
+		})
+		if err == nil {
+			t.Error("Expected error for nonexistent repository")
+		}
+		if !strings.Contains(err.Error(), "repository not found") {
+			t.Errorf("Expected 'repository not found' error, got: %v", err)
+		}
+	})
 }

@@ -2,7 +2,9 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -39,22 +41,15 @@ func (e *WorkspaceTestEnvironment) Cleanup() {
 	}
 }
 
-func (e *WorkspaceTestEnvironment) CreateWorkspace(purpose string) *Workspace {
-	opts := CreateOptions{
-		Purpose: purpose,
+func (e *WorkspaceTestEnvironment) CreateWorkspace(purpose string, repos []RepositoryOption) *Workspace {
+	if repos == nil {
+		repos = []RepositoryOption{
+			{URL: "https://github.com/test/repo", Ref: "main"},
+		}
 	}
-	ws, err := e.Store.Create(e.Ctx, opts)
-	if err != nil {
-		e.T.Fatalf("Create failed: %v", err)
-	}
-	return ws
-}
-
-func (e *WorkspaceTestEnvironment) CreateWorkspaceWithRepo(purpose, repoURL, repoRef string) *Workspace {
 	opts := CreateOptions{
-		Purpose: purpose,
-		RepoURL: repoURL,
-		RepoRef: repoRef,
+		Purpose:      purpose,
+		Repositories: repos,
 	}
 	ws, err := e.Store.Create(e.Ctx, opts)
 	if err != nil {
@@ -144,4 +139,71 @@ func CreateTestStore(t *testing.T) (*FSStore, string) {
 		t.Fatalf("NewFSStore failed: %v", err)
 	}
 	return store, root
+}
+
+func CreateLocalGitRepo(t *testing.T, name string, files map[string]string) string {
+	tmpDir := t.TempDir()
+	repoDir := filepath.Join(tmpDir, name)
+
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatalf("Failed to create repo dir: %v", err)
+	}
+
+	cmd := exec.Command("git", "init")
+	cmd.Dir = repoDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command("git", "config", "user.email", "test@example.com")
+	cmd.Dir = repoDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git config user.email failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command("git", "config", "user.name", "Test User")
+	cmd.Dir = repoDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git config user.name failed: %v\n%s", err, out)
+	}
+
+	if err := AddGitCommit(repoDir, "Initial commit", files); err != nil {
+		t.Fatalf("Failed to add initial commit: %v", err)
+	}
+
+	return "file://" + repoDir
+}
+
+func AddGitCommit(repoDir, message string, files map[string]string) error {
+	for relPath, content := range files {
+		fullPath := filepath.Join(repoDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+			return err
+		}
+		cmd := exec.Command("git", "add", relPath)
+		cmd.Dir = repoDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("git add %s failed: %v\n%s", relPath, err, out)
+		}
+	}
+
+	cmd := exec.Command("git", "commit", "-m", message)
+	cmd.Dir = repoDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git commit failed: %v\n%s", err, out)
+	}
+
+	return nil
+}
+
+func CreateGitBranch(repoDir, branchName string) error {
+	cmd := exec.Command("git", "checkout", "-b", branchName)
+	cmd.Dir = repoDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git checkout -b %s failed: %v\n%s", branchName, err, out)
+	}
+	return nil
 }

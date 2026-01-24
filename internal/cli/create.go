@@ -12,16 +12,16 @@ import (
 
 const defaultCloneTimeout = 5 * time.Minute
 
-// Create creates a new workspace with the specified purpose and optional repository.
 func Create(args []string) {
 	l := logger.NewLogger(logger.INFO, "create")
 
 	fs := flag.NewFlagSet("create", flag.ExitOnError)
 	purpose := fs.String("purpose", "", "Purpose of the workspace (required)")
-	repo := fs.String("repo", "", "Repository URL with optional ref (format: url@ref)")
+	repoFlags := fs.String("repo", "", "Repository URL with optional ref (format: url@ref). Comma-separated for multiple repos.")
+	reposAlias := fs.String("repos", "", "Alias for --repo")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed create --purpose <purpose> [--repo url@ref]\n\n")
+		logger.SafeFprintf(errWriter, "Usage: workshed create --purpose <purpose> [--repo url@ref]...\n\n")
 		logger.SafeFprintf(errWriter, "Flags:\n")
 		fs.PrintDefaults()
 	}
@@ -37,14 +37,29 @@ func Create(args []string) {
 		exitFunc(1)
 	}
 
-	opts := workspace.CreateOptions{
-		Purpose: *purpose,
+	repos := *repoFlags
+	if *reposAlias != "" {
+		repos = *reposAlias
 	}
 
-	if *repo != "" {
-		url, ref := parseRepoFlag(*repo)
-		opts.RepoURL = url
-		opts.RepoRef = ref
+	opts := workspace.CreateOptions{
+		Purpose:      *purpose,
+		Repositories: []workspace.RepositoryOption{},
+	}
+
+	if repos != "" {
+		repoList := strings.Split(repos, ",")
+		for _, repo := range repoList {
+			repo = strings.TrimSpace(repo)
+			if repo == "" {
+				continue
+			}
+			url, ref := parseRepoFlag(repo)
+			opts.Repositories = append(opts.Repositories, workspace.RepositoryOption{
+				URL: url,
+				Ref: ref,
+			})
+		}
 	}
 
 	store, err := workspace.NewFSStore(GetWorkshedRoot())
@@ -63,7 +78,15 @@ func Create(args []string) {
 		return
 	}
 
-	l.Success("workspace created", "handle", ws.Handle, "path", ws.Path)
+	if len(ws.Repositories) > 0 {
+		repoNames := make([]string, len(ws.Repositories))
+		for i, repo := range ws.Repositories {
+			repoNames[i] = repo.Name
+		}
+		l.Success("workspace created", "handle", ws.Handle, "path", ws.Path, "repos", strings.Join(repoNames, ", "))
+	} else {
+		l.Success("workspace created", "handle", ws.Handle, "path", ws.Path)
+	}
 }
 
 func parseRepoFlag(repo string) (url, ref string) {

@@ -39,24 +39,25 @@ If `git worktree` is about checking out another branch, Workshed is about groupi
 
 ```bash
 # Create a workspace for a specific task
-# (multi-repo support coming in v0.2)
 workshed create \
   --purpose "Debug payment timeout across services" \
-  --repo api=git@github.com:org/api@main
+  --repos "git@github.com:org/api@main,git@github.com:org/worker@develop"
 
 workshed list
 workshed list --purpose payment
 
 cd $(workshed path aquatic-fish-motion)
 
-workshed exec -- git status
-workshed exec -- git commit -m "WIP"
-workshed exec -- git push
+# Run command in all repositories
+workshed exec aquatic-fish-motion -- make test
+
+# Run command in specific repository
+workshed exec aquatic-fish-motion --repo api -- git status
 
 workshed remove aquatic-fish-motion
 ```
 
-This creates a directory containing the cloned repository and a small metadata file describing the workspace.
+This creates a directory containing cloned repositories and a small metadata file describing the workspace.
 
 ---
 
@@ -76,13 +77,26 @@ If the directory exists, the workspace exists.
 Repositories are cloned into subdirectories of the workspace. They are not coupled beyond being colocated.
 
 ### Batch execution (`exec`)
-`workshed exec` runs a command in each repository directory:
+`workshed exec` runs a command in each repository:
 
-- Commands run sequentially
+- Commands run sequentially by default
 - Repositories are processed in creation order
 - Each command runs from the repository root
-- Output is streamed
+- Use `--repo <name>` to target a specific repository
+- Use `--repo all` to run in all repositories (default)
+- Output is streamed with repository headers
 - Execution stops on the first non-zero exit code
+
+```bash
+# Run in all repositories
+workshed exec aquatic-fish-motion -- make test
+
+# Run in specific repository
+workshed exec aquatic-fish-motion --repo api -- make build
+
+# Run in workspace root
+workshed exec aquatic-fish-motion -- make setup
+```
 
 There is no rollback, retry logic, or interpretation of results.
 
@@ -114,22 +128,18 @@ Workshed does not try to understand your code or your workflow. It only manages 
 
 ## Development Status
 
-### Implemented (v0.1)
+### Implemented (v0.1.0)
 - Workspace creation with required purpose
-- Single-repository workspaces
+- Multiple repositories per workspace
+- `exec` for sequential batch commands
 - Listing and filtering by purpose
 - Workspace inspection and path lookup
 - Filesystem-backed storage
 
 ### Planned
 
-**v0.2**
-- Multiple repositories per workspace
-- `exec` for sequential batch commands
-- Updating workspace purpose
-- Improved output and errors
-
 **Later**
+- Updating workspace purpose
 - Templates for workspace setup
 - Additional filtering and discovery
 - Optional concurrent execution
@@ -163,7 +173,7 @@ make lint-fix     # auto-fix issues
 - `WORKSHED_LOG_FORMAT` — output format: `human`, `json`, or `raw` (default: `human`)
 
 ### Metadata
-Workspaces are stored as directories containing a `.workshed.json` metadata file with workspace metadata (handle, purpose, repository URL, reference, creation time).
+Workspaces are stored as directories containing a `.workshed.json` metadata file with workspace metadata (handle, purpose, list of repositories with URL/ref/name, creation time).
 
 ---
 

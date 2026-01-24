@@ -38,6 +38,7 @@ Commands:
   list      List workspaces
   inspect   Show workspace details
   path      Show workspace path
+  exec      Run a command in repositories
   remove    Remove a workspace
 
 Flags:
@@ -48,12 +49,14 @@ Environment:
   WORKSHED_LOG_FORMAT  Output format (human|json|raw, default: human)
 
 Examples:
-  workshed create --purpose "Debug payment timeout"
-  workshed create --purpose "Add login" --repo git@github.com:org/api@main
+  workshed create --purpose "Debug payment timeout" \
+    --repo git@github.com:org/api@main \
+    --repo git@github.com:org/worker@develop
   workshed list
   workshed list --purpose debug
   workshed inspect aquatic-fish-motion
-  cd $(workshed path aquatic-fish-motion)
+  workshed exec aquatic-fish-motion -- make test
+  workshed exec aquatic-fish-motion --repo api -- git status
   workshed remove aquatic-fish-motion
 `, version)
 

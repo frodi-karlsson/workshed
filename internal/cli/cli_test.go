@@ -181,3 +181,60 @@ func TestTruncate(t *testing.T) {
 		})
 	}
 }
+
+func TestExecErrors(t *testing.T) {
+	t.Run("should exit with error when workspace handle is missing", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		Exec([]string{"--", "echo", "hello"})
+
+		if !env.ExitCalled() {
+			t.Error("Exec should exit with error when handle is missing")
+		}
+	})
+
+	t.Run("should exit with error when command separator is missing", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		Exec([]string{"handle", "echo", "hello"})
+
+		if !env.ExitCalled() {
+			t.Error("Exec should exit with error when separator is missing")
+		}
+
+		errOutput := env.ErrorOutput()
+		if !strings.Contains(errOutput, "Usage") {
+			t.Errorf("Error output should contain usage, got: %s", errOutput)
+		}
+	})
+
+	t.Run("should exit with error when workspace does not exist", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		Exec([]string{"nonexistent-handle", "--", "echo", "hello"})
+
+		if !env.ExitCalled() {
+			t.Error("Exec should exit with error when workspace does not exist")
+		}
+	})
+
+	t.Run("should show exec in usage", func(t *testing.T) {
+		var buf bytes.Buffer
+		errWriter = &buf
+
+		Usage()
+
+		output := buf.String()
+		if !strings.Contains(output, "exec") {
+			t.Errorf("Usage() should contain 'exec', got: %s", output)
+		}
+
+		errWriter = os.Stderr
+	})
+}

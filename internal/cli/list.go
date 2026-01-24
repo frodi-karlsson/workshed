@@ -55,9 +55,17 @@ func List(args []string) {
 	logger.SafeFprintln(w, "HANDLE\tPURPOSE\tREPO\tCREATED")
 
 	for _, ws := range workspaces {
-		repo := truncate(ws.RepoURL, 40)
+		repoCount := len(ws.Repositories)
+		var repoInfo string
+		if repoCount == 1 {
+			repoInfo = ws.Repositories[0].Name
+		} else if repoCount > 1 {
+			repoInfo = fmt.Sprintf("%d repos", repoCount)
+		} else {
+			repoInfo = "(empty)"
+		}
 		created := ws.CreatedAt.Format("2006-01-02 15:04")
-		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ws.Handle, ws.Purpose, repo, created); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ws.Handle, ws.Purpose, repoInfo, created); err != nil {
 			l.Error("failed to write workspace line", "error", err)
 			break
 		}

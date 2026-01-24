@@ -8,7 +8,6 @@ import (
 	"github.com/frodi/workshed/internal/workspace"
 )
 
-// Inspect displays detailed information about a workspace.
 func Inspect(args []string) {
 	l := logger.NewLogger(logger.INFO, "inspect")
 
@@ -47,10 +46,11 @@ func Inspect(args []string) {
 
 	l.Info("workspace details", "handle", ws.Handle, "purpose", ws.Purpose, "created", ws.CreatedAt.Format("2006-01-02 15:04:05"), "path", ws.Path)
 
-	if ws.RepoURL != "" {
-		l.Info("repository info", "repo", ws.RepoURL)
-		if ws.RepoRef != "" {
-			l.Info("reference", "ref", ws.RepoRef)
+	for _, repo := range ws.Repositories {
+		if repo.Ref != "" {
+			l.Info("repository", "name", repo.Name, "url", repo.URL, "ref", repo.Ref)
+		} else {
+			l.Info("repository", "name", repo.Name, "url", repo.URL)
 		}
 	}
 }

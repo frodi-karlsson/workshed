@@ -33,6 +33,8 @@ func main() {
 		cli.Inspect(os.Args[2:])
 	case "path":
 		cli.Path(os.Args[2:])
+	case "exec":
+		cli.Exec(os.Args[2:])
 	case "remove":
 		cli.Remove(os.Args[2:])
 	case "version", "-v", "--version":

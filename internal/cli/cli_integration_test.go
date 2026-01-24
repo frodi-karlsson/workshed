@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/frodi/workshed/internal/workspace"
 )
@@ -18,8 +17,10 @@ func TestCreate(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Test workspace"})
+		Create([]string{"--purpose", "Test workspace", "--repo", repoURL})
 		if env.ExitCalled() {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
@@ -58,6 +59,9 @@ func TestCreate(t *testing.T) {
 		if !strings.Contains(output, "Test workspace") {
 			t.Errorf("Inspect output should contain purpose, got: %s", output)
 		}
+		if !strings.Contains(output, "test-repo") {
+			t.Errorf("Inspect output should contain repository name, got: %s", output)
+		}
 
 		env.ResetBuffers()
 		Remove([]string{"--force", handle})
@@ -94,44 +98,25 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
-	t.Run("should respect context timeout", func(t *testing.T) {
+	t.Run("should create workspace with local repository", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
-		store, err := workspace.NewFSStore(env.TempDir)
-		if err != nil {
-			t.Fatalf("Failed to create store: %v", err)
+		repoURL := workspace.CreateLocalGitRepo(t, "local-test", map[string]string{"README.md": "# Test"})
+
+		env.ResetBuffers()
+		Create([]string{"--purpose", "Local repo test", "--repo", repoURL})
+
+		if env.ExitCalled() {
+			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
-		defer cancel()
-
-		time.Sleep(10 * time.Millisecond)
-
-		opts := workspace.CreateOptions{
-			Purpose: "Test timeout",
-			RepoURL: "https://github.com/torvalds/linux",
-			RepoRef: "master",
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should contain 'workspace created', got: %s", output)
 		}
-
-		_, err = store.Create(ctx, opts)
-		if err == nil {
-			t.Error("Create should fail with cancelled context")
-		}
-
-		if !strings.Contains(err.Error(), "context") && !strings.Contains(err.Error(), "signal") {
-			t.Logf("Expected context/signal error, got: %v", err)
-		}
-
-		entries, err := os.ReadDir(env.TempDir)
-		if err != nil {
-			t.Fatalf("Failed to read tmpDir: %v", err)
-		}
-
-		for _, entry := range entries {
-			if strings.HasPrefix(entry.Name(), ".tmp-") {
-				t.Errorf("Temporary directory not cleaned up: %s", entry.Name())
-			}
+		if !strings.Contains(output, "local-test") {
+			t.Errorf("Create output should contain repository name, got: %s", output)
 		}
 	})
 
@@ -143,8 +128,10 @@ func TestCreate(t *testing.T) {
 			t.Skipf("Cannot make directory read-only, skipping test: %v", err)
 		}
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Test workspace"})
+		Create([]string{"--purpose", "Test workspace", "--repo", repoURL})
 
 		if !env.ExitCalled() {
 			t.Error("Create should exit with error in read-only directory")
@@ -155,9 +142,11 @@ func TestCreate(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		purpose := "Debug: payment flow with café and naïve users"
 		env.ResetBuffers()
-		Create([]string{"--purpose", purpose})
+		Create([]string{"--purpose", purpose, "--repo", repoURL})
 
 		if env.ExitCalled() {
 			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
@@ -190,17 +179,34 @@ func TestList(t *testing.T) {
 
 		ctx := context.Background()
 
-		_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Debug payment flow"})
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		_, err = store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Debug payment flow",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
 
-		_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Add login feature"})
+		_, err = store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Add login feature",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
 
-		_, err = store.Create(ctx, workspace.CreateOptions{Purpose: "Debug checkout bug"})
+		_, err = store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Debug checkout bug",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}

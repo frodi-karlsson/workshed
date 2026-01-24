@@ -51,9 +51,9 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		return nil, errors.New("purpose is required")
 	}
 
-	if opts.RepoURL != "" {
-		if err := validateRepoURL(opts.RepoURL); err != nil {
-			return nil, fmt.Errorf("invalid repository URL: %w", err)
+	if len(opts.Repositories) > 0 {
+		if err := validateRepositories(opts.Repositories); err != nil {
+			return nil, fmt.Errorf("invalid repositories: %w", err)
 		}
 	}
 
@@ -66,13 +66,21 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		return nil, fmt.Errorf("generating handle: %w", err)
 	}
 
+	repos := make([]Repository, len(opts.Repositories))
+	for i, opt := range opts.Repositories {
+		repos[i] = Repository{
+			URL:  opt.URL,
+			Ref:  opt.Ref,
+			Name: extractRepoName(opt.URL),
+		}
+	}
+
 	ws := &Workspace{
-		Version:   CurrentMetadataVersion,
-		Handle:    h,
-		Purpose:   opts.Purpose,
-		RepoURL:   opts.RepoURL,
-		RepoRef:   opts.RepoRef,
-		CreatedAt: time.Now(),
+		Version:      CurrentMetadataVersion,
+		Handle:       h,
+		Purpose:      opts.Purpose,
+		Repositories: repos,
+		CreatedAt:    time.Now(),
 	}
 
 	tmpDir, err := os.MkdirTemp(s.root, ".tmp-")
@@ -85,7 +93,6 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 	defer func() {
 		if !success {
 			if err := os.RemoveAll(tmpDir); err != nil {
-				// Store the cleanup error - we'll combine it with the main error
 				cleanupErr = fmt.Errorf("cleanup of temp directory %s failed: %w", tmpDir, err)
 			}
 		}
@@ -98,13 +105,11 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		return nil, fmt.Errorf("writing metadata: %w", err)
 	}
 
-	if opts.RepoURL != "" {
-		if err := s.cloneRepo(ctx, ws, tmpDir); err != nil {
-			if cleanupErr != nil {
-				return nil, fmt.Errorf("cloning repository: %w; %v", err, cleanupErr)
-			}
-			return nil, fmt.Errorf("cloning repository: %w", err)
+	if err := s.cloneRepositories(ctx, repos, tmpDir); err != nil {
+		if cleanupErr != nil {
+			return nil, fmt.Errorf("cloning repositories: %w; %v", err, cleanupErr)
 		}
+		return nil, fmt.Errorf("cloning repositories: %w", err)
 	}
 
 	finalDir := s.workspaceDir(h)
@@ -197,6 +202,115 @@ func (s *FSStore) Path(ctx context.Context, handle string) (string, error) {
 	return ws.Path, nil
 }
 
+type ExecOptions struct {
+	Target   string
+	Command  []string
+	Parallel bool
+}
+
+type ExecResult struct {
+	Repository string
+	Dir        string
+	ExitCode   int
+	Output     []byte
+}
+
+func (s *FSStore) Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error) {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []ExecResult
+
+	switch opts.Target {
+	case "", "all":
+		for _, repo := range ws.Repositories {
+			result, err := s.execInRepository(ctx, repo, ws.Path, opts.Command)
+			results = append(results, result)
+			if err != nil {
+				return results, err
+			}
+			if result.ExitCode != 0 {
+				return results, fmt.Errorf("command failed in %s with exit code %d", repo.Name, result.ExitCode)
+			}
+		}
+	case "root":
+		result := ExecResult{
+			Repository: "root",
+			Dir:        ws.Path,
+		}
+		cmd := exec.CommandContext(ctx, opts.Command[0], opts.Command[1:]...)
+		cmd.Dir = ws.Path
+		output, err := cmd.CombinedOutput()
+		result.Output = output
+		if err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				result.ExitCode = exitErr.ExitCode()
+			} else {
+				result.ExitCode = 1
+			}
+		}
+		results = append(results, result)
+		if result.ExitCode != 0 {
+			return results, fmt.Errorf("command failed with exit code %d", result.ExitCode)
+		}
+	default:
+		repo := ws.GetRepositoryByName(opts.Target)
+		if repo == nil {
+			return nil, fmt.Errorf("repository not found: %s", opts.Target)
+		}
+		result, err := s.execInRepository(ctx, *repo, ws.Path, opts.Command)
+		results = append(results, result)
+		if err != nil {
+			return results, err
+		}
+		if result.ExitCode != 0 {
+			return results, fmt.Errorf("command failed in %s with exit code %d", repo.Name, result.ExitCode)
+		}
+	}
+
+	return results, nil
+}
+
+func (s *FSStore) execInRepository(ctx context.Context, repo Repository, wsPath string, cmdArgs []string) (ExecResult, error) {
+	repoDir := filepath.Join(wsPath, repo.Name)
+	result := ExecResult{
+		Repository: repo.Name,
+		Dir:        repoDir,
+	}
+
+	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
+	cmd.Dir = repoDir
+	output, err := cmd.CombinedOutput()
+	result.Output = output
+
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			result.ExitCode = exitErr.ExitCode()
+		} else {
+			result.ExitCode = 1
+		}
+		return result, err
+	}
+
+	return result, nil
+}
+
+func (s *FSStore) GetRepositoryPath(ctx context.Context, handle, repoName string) (string, error) {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return "", err
+	}
+
+	repo := ws.GetRepositoryByName(repoName)
+	if repo == nil {
+		return "", fmt.Errorf("repository not found: %s", repoName)
+	}
+
+	return filepath.Join(ws.Path, repo.Name), nil
+}
+
 func (s *FSStore) workspaceDir(handle string) string {
 	return filepath.Join(s.root, handle)
 }
@@ -213,14 +327,38 @@ func validateRepoURL(url string) error {
 		return nil
 	}
 
-	validSchemes := []string{"https://", "http://", "git://", "ssh://"}
+	validSchemes := []string{"https://", "http://", "git://", "ssh://", "file://"}
 	for _, scheme := range validSchemes {
 		if strings.HasPrefix(url, scheme) {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("unsupported URL scheme (expected https://, git@, ssh://, or git://)")
+	return fmt.Errorf("unsupported URL scheme (expected https://, git@, ssh://, git://, or file://)")
+}
+
+func validateRepositories(repos []RepositoryOption) error {
+	seenURLs := make(map[string]bool)
+	seenNames := make(map[string]bool)
+
+	for _, repo := range repos {
+		if err := validateRepoURL(repo.URL); err != nil {
+			return fmt.Errorf("invalid repository URL %s: %w", repo.URL, err)
+		}
+
+		if seenURLs[repo.URL] {
+			return fmt.Errorf("duplicate repository URL: %s", repo.URL)
+		}
+		seenURLs[repo.URL] = true
+
+		name := extractRepoName(repo.URL)
+		if seenNames[name] {
+			return fmt.Errorf("duplicate repository name: %s", name)
+		}
+		seenNames[name] = true
+	}
+
+	return nil
 }
 
 func (s *FSStore) writeMetadataToDir(ws *Workspace, dir string) error {
@@ -238,19 +376,14 @@ func (s *FSStore) writeMetadataToDir(ws *Workspace, dir string) error {
 	return nil
 }
 
-func (s *FSStore) cloneRepo(ctx context.Context, ws *Workspace, wsDir string) error {
-	url := ws.RepoURL
-	ref := ws.RepoRef
+func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir string) error {
+	url := repo.URL
+	ref := repo.Ref
 	if ref == "" {
 		ref = "main"
 	}
 
-	repoName := extractRepoName(url)
-	if repoName == "" {
-		return errors.New("could not extract repository name from URL")
-	}
-
-	repoDir := filepath.Join(wsDir, repoName)
+	repoDir := filepath.Join(wsDir, repo.Name)
 
 	cmd := exec.CommandContext(ctx, "git", "clone", url, repoDir)
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -263,6 +396,15 @@ func (s *FSStore) cloneRepo(ctx context.Context, ws *Workspace, wsDir string) er
 		return classifyGitError("checkout", err, output)
 	}
 
+	return nil
+}
+
+func (s *FSStore) cloneRepositories(ctx context.Context, repos []Repository, wsDir string) error {
+	for _, repo := range repos {
+		if err := s.cloneRepo(ctx, repo, wsDir); err != nil {
+			return fmt.Errorf("failed to clone %s: %w", repo.Name, err)
+		}
+	}
 	return nil
 }
 
