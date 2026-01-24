@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# Pre-commit hook for Go linting
+# This hook runs golangci-lint on changed Go files and auto-fixes formatting issues
+
+set -e  # Exit on first error
+
+echo "🔍 Running pre-commit linting..."
+
+# Check if golangci-lint is available
+if ! command -v golangci-lint >/dev/null 2>&1; then
+    echo "❌ golangci-lint not found. Please install it:"
+    echo "   go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
+    exit 1
+fi
+
+# Get list of Go files being committed (staged changes only)
+CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$')
+
+if [ -z "$CHANGED_FILES" ]; then
+    echo "✅ No Go files to lint"
+    exit 0
+fi
+
+echo "📝 Files to lint: $(echo "$CHANGED_FILES" | wc -w)"
+echo "$CHANGED_FILES" | sed 's/^/  - /'
+
+echo ""
+echo "🎨 Stage 1: Auto-fixing formatting and imports..."
+
+# Auto-fix formatting issues with gofmt
+FORMATTED_FILES=$(echo "$CHANGED_FILES" | xargs gofmt -l 2>/dev/null || true)
+if [ -n "$FORMATTED_FILES" ]; then
+    echo "  Auto-formatting $(echo "$FORMATTED_FILES" | wc -w) files..."
+    echo "$FORMATTED_FILES" | xargs gofmt -w
+    echo "  ✅ Auto-formatted"
+else
+    echo "  ✅ No formatting issues found"
+fi
+
+# Auto-fix import organization
+IMPORT_FILES=$(echo "$CHANGED_FILES" | xargs goimports -l 2>/dev/null || true)
+if [ -n "$IMPORT_FILES" ]; then
+    echo "  Organizing imports in $(echo "$IMPORT_FILES" | wc -w) files..."
+    echo "$IMPORT_FILES" | xargs goimports -w
+    echo "  ✅ Auto-organized imports"
+else
+    echo "  ✅ Import organization looks good"
+fi
+
+echo ""
+echo "🔧 Stage 2: Running golangci-lint with auto-fixes..."
+
+# Run golangci-lint with auto-fixes on individual files
+FAILED=0
+for file in $CHANGED_FILES; do
+    if ! golangci-lint run --fix "$file" 2>/dev/null; then
+        FAILED=1
+    fi
+done
+
+if [ $FAILED -eq 0 ]; then
+    echo "  ✅ Auto-fixes applied successfully"
+else
+    echo "  ⚠️  Some issues couldn't be auto-fixed"
+fi
+
+echo ""
+echo "🧐 Stage 3: Checking for remaining issues..."
+
+# Run final linter check
+if echo "$CHANGED_FILES" | xargs golangci-lint run; then
+    echo "  ✅ All linting checks passed!"
+else
+    echo ""
+    echo "❌ Linting failed with remaining issues."
+    echo ""
+    echo "💡 To fix these issues:"
+    echo "   1. Review the errors above"
+    echo "   2. Make necessary changes to your code"
+    echo "   3. Re-stage your changes: git add <files>"
+    echo "   4. Try committing again"
+    echo ""
+    echo "⚠️  To bypass this hook (emergency only):"
+    echo "   git commit --no-verify"
+    echo ""
+    echo "📋 To run linter manually:"
+    echo "   make lint-fix  # Auto-fix issues"
+    echo "   make lint      # Show issues without fixing"
+    exit 1
+fi
+
+# Re-stage any auto-fixes made by the linter
+FIXED_FILES=$(git diff --name-only | grep '\.go$' || true)
+if [ -n "$FIXED_FILES" ]; then
+    echo ""
+    echo "📦 Staging auto-fixes..."
+    echo "$FIXED_FILES" | sed 's/^/  + /'
+    git add $FIXED_FILES
+    echo "  ✅ Auto-fixes staged"
+fi
+
+echo ""
+echo "✅ Pre-commit linting completed successfully!"

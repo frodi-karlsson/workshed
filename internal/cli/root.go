@@ -10,7 +10,7 @@ import (
 const version = "0.1.0"
 
 var (
-	exitFunc  = os.Exit
+	exitFunc            = os.Exit
 	inReader  io.Reader = os.Stdin
 	outWriter io.Writer = os.Stdout
 	errWriter io.Writer = os.Stderr
