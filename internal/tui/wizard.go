@@ -13,6 +13,12 @@ import (
 
 var ErrCancelled = errors.New("wizard cancelled")
 
+type wizardDoneMsg struct {
+	result    *WizardResult
+	cancelled bool
+	err       error
+}
+
 type wizardStep int
 
 const (
@@ -60,19 +66,27 @@ func (m wizardModel) Init() tea.Cmd {
 
 func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.err != nil {
-		return m, tea.Quit
+		return m, func() tea.Msg {
+			return wizardDoneMsg{err: m.err}
+		}
 	}
 
 	switch msg := msg.(type) {
+	case wizardDoneMsg:
+		return m, tea.Quit
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			m.cancelled = true
-			return m, tea.Quit
+			return m, func() tea.Msg {
+				return wizardDoneMsg{cancelled: true}
+			}
 		case tea.KeyRunes:
 			if msg.String() == "q" {
 				m.cancelled = true
-				return m, tea.Quit
+				return m, func() tea.Msg {
+					return wizardDoneMsg{cancelled: true}
+				}
 			}
 		}
 	}
@@ -103,7 +117,9 @@ func (m wizardModel) updatePurposeStep(msg tea.Msg) (tea.Model, tea.Cmd) {
 		workspaces, err := m.store.List(m.ctx, workspace.ListOptions{})
 		if err != nil {
 			m.err = err
-			return m, tea.Quit
+			return m, func() tea.Msg {
+				return wizardDoneMsg{err: m.err}
+			}
 		}
 
 		repoModel := newRepoStepModel(workspaces, m.purpose)
@@ -114,7 +130,9 @@ func (m wizardModel) updatePurposeStep(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.purposeModel.cancelled {
 		m.cancelled = true
-		return m, tea.Quit
+		return m, func() tea.Msg {
+			return wizardDoneMsg{cancelled: true}
+		}
 	}
 
 	return m, cmd
@@ -142,7 +160,14 @@ func (m wizardModel) updateRepoStep(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.repoModel.done {
 		m.repositories = m.repoModel.repositories
 		m.done = true
-		return m, tea.Quit
+		return m, func() tea.Msg {
+			return wizardDoneMsg{
+				result: &WizardResult{
+					Purpose:      m.purpose,
+					Repositories: m.repositories,
+				},
+			}
+		}
 	}
 
 	return m, cmd
@@ -186,15 +211,24 @@ func RunCreateWizard(ctx context.Context, store *workspace.FSStore) (*WizardResu
 		if fm.err != nil {
 			return nil, fm.err
 		}
-		if fm.cancelled {
-			return nil, ErrCancelled
-		}
-		if fm.done {
-			return &WizardResult{
-				Purpose:      fm.purpose,
-				Repositories: fm.repositories,
-			}, nil
-		}
+	}
+
+	m2, ok := finalModel.(wizardModel)
+	if !ok {
+		return nil, fmt.Errorf("unexpected model type")
+	}
+
+	if m2.err != nil {
+		return nil, m2.err
+	}
+	if m2.cancelled {
+		return nil, ErrCancelled
+	}
+	if m2.done {
+		return &WizardResult{
+			Purpose:      m2.purpose,
+			Repositories: m2.repositories,
+		}, nil
 	}
 
 	return nil, fmt.Errorf("wizard did not complete")

@@ -286,38 +286,29 @@ func (p ProgressBar) Render() string {
 	return p.Style.Render("[" + fill + empty + "]")
 }
 
-type HelpText struct {
-	Style lipgloss.Style
-	Items []HelpItem
-}
-
 type HelpItem struct {
 	Key   string
 	Label string
 }
 
-func NewHelpText() HelpText {
-	return HelpText{
-		Style: lipgloss.NewStyle().
-			Foreground(ColorMuted).
-			MarginTop(1),
-	}
-}
-
-func (h HelpText) Add(key, label string) HelpText {
-	h.Items = append(h.Items, HelpItem{Key: key, Label: label})
-	return h
-}
-
-func (h HelpText) Render() string {
-	if len(h.Items) == 0 {
+func RenderHelp(items []HelpItem) string {
+	if len(items) == 0 {
 		return ""
 	}
-
 	var parts []string
-	for _, item := range h.Items {
-		parts = append(parts, "["+item.Key+"] "+item.Label)
+	for _, item := range items {
+		if item.Label != "" {
+			parts = append(parts, "["+item.Key+"] "+item.Label)
+		} else {
+			parts = append(parts, "["+item.Key+"]")
+		}
 	}
-
-	return h.Style.Render(strings.Join(parts, "  "))
+	return lipgloss.NewStyle().Foreground(ColorVeryMuted).Render(strings.Join(parts, "  "))
 }
+
+var (
+	HelpDismiss   = RenderHelp([]HelpItem{{"Esc/q/Enter", "Dismiss"}})
+	HelpNavigate  = RenderHelp([]HelpItem{{"↑↓/j/k", "Navigate"}, {"Enter", "Select"}, {"Esc", "Cancel"}})
+	HelpInput     = RenderHelp([]HelpItem{{"Enter", "Confirm"}, {"Tab", "Browse"}, {"Esc", "Cancel"}})
+	HelpDashboard = RenderHelp([]HelpItem{{"c", "Create"}, {"Enter", "Menu"}, {"l", "Filter"}, {"?", "Help"}, {"q", "Quit"}})
+)

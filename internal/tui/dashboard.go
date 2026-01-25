@@ -59,6 +59,7 @@ type dashboardModel struct {
 	modalErr        error
 	execResults     []workspace.ExecResult
 	execCommand     string
+	wizardModel     *wizardModel
 	wizardResult    *WizardResult
 	wizardErr       error
 	contextResult   string
@@ -273,8 +274,14 @@ func (m dashboardModel) updateDashboard(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case "c":
+			wm, err := newWizardModel(m.ctx, m.store)
+			if err != nil {
+				m.err = err
+				return m, nil
+			}
+			m.wizardModel = &wm
 			m.currentView = viewCreateWizard
-			return m, nil
+			return m, textinput.Blink
 		case "l":
 			if !m.filterMode {
 				m.filterMode = true
@@ -686,37 +693,55 @@ func (m dashboardModel) viewRemoveModal() string {
 }
 
 func (m dashboardModel) updateWizard(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.wizardModel == nil {
+		m.currentView = viewDashboard
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
+	case wizardDoneMsg:
+		if msg.err != nil {
+			m.err = msg.err
 			m.currentView = viewDashboard
 			return m, nil
-		case tea.KeyRunes:
-			if msg.String() == "q" {
-				m.currentView = viewDashboard
-				return m, nil
-			}
 		}
+		if msg.cancelled {
+			m.currentView = viewDashboard
+			return m, nil
+		}
+		if msg.result != nil {
+			m.wizardResult = msg.result
+			ws, err := m.store.Create(m.ctx, workspace.CreateOptions{
+				Purpose:      msg.result.Purpose,
+				Repositories: msg.result.Repositories,
+			})
+			if err != nil {
+				m.err = err
+			} else {
+				m.modalWorkspace = ws
+			}
+			m.currentView = viewDashboard
+			if err := m.loadWorkspaces(); err != nil {
+				m.err = err
+			}
+			return m, nil
+		}
+		m.currentView = viewDashboard
+		return m, nil
 	}
-	return m, nil
+
+	updated, cmd := m.wizardModel.Update(msg)
+	if updated, ok := updated.(wizardModel); ok {
+		*m.wizardModel = updated
+	}
+	return m, cmd
 }
 
 func (m dashboardModel) viewWizard() string {
-	return modalFrame().
-		Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				lipgloss.NewStyle().
-					Bold(true).
-					Foreground(colorText).
-					Render("Create Workspace"),
-				"\n",
-				lipgloss.NewStyle().
-					Foreground(colorMuted).
-					Render("Wizard placeholder - press Esc to cancel"),
-			),
-		)
+	if m.wizardModel == nil {
+		return modalFrame().Render("Loading wizard...")
+	}
+	return m.wizardModel.View()
 }
 
 func (m dashboardModel) updateHelpModal(msg tea.Msg) (tea.Model, tea.Cmd) {

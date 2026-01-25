@@ -22,13 +22,8 @@ func (m menuItem) Title() string {
 	return "[" + m.key + "] " + m.label
 }
 
-func (m menuItem) Description() string {
-	return m.desc
-}
-
-func (m menuItem) FilterValue() string {
-	return m.key + " " + m.label
-}
+func (m menuItem) Description() string { return m.desc }
+func (m menuItem) FilterValue() string { return m.key + " " + m.label }
 
 const contextMenuWidth = 40
 
@@ -65,9 +60,7 @@ func newContextMenuModel(handle string) contextMenuModel {
 	}
 }
 
-func (m contextMenuModel) Init() tea.Cmd {
-	return nil
-}
+func (m contextMenuModel) Init() tea.Cmd { return nil }
 
 func (m contextMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -99,12 +92,10 @@ func (m contextMenuModel) View() string {
 	if m.done {
 		frameStyle = frameStyle.BorderForeground(colorSuccess)
 	}
-
 	return frameStyle.Render(
-		m.list.View() + "\n" +
+		m.list.View() + "\n\n" +
 			lipgloss.NewStyle().
 				Foreground(colorVeryMuted).
-				MarginTop(1).
 				Render("[↑↓/j/k] Navigate  [Enter] Select  [Esc/q/Ctrl+C] Cancel"),
 	)
 }
@@ -116,13 +107,11 @@ func ShowContextMenu(handle string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	if fm, ok := finalModel.(contextMenuModel); ok {
 		if fm.quit {
 			return "", nil
 		}
 		return fm.result, nil
 	}
-
 	return "", nil
 }

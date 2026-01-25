@@ -244,8 +244,8 @@ func TestDashboardCreateWorkspace(t *testing.T) {
 	if updatedModel.currentView != viewCreateWizard {
 		t.Errorf("Expected currentView to be viewCreateWizard after 'c' key, got %v", updatedModel.currentView)
 	}
-	if cmd != nil {
-		t.Error("Expected no command for view switch")
+	if cmd == nil {
+		t.Error("Expected a command (textinput.Blink) for wizard initialization")
 	}
 }
 

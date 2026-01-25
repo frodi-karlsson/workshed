@@ -193,11 +193,10 @@ func newTestContextMenuModel(handle string) contextMenuModel {
 		Foreground(colorMuted)
 
 	return contextMenuModel{
-		list:     l,
-		selected: 0,
-		done:     false,
-		quit:     false,
-		result:   "",
+		list:   l,
+		done:   false,
+		quit:   false,
+		result: "",
 	}
 }
 
