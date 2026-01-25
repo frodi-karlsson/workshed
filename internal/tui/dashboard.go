@@ -435,72 +435,31 @@ func (m dashboardModel) viewContextMenu() string {
 }
 
 func (m dashboardModel) updateInspectModal(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc, tea.KeyEnter:
-			m.currentView = viewDashboard
-			return m, nil
-		case tea.KeyRunes:
-			switch msg.String() {
-			case "q", " ":
-				m.currentView = viewDashboard
-				return m, nil
-			}
-		}
+	alertModal := NewEmbeddableAlertModal(buildWorkspaceDetailContent(m.modalWorkspace))
+	if alertModal.Update(msg) {
+		m.currentView = viewDashboard
 	}
 	return m, nil
 }
 
 func (m dashboardModel) viewInspectModal() string {
-	ws := m.modalWorkspace
-
-	headerStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(colorText)
-
-	purposeStyle := lipgloss.NewStyle().
-		Foreground(colorSuccess)
-
-	var repoLines []string
-	for _, repo := range ws.Repositories {
-		if repo.Ref != "" {
-			repoLines = append(repoLines, fmt.Sprintf("  • %s\t%s @ %s", repo.Name, repo.URL, repo.Ref))
-		} else {
-			repoLines = append(repoLines, fmt.Sprintf("  • %s\t%s", repo.Name, repo.URL))
-		}
-	}
-
-	helpStyle := lipgloss.NewStyle().
-		Foreground(colorVeryMuted)
-
-	return modalFrame().Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			headerStyle.Render("Workspace: ")+ws.Handle+"\n",
-			purposeStyle.Render("Purpose: ")+ws.Purpose+"\n",
-			headerStyle.Render("Path: ")+ws.Path+"\n",
-			headerStyle.Render("Created: ")+ws.CreatedAt.Format("Jan 2, 2006")+"\n",
-			"\n",
-			headerStyle.Render("Repositories:")+"\n",
-			lipgloss.JoinVertical(lipgloss.Left, repoLines...),
-			"\n",
-			helpStyle.Render("[Press any key to return]"),
-		),
-	)
+	alertModal := NewEmbeddableAlertModal(buildWorkspaceDetailContent(m.modalWorkspace))
+	return alertModal.View()
 }
 
 func (m dashboardModel) updatePathModal(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
-	case tea.KeyMsg:
+	alertModal := NewEmbeddableAlertModal("")
+	if alertModal.Update(msg) {
 		m.currentView = viewDashboard
-		return m, nil
 	}
 	return m, nil
 }
 
 func (m dashboardModel) viewPathModal() string {
 	ws := m.modalWorkspace
+
+	helpStyle := lipgloss.NewStyle().
+		Foreground(colorVeryMuted)
 
 	return modalFrame().
 		BorderForeground(colorSuccess).
@@ -520,10 +479,7 @@ func (m dashboardModel) viewPathModal() string {
 					Foreground(colorSuccess).
 					Render("Path copied to clipboard!"),
 				"\n",
-				lipgloss.NewStyle().
-					Foreground(colorVeryMuted).
-					MarginTop(1).
-					Render("[Press any key to return]"),
+				helpStyle.Render("[Esc/q/Enter] Dismiss"),
 			),
 		)
 }
@@ -764,10 +720,9 @@ func (m dashboardModel) viewWizard() string {
 }
 
 func (m dashboardModel) updateHelpModal(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
-	case tea.KeyMsg:
+	alertModal := NewEmbeddableAlertModal("")
+	if alertModal.Update(msg) {
 		m.currentView = viewDashboard
-		return m, nil
 	}
 	return m, nil
 }
@@ -782,12 +737,19 @@ func (m dashboardModel) viewHelpModal() string {
 		"[l] Filter workspaces by purpose or handle\n" +
 		"[↑/↓/j/k] Navigate workspaces\n" +
 		"[?] Toggle this help\n" +
-		"[q/Esc] Quit\n\n" +
-		lipgloss.NewStyle().
-			Foreground(colorMuted).
-			Render("Press any key to return")
+		"[q/Esc] Quit"
 
-	return modalFrame().Render(helpText)
+	helpStyle := lipgloss.NewStyle().
+		Foreground(colorVeryMuted)
+
+	return modalFrame().Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			helpText,
+			"\n",
+			helpStyle.Render("[Esc/q/Enter] Dismiss"),
+		),
+	)
 }
 
 func (m dashboardModel) updateFilterInput(msg tea.Msg) (tea.Model, tea.Cmd) {

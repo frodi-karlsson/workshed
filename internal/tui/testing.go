@@ -250,13 +250,6 @@ func sendKey(m dashboardModel, key string) (dashboardModel, tea.Cmd) {
 	return updatedModel.(dashboardModel), cmd
 }
 
-func newTestInspectModel(ws *workspace.Workspace) inspectModel {
-	return inspectModel{
-		workspace: ws,
-		quitting:  false,
-	}
-}
-
 func newTestExecModel(ws *workspace.Workspace) execModel {
 	repoItems := make([]tealist.Item, len(ws.Repositories))
 	for i, repo := range ws.Repositories {

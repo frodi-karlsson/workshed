@@ -11,6 +11,13 @@ import (
 	"github.com/frodi/workshed/internal/workspace"
 )
 
+func newTestAlertModel(content string) *AlertModal {
+	return &AlertModal{
+		content:  content,
+		quitting: false,
+	}
+}
+
 func TestInspectModalRendersWorkspace(t *testing.T) {
 	ws := &workspace.Workspace{
 		Handle:    "test-workspace",
@@ -22,7 +29,8 @@ func TestInspectModalRendersWorkspace(t *testing.T) {
 		},
 	}
 
-	m := newTestInspectModel(ws)
+	content := buildWorkspaceDetailContent(ws)
+	m := newTestAlertModel(content)
 
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(testTermWidth, testTermHeight))
 
@@ -41,7 +49,8 @@ func TestInspectModalShowsRepos(t *testing.T) {
 		},
 	}
 
-	m := newTestInspectModel(ws)
+	content := buildWorkspaceDetailContent(ws)
+	m := newTestAlertModel(content)
 
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(testTermWidth, testTermHeight))
 
@@ -57,7 +66,8 @@ func TestInspectModalClosesOnKey(t *testing.T) {
 		Repositories: []workspace.Repository{},
 	}
 
-	m := newTestInspectModel(ws)
+	content := buildWorkspaceDetailContent(ws)
+	m := newTestAlertModel(content)
 
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(testTermWidth, testTermHeight))
 
@@ -75,7 +85,8 @@ func TestInspectModalClosesOnEsc(t *testing.T) {
 		Repositories: []workspace.Repository{},
 	}
 
-	m := newTestInspectModel(ws)
+	content := buildWorkspaceDetailContent(ws)
+	m := newTestAlertModel(content)
 
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(testTermWidth, testTermHeight))
 
@@ -94,7 +105,8 @@ func TestInspectModalShowsCreationDate(t *testing.T) {
 		Repositories: []workspace.Repository{},
 	}
 
-	m := newTestInspectModel(ws)
+	content := buildWorkspaceDetailContent(ws)
+	m := newTestAlertModel(content)
 
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(testTermWidth, testTermHeight))
 
@@ -110,7 +122,8 @@ func TestInspectModalWithNoRepos(t *testing.T) {
 		Repositories: []workspace.Repository{},
 	}
 
-	m := newTestInspectModel(ws)
+	content := buildWorkspaceDetailContent(ws)
+	m := newTestAlertModel(content)
 
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(testTermWidth, testTermHeight))
 
@@ -128,7 +141,8 @@ func TestInspectModalWithRef(t *testing.T) {
 		},
 	}
 
-	m := newTestInspectModel(ws)
+	content := buildWorkspaceDetailContent(ws)
+	m := newTestAlertModel(content)
 
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(testTermWidth, testTermHeight))
 
