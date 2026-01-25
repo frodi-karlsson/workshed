@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/frodi/workshed/internal/logger"
+	"github.com/frodi/workshed/internal/tui"
+	"github.com/frodi/workshed/internal/workspace"
 )
 
 const version = "0.2.0"
@@ -91,4 +94,46 @@ func GetWorkshedRoot() string {
 	}
 
 	return filepath.Join(home, ".workshed", "workspaces")
+}
+
+// GetOrCreateStore creates a workspace store or exits on error.
+func GetOrCreateStore(l *logger.Logger) *workspace.FSStore {
+	store, err := workspace.NewFSStore(GetWorkshedRoot())
+	if err != nil {
+		l.Error("failed to create workspace store", "error", err)
+		exitFunc(1)
+		return nil
+	}
+	return store
+}
+
+// ResolveHandle resolves a workspace handle from args or current directory.
+// If no handle is provided and auto-discovery fails, it attempts TUI selection.
+// Returns the handle or exits on error.
+func ResolveHandle(ctx context.Context, store *workspace.FSStore, providedHandle string, l *logger.Logger) string {
+	if providedHandle != "" {
+		return providedHandle
+	}
+
+	ws, err := store.FindWorkspace(ctx, ".")
+	if err != nil {
+		l.Error("failed to find workspace", "error", err)
+		if h, ok := tui.TrySelectWorkspace(ctx, store, err, l); ok {
+			return h
+		}
+		exitFunc(1)
+		return ""
+	}
+	return ws.Handle
+}
+
+func RunMainDashboard() {
+	l := logger.NewLogger(logger.ERROR, "workshed")
+	store := GetOrCreateStore(l)
+	ctx := context.Background()
+
+	if err := tui.RunDashboard(ctx, store); err != nil {
+		l.Error("dashboard error", "error", err)
+		exitFunc(1)
+	}
 }

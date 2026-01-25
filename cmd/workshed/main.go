@@ -18,8 +18,8 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		cli.Usage()
-		os.Exit(1)
+		cli.RunMainDashboard()
+		return
 	}
 
 	command := os.Args[1]
@@ -39,6 +39,8 @@ func main() {
 		cli.Remove(os.Args[2:])
 	case "update":
 		cli.Update(os.Args[2:])
+	case "dashboard":
+		cli.RunMainDashboard()
 	case "version", "-v", "--version":
 		cli.Version()
 	case "help", "-h", "--help":

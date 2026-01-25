@@ -81,8 +81,18 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 
 	clonedRepos := make([]Repository, len(repos))
 	for i, opt := range repos {
+		url := opt.URL
+		// Convert relative local paths to absolute for metadata storage
+		if isLocalPath(url) {
+			absPath, err := filepath.Abs(url)
+			if err != nil {
+				return nil, fmt.Errorf("resolving local path %s: %w", url, err)
+			}
+			url = absPath
+		}
+
 		clonedRepos[i] = Repository{
-			URL:  opt.URL,
+			URL:  url,
 			Ref:  opt.Ref,
 			Name: extractRepoName(opt.URL),
 		}
@@ -270,6 +280,7 @@ type ExecResult struct {
 	Dir        string
 	ExitCode   int
 	Output     []byte
+	Duration   time.Duration
 }
 
 func (s *FSStore) Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error) {
@@ -305,9 +316,12 @@ func (s *FSStore) Exec(ctx context.Context, handle string, opts ExecOptions) ([]
 			Repository: "root",
 			Dir:        ws.Path,
 		}
+		start := time.Now()
 		cmd := exec.CommandContext(ctx, opts.Command[0], opts.Command[1:]...)
 		cmd.Dir = ws.Path
 		output, err := cmd.CombinedOutput()
+		result.Duration = time.Since(start)
+
 		result.Output = output
 		if err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
@@ -349,9 +363,12 @@ func (s *FSStore) execInRepository(ctx context.Context, repo Repository, wsPath 
 		Dir:        repoDir,
 	}
 
+	start := time.Now()
 	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = repoDir
 	output, err := cmd.CombinedOutput()
+	result.Duration = time.Since(start)
+
 	result.Output = output
 
 	if err != nil {
@@ -399,6 +416,10 @@ func isLocalPath(path string) bool {
 	}
 
 	if strings.HasPrefix(path, "/") || strings.Contains(path, string(filepath.Separator)) {
+		return true
+	}
+
+	if path == "." || path == ".." {
 		return true
 	}
 
@@ -505,6 +526,15 @@ func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir string) 
 		ref = "main"
 	}
 
+	// Convert relative local paths to absolute for git clone
+	if isLocalPath(url) {
+		absPath, err := filepath.Abs(url)
+		if err != nil {
+			return fmt.Errorf("resolving local path: %w", err)
+		}
+		url = absPath
+	}
+
 	repoDir := filepath.Join(wsDir, repo.Name)
 
 	cmd := exec.CommandContext(ctx, "git", "clone", url, repoDir)
@@ -567,6 +597,13 @@ func extractRepoName(url string) string {
 	url = strings.TrimSuffix(url, ".git")
 
 	if isLocalPath(url) {
+		// Resolve relative paths like "." or ".." to get actual directory name
+		if url == "." || url == ".." || strings.HasPrefix(url, "./") || strings.HasPrefix(url, "../") {
+			absPath, err := filepath.Abs(url)
+			if err == nil {
+				return filepath.Base(absPath)
+			}
+		}
 		return filepath.Base(url)
 	}
 

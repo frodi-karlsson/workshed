@@ -1,4 +1,4 @@
-.PHONY: build test test-race test-integration test-all check help install clean lint lint-fix install-hooks
+.PHONY: build test test-race test-integration test-e2e test-all check help install clean lint lint-fix install-hooks
 
 build:
 	@mkdir -p bin
@@ -13,12 +13,18 @@ test-race:
 test-integration:
 	go test -v -tags=integration ./...
 
+test-e2e:
+	go test -v -timeout=5s ./internal/tui/...
+
 test-all:
 	@echo "Running unit tests..."
 	go test ./...
 	@echo ""
 	@echo "Running integration tests..."
 	go test -v -tags=integration ./...
+	@echo ""
+	@echo "Running e2e tests..."
+	go test -v -timeout=5s ./internal/tui/...
 
 check:
 	@echo "Running all checks..."
@@ -31,6 +37,9 @@ check:
 	@echo ""
 	@echo "--- Integration Tests ---"
 	go test -v -tags=integration ./...
+	@echo ""
+	@echo "--- E2E Tests ---"
+	go test -v -timeout=5s ./internal/tui/...
 
 help:
 	@echo "Available targets:"
@@ -39,8 +48,9 @@ help:
 	@echo "  test           Run unit tests"
 	@echo "  test-race      Run unit tests with race detector"
 	@echo "  test-integration   Run integration tests"
-	@echo "  test-all       Run unit and integration tests"
-	@echo "  check          Run lint, unit tests, and integration tests"
+	@echo "  test-e2e       Run e2e TUI tests with timeout"
+	@echo "  test-all       Run unit, integration, and e2e tests"
+	@echo "  check          Run lint, unit, integration, and e2e tests"
 	@echo "  install        Install workshed to \$$GOPATH/bin"
 	@echo "  clean          Remove build artifacts"
 	@echo "  lint           Run golangci-lint"

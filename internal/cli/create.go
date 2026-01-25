@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/frodi/workshed/internal/logger"
+	"github.com/frodi/workshed/internal/tui"
 	"github.com/frodi/workshed/internal/workspace"
 	flag "github.com/spf13/pflag"
 )
@@ -33,44 +34,53 @@ func Create(args []string) {
 		exitFunc(1)
 	}
 
-	if *purpose == "" {
-		l.Error("missing required flag", "flag", "--purpose")
-		fs.Usage()
-		exitFunc(1)
-	}
-
-	repos := repoFlags
-	if len(reposAlias) > 0 {
-		repos = reposAlias
-	}
+	store := GetOrCreateStore(l)
+	ctx := context.Background()
 
 	opts := workspace.CreateOptions{
-		Purpose:      *purpose,
 		Repositories: []workspace.RepositoryOption{},
 	}
 
-	for _, repo := range repos {
-		repo = strings.TrimSpace(repo)
-		if repo == "" {
-			continue
+	if *purpose == "" {
+		if tui.IsHumanMode() {
+			result, err := tui.RunCreateWizard(ctx, store)
+			if err != nil {
+				l.Help("wizard cancelled")
+				exitFunc(0)
+				return
+			}
+			opts.Purpose = result.Purpose
+			opts.Repositories = result.Repositories
+		} else {
+			l.Error("missing required flag", "flag", "--purpose")
+			fs.Usage()
+			exitFunc(1)
 		}
-		url, ref := parseRepoFlag(repo)
-		opts.Repositories = append(opts.Repositories, workspace.RepositoryOption{
-			URL: url,
-			Ref: ref,
-		})
+	} else {
+		opts.Purpose = *purpose
+
+		repos := repoFlags
+		if len(reposAlias) > 0 {
+			repos = reposAlias
+		}
+
+		for _, repo := range repos {
+			repo = strings.TrimSpace(repo)
+			if repo == "" {
+				continue
+			}
+			url, ref := parseRepoFlag(repo)
+			opts.Repositories = append(opts.Repositories, workspace.RepositoryOption{
+				URL: url,
+				Ref: ref,
+			})
+		}
 	}
 
-	store, err := workspace.NewFSStore(GetWorkshedRoot())
-	if err != nil {
-		l.Error("failed to create workspace store", "error", err)
-		exitFunc(1)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultCloneTimeout)
+	createCtx, cancel := context.WithTimeout(ctx, defaultCloneTimeout)
 	defer cancel()
 
-	ws, err := store.Create(ctx, opts)
+	ws, err := store.Create(createCtx, opts)
 	if err != nil {
 		l.Error("workspace creation failed", "purpose", opts.Purpose, "error", err)
 		exitFunc(1)

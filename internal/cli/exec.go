@@ -49,26 +49,14 @@ func Exec(args []string) {
 
 	command := args[sepIdx+1:]
 
-	store, err := workspace.NewFSStore(GetWorkshedRoot())
-	if err != nil {
-		l.Error("failed to create workspace store", "error", err)
-		exitFunc(1)
-	}
-
+	store := GetOrCreateStore(l)
 	ctx := context.Background()
 
-	var handle string
+	providedHandle := ""
 	if fs.NArg() >= 1 {
-		handle = fs.Arg(0)
-	} else {
-		ws, err := store.FindWorkspace(ctx, ".")
-		if err != nil {
-			l.Error("failed to find workspace", "error", err)
-			exitFunc(1)
-			return
-		}
-		handle = ws.Handle
+		providedHandle = fs.Arg(0)
 	}
+	handle := ResolveHandle(ctx, store, providedHandle, l)
 
 	opts := workspace.ExecOptions{
 		Target:  *target,

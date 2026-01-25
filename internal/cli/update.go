@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/frodi/workshed/internal/logger"
-	"github.com/frodi/workshed/internal/workspace"
 	flag "github.com/spf13/pflag"
 )
 
@@ -29,29 +28,16 @@ func Update(args []string) {
 		l.Error("missing required flag", "flag", "--purpose")
 		fs.Usage()
 		exitFunc(1)
-		return
 	}
 
-	store, err := workspace.NewFSStore(GetWorkshedRoot())
-	if err != nil {
-		l.Error("failed to create workspace store", "error", err)
-		exitFunc(1)
-	}
-
+	store := GetOrCreateStore(l)
 	ctx := context.Background()
 
-	var handle string
+	providedHandle := ""
 	if fs.NArg() >= 1 {
-		handle = fs.Arg(0)
-	} else {
-		ws, err := store.FindWorkspace(ctx, ".")
-		if err != nil {
-			l.Error("failed to find workspace", "error", err)
-			exitFunc(1)
-			return
-		}
-		handle = ws.Handle
+		providedHandle = fs.Arg(0)
 	}
+	handle := ResolveHandle(ctx, store, providedHandle, l)
 
 	if err := store.UpdatePurpose(ctx, handle, *purpose); err != nil {
 		l.Error("failed to update workspace purpose", "handle", handle, "error", err)

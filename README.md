@@ -71,7 +71,7 @@ This creates a directory containing cloned repositories and a small metadata fil
 ## How It Works
 
 ### Purpose
-A workspace must be created with `--purpose`. This is stored as metadata and used for listing and discovery. The handle itself is not intended to be meaningful.
+A workspace must have a purpose. Use `--purpose` flag or enter it interactively when TUI is enabled. This is stored as metadata and used for listing and discovery. The handle itself is not intended to be meaningful.
 
 ### Workspace layout
 A workspace is a directory containing:
@@ -127,7 +127,8 @@ There is no rollback, retry logic, or interpretation of results.
 
 ## Commands
 
-- `create` — Create a workspace (requires `--purpose`, repos optional, defaults to current directory)
+- `dashboard` — Open interactive workspace dashboard (also runs with no arguments)
+- `create` — Create a workspace (purpose required via `--purpose` or interactive wizard, repos optional)
 - `list` — List workspaces with optional filtering
 - `inspect` — Show workspace details (handle optional, auto-discovers from current directory)
 - `path` — Print the workspace path (handle optional, auto-discovers from current directory)
@@ -178,10 +179,11 @@ make build
 
 ### Test
 ```bash
-make test          # unit tests
-make test-integration      # integration tests
-make test-all    # all tests
-make check       # lint + all tests
+make test              # unit tests
+make test-integration  # integration tests
+make test-e2e          # TUI e2e tests
+make test-all          # all tests (unit + integration + e2e)
+make check             # lint + all tests
 ```
 
 ### Lint
@@ -193,6 +195,55 @@ make lint-fix     # auto-fix issues
 ### Environment Variables
 - `WORKSHED_ROOT` — workspace directory (default: `~/.workshed/workspaces`)
 - `WORKSHED_LOG_FORMAT` — output format: `human`, `json`, or `raw` (default: `human`)
+
+---
+
+## Terminal UI (TUI)
+
+Workshed includes optional interactive terminal UI components for workspace selection and purpose input. These are enabled by default when running in human mode.
+
+### When TUI Is Active
+
+The TUI is available when `WORKSHED_LOG_FORMAT` is unset or set to `human` (the default). Set to `json` or any other value to disable TUI and use plain output:
+
+```bash
+# TUI enabled (default)
+workshed create --purpose "Task"
+export WORKSHED_LOG_FORMAT=json  # Disable TUI
+```
+
+### Workspace Selector
+
+When a workspace handle is not provided and auto-discovery fails, the TUI presents an interactive list of existing workspaces:
+
+- **Navigation**: Arrow keys or `j`/`k` to move up/down
+- **Search**: Type to filter the list by handle or purpose
+- **Select**: `Enter` to confirm selection
+- **Cancel**: `Ctrl+C` or `Esc` to exit without selecting
+
+The selector displays each workspace with:
+- Handle (e.g., `aquatic-fish-motion`)
+- Purpose
+- Repository count and creation date
+
+### Purpose Input with Autocomplete
+
+When creating a workspace without `--purpose`, the TUI shows an input field with autocomplete suggestions from existing workspace purposes:
+
+- **Type** a new purpose directly
+- **Navigate** suggestions with arrow keys
+- **Select** a suggestion with `Enter` to use it
+- **Cancel** with `Ctrl+C` or `Esc`
+
+Suggestions appear below the input and update as you type, matching purposes case-insensitively.
+
+### Non-Interactive Fallback
+
+When TUI is disabled or not applicable (e.g., piped output, CI environments), Workshed falls back to plain text prompts:
+
+```
+Error: could not determine workspace, specify a handle or run from within a workspace
+```
 
 ### Metadata
 Workspaces are stored as directories containing a `.workshed.json` metadata file with workspace metadata (handle, purpose, list of repositories with URL/ref/name, creation time).

@@ -124,11 +124,14 @@ func TestCreate(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
-		if err := os.Chmod(env.TempDir, 0555); err != nil {
-			t.Skipf("Cannot make directory read-only, skipping test: %v", err)
-		}
-
 		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		// Make directory read-only
+		if err := os.Chmod(env.TempDir, 0555); err != nil {
+			t.Fatalf("Failed to make directory read-only: %v", err)
+		}
+		// Restore permissions on cleanup so t.TempDir() can remove it
+		defer os.Chmod(env.TempDir, 0755)
 
 		env.ResetBuffers()
 		Create([]string{"--purpose", "Test workspace", "--repo", repoURL})
