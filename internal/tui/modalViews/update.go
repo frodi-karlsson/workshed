@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/key"
 )
 
 type UpdateModal struct {
@@ -19,6 +20,7 @@ func NewUpdateModal(handle string, onDismiss func(), onConfirm func(purpose stri
 	ti.Placeholder = "Enter new purpose..."
 	ti.CharLimit = 100
 	ti.Prompt = ""
+	ti.Focus()
 
 	return UpdateModal{
 		textInput: ti,
@@ -30,25 +32,23 @@ func NewUpdateModal(handle string, onDismiss func(), onConfirm func(purpose stri
 }
 
 func (m UpdateModal) Update(msg tea.Msg) (UpdateModal, bool) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "esc":
-			m.dismissed = true
-			if m.onDismiss != nil {
-				m.onDismiss()
-			}
-			return m, true
-		case "enter":
-			purpose := m.textInput.Value()
-			if purpose != "" {
-				if m.onConfirm != nil {
-					m.onConfirm(purpose)
-				}
-			}
-			m.dismissed = true
-			return m, true
+	if key.IsCancel(msg) {
+		m.dismissed = true
+		if m.onDismiss != nil {
+			m.onDismiss()
 		}
+		return m, true
+	}
+
+	if key.IsEnter(msg) {
+		purpose := m.textInput.Value()
+		if purpose != "" {
+			if m.onConfirm != nil {
+				m.onConfirm(purpose)
+			}
+		}
+		m.dismissed = true
+		return m, true
 	}
 
 	updatedInput, cmd := m.textInput.Update(msg)

@@ -1,0 +1,120 @@
+
+[TestModal_Exec/view - 1]
+TestModal_Exec/view
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "multi-repo-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "Show workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Change workspace purpose"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Delete workspace (confirm)"
+          }
+        ],
+        "SelectedKey": "i",
+        "Stale": false
+      }
+    },
+    {
+      "Type": "*views.modal_ExecView",
+      "Data": {
+        "Type": "ExecView",
+        "Handle": "multi-repo-ws",
+        "Command": "",
+        "Done": false,
+        "RepoCount": 2
+      }
+    }
+  ]
+}
+---
+
+[TestModal_Exec/dismiss_esc - 1]
+TestModal_Exec/dismiss_esc
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "Show workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Change workspace purpose"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Delete workspace (confirm)"
+          }
+        ],
+        "SelectedKey": "i",
+        "Stale": false
+      }
+    }
+  ]
+}
+---

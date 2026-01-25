@@ -1,0 +1,64 @@
+
+[TestModal_Remove - 1]
+TestModal_Remove
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "delete-me",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "Show workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Change workspace purpose"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Delete workspace (confirm)"
+          }
+        ],
+        "SelectedKey": "i",
+        "Stale": false
+      }
+    },
+    {
+      "Type": "*views.modal_RemoveView",
+      "Data": {
+        "Type": "RemoveView",
+        "Handle": "delete-me",
+        "Done": false,
+        "Confirm": false
+      }
+    }
+  ]
+}
+---

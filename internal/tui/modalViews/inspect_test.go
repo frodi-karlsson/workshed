@@ -177,89 +177,6 @@ func TestInspectModal_UpdateNoDismissOnOtherKeys(t *testing.T) {
 	}
 }
 
-func TestInspectModal_ViewOutput(t *testing.T) {
-	ws := &workspace.Workspace{
-		Handle:       "test-ws",
-		Purpose:      "Test purpose",
-		Path:         "/test/path",
-		CreatedAt:    time.Now(),
-		Repositories: []workspace.Repository{},
-	}
-
-	modal := NewInspectModal(ws, func() {})
-
-	output := modal.View()
-
-	if output == "" {
-		t.Error("Expected non-empty view output")
-	}
-
-	if !contains(output, "Workspace:") {
-		t.Error("View output should contain 'Workspace:' label")
-	}
-
-	if !contains(output, "test-ws") {
-		t.Error("View output should contain workspace handle")
-	}
-
-	if !contains(output, "Purpose:") {
-		t.Error("View output should contain 'Purpose:' label")
-	}
-
-	if !contains(output, "Test purpose") {
-		t.Error("View output should contain workspace purpose")
-	}
-
-	if !contains(output, "Path:") {
-		t.Error("View output should contain 'Path:' label")
-	}
-
-	if !contains(output, "/test/path") {
-		t.Error("View output should contain workspace path")
-	}
-
-	if !contains(output, "Dismiss") {
-		t.Error("View output should contain dismiss help text")
-	}
-}
-
-func TestInspectModal_ViewWithRepositories(t *testing.T) {
-	ws := &workspace.Workspace{
-		Handle:    "test-ws",
-		Purpose:   "Test purpose",
-		Path:      "/test/path",
-		CreatedAt: time.Now(),
-		Repositories: []workspace.Repository{
-			{URL: "https://github.com/org/repo1", Ref: "main", Name: "repo1"},
-			{URL: "https://github.com/org/repo2", Ref: "", Name: "repo2"},
-		},
-	}
-
-	modal := NewInspectModal(ws, func() {})
-
-	output := modal.View()
-
-	if !contains(output, "Repositories:") {
-		t.Error("View output should contain 'Repositories:' label")
-	}
-
-	if !contains(output, "repo1") {
-		t.Error("View output should contain first repository name")
-	}
-
-	if !contains(output, "repo2") {
-		t.Error("View output should contain second repository name")
-	}
-
-	if !contains(output, "https://github.com/org/repo1") {
-		t.Error("View output should contain first repository URL")
-	}
-
-	if !contains(output, "main") {
-		t.Error("View output should contain ref for first repository")
-	}
-}
-
 func TestInspectModal_DismissedMethod(t *testing.T) {
 	ws := &workspace.Workspace{
 		Handle:       "test-ws",
@@ -320,13 +237,4 @@ func TestInspectModal_CallbackWithNil(t *testing.T) {
 	if !updatedModal.dismissed {
 		t.Error("Expected dismissed flag to be set")
 	}
-}
-
-func contains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

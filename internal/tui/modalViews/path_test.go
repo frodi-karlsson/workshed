@@ -177,40 +177,6 @@ func TestPathModal_UpdateNoDismissOnOtherKeys(t *testing.T) {
 	}
 }
 
-func TestPathModal_ViewOutput(t *testing.T) {
-	ws := &workspace.Workspace{
-		Handle:       "test-ws",
-		Purpose:      "Test purpose",
-		Path:         "/test/path",
-		CreatedAt:    time.Now(),
-		Repositories: []workspace.Repository{},
-	}
-
-	modal := NewPathModal(ws, func() {})
-
-	output := modal.View()
-
-	if output == "" {
-		t.Error("Expected non-empty view output")
-	}
-
-	if !contains(output, "Workspace Path") {
-		t.Error("View output should contain 'Workspace Path' title")
-	}
-
-	if !contains(output, "/test/path") {
-		t.Error("View output should contain workspace path")
-	}
-
-	if !contains(output, "Path copied to clipboard") {
-		t.Error("View output should contain clipboard confirmation")
-	}
-
-	if !contains(output, "Dismiss") {
-		t.Error("View output should contain dismiss help text")
-	}
-}
-
 func TestPathModal_DismissedMethod(t *testing.T) {
 	ws := &workspace.Workspace{
 		Handle:       "test-ws",

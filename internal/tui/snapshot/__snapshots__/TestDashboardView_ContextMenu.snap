@@ -1,0 +1,176 @@
+
+[TestDashboardView_ContextMenu - 1]
+context_menu_open
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "Show workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Change workspace purpose"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Delete workspace (confirm)"
+          }
+        ],
+        "SelectedKey": "i",
+        "Stale": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ContextMenu - 2]
+inspect_view
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "Show workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Change workspace purpose"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Delete workspace (confirm)"
+          }
+        ],
+        "SelectedKey": "i",
+        "Stale": false
+      }
+    },
+    {
+      "Type": "*views.modal_InspectView",
+      "Data": {
+        "Type": "InspectView",
+        "Handle": "test-ws",
+        "Purpose": "Test workspace",
+        "Path": "/test/path/to/workspace",
+        "RepoCount": 1,
+        "CreatedDate": "Jan 26, 2026"
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ContextMenu - 3]
+inspect_dismissed
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "Show workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Change workspace purpose"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Delete workspace (confirm)"
+          }
+        ],
+        "SelectedKey": "i",
+        "Stale": false
+      }
+    }
+  ]
+}
+---

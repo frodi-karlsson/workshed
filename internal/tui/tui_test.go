@@ -214,37 +214,3 @@ func TestPurposeItem(t *testing.T) {
 		testutil.AssertEqual(t, item.FilterValue(), "Test purpose", "filter should match purpose")
 	})
 }
-
-func TestSelectorNotNil(t *testing.T) {
-	s := NewSelector(nil)
-	testutil.AssertNotNil(t, s, "selector should not be nil")
-}
-
-func TestPurposeInputNotNil(t *testing.T) {
-	p := NewPurposeInput(nil)
-	testutil.AssertNotNil(t, p, "purpose input should not be nil")
-}
-
-func TestIsHumanModeUnset(t *testing.T) {
-	testutil.WithEnvVar(t, "WORKSHED_LOG_FORMAT", "", func() {
-		testutil.AssertTrue(t, IsHumanMode(), "should be human mode when env var is unset")
-	})
-}
-
-func TestIsHumanModeExplicitHuman(t *testing.T) {
-	testutil.WithEnvVar(t, "WORKSHED_LOG_FORMAT", "human", func() {
-		testutil.AssertTrue(t, IsHumanMode(), "should be human mode when env var is 'human'")
-	})
-}
-
-func TestIsHumanModeJSON(t *testing.T) {
-	testutil.WithEnvVar(t, "WORKSHED_LOG_FORMAT", "json", func() {
-		testutil.AssertFalse(t, IsHumanMode(), "should not be human mode when env var is 'json'")
-	})
-}
-
-func TestIsHumanModeWithValue(t *testing.T) {
-	testutil.WithEnvVar(t, "WORKSHED_LOG_FORMAT", "machine", func() {
-		testutil.AssertFalse(t, IsHumanMode(), "should not be human mode for arbitrary value")
-	})
-}

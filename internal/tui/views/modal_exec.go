@@ -1,0 +1,138 @@
+package views
+
+import (
+	"context"
+	"strings"
+
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/key"
+	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/workspace"
+)
+
+type modal_ExecView struct {
+	store     store.Store
+	ctx       context.Context
+	handle    string
+	workspace *workspace.Workspace
+	input     textinput.Model
+	result    []workspace.ExecResult
+	done      bool
+}
+
+func NewExecView(s store.Store, ctx context.Context, handle string) *modal_ExecView {
+	ws, _ := s.Get(ctx, handle)
+	ti := textinput.New()
+	ti.Placeholder = "Enter command (e.g., git status)"
+	ti.Prompt = "> "
+	ti.Focus()
+	return &modal_ExecView{
+		store:     s,
+		ctx:       ctx,
+		handle:    handle,
+		workspace: ws,
+		input:     ti,
+	}
+}
+
+func (v *modal_ExecView) Init() tea.Cmd { return textinput.Blink }
+
+func (v *modal_ExecView) OnPush()   {}
+func (v *modal_ExecView) OnResume() {}
+func (v *modal_ExecView) IsLoading() bool {
+	return false
+}
+
+func (v *modal_ExecView) Cancel() {}
+
+func (v *modal_ExecView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
+	if key.IsCancel(msg) {
+		return ViewResult{Action: StackPop{}}, nil
+	}
+
+	if key.IsEnter(msg) {
+		if v.done {
+			return ViewResult{Action: StackPop{}}, nil
+		}
+		results, err := v.store.Exec(v.ctx, v.handle, workspace.ExecOptions{
+			Command: strings.Fields(v.input.Value()),
+		})
+		if err != nil {
+			errView := NewErrorView(err)
+			return ViewResult{NextView: errView}, nil
+		}
+		v.result = results
+		v.done = true
+		return ViewResult{}, nil
+	}
+
+	if !v.done {
+		updatedInput, cmd := v.input.Update(msg)
+		v.input = updatedInput
+		return ViewResult{}, cmd
+	}
+
+	return ViewResult{}, nil
+}
+
+func (v *modal_ExecView) View() string {
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(ColorText)
+
+	if v.done {
+		var resultLines []string
+		for _, r := range v.result {
+			resultLines = append(resultLines, "["+r.Repository+"] "+string(r.Output))
+		}
+
+		content := lipgloss.JoinVertical(
+			lipgloss.Left,
+			headerStyle.Render("Command Output:"),
+			lipgloss.JoinVertical(lipgloss.Left, resultLines...),
+		)
+
+		return ModalFrame().Render(
+			lipgloss.JoinVertical(
+				lipgloss.Left, content, "\n",
+				lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Enter/Esc] Dismiss"),
+			),
+		)
+	}
+
+	if v.workspace == nil {
+		return ModalFrame().Render("Loading...")
+	}
+
+	return ModalFrame().Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			headerStyle.Render("Run command in:"), "\n",
+			v.workspace.Handle+" ("+v.workspace.Purpose+")", "\n", "\n",
+			lipgloss.NewStyle().Foreground(ColorMuted).Render("Repositories: "),
+		) + "\n" + v.input.View() + "\n" +
+			lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Enter] Run  [Esc] Cancel"),
+	)
+}
+
+type ExecViewSnapshot struct {
+	Type      string
+	Handle    string
+	Command   string
+	Done      bool
+	RepoCount int
+}
+
+func (v *modal_ExecView) Snapshot() interface{} {
+	repoCount := 0
+	if v.workspace != nil {
+		repoCount = len(v.workspace.Repositories)
+	}
+	return ExecViewSnapshot{
+		Type:      "ExecView",
+		Handle:    v.handle,
+		Command:   v.input.Value(),
+		Done:      v.done,
+		RepoCount: repoCount,
+	}
+}

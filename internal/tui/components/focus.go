@@ -2,16 +2,29 @@ package components
 
 import "github.com/charmbracelet/lipgloss"
 
+// FocusState represents which UI element currently has focus.
+// This is used for keyboard navigation and focus management.
 type FocusState int
 
 const (
+	// FocusNone indicates no element has focus.
 	FocusNone FocusState = iota
+
+	// FocusInput indicates a text input field has focus.
 	FocusInput
+
+	// FocusList indicates a list view has focus.
 	FocusList
+
+	// FocusButton indicates a button has focus.
 	FocusButton
+
+	// FocusCustom indicates a custom element has focus.
 	FocusCustom
 )
 
+// FocusManager coordinates focus navigation between different UI elements.
+// It maintains a ordered list of focusable elements and handles traversal.
 type FocusManager struct {
 	currentFocus  FocusState
 	focusOrder    []FocusState
@@ -134,6 +147,8 @@ func (fm *FocusManager) IsButtonFocused() bool {
 	return fm.currentFocus == FocusButton
 }
 
+// FocusIndicator renders a visual cue showing which element has focus.
+// It displays different characters/styles based on focus state.
 type FocusIndicator struct {
 	Style        lipgloss.Style
 	FocusedStyle lipgloss.Style
@@ -169,11 +184,19 @@ func (fi *FocusIndicator) SetFocused(focused bool) *FocusIndicator {
 	return fi
 }
 
+// Focusable is the interface for UI elements that can receive focus.
+// Implementations track and report their focus state.
 type Focusable interface {
+	// GetFocusState returns the current focus state of the element.
 	GetFocusState() FocusState
+
+	// SetFocus sets the focus state of the element.
+	// The focused parameter indicates whether the element should be focused.
 	SetFocus(focused bool)
 }
 
+// FocusableGroup manages a collection of Focusable elements.
+// It allows focusing individual elements and clearing all focus at once.
 type FocusableGroup struct {
 	items []Focusable
 }
@@ -209,6 +232,8 @@ func (g *FocusableGroup) ClearFocus() {
 	}
 }
 
+// FocusableItem is a simple wrapper that treats a FocusState as a Focusable.
+// It can be used to include focus states directly in a FocusableGroup.
 type FocusableItem struct {
 	state FocusState
 }
@@ -227,13 +252,24 @@ func (i *FocusableItem) SetFocus(focused bool) {
 	}
 }
 
+// FocusStyle specifies how focus is visually indicated.
+// Different styles provide various visual cues for the focused element.
 type FocusStyle int
 
 const (
+	// FocusStyleNoIndicator hides the focus indicator.
 	FocusStyleNone FocusStyle = iota
+
+	// FocusStyleUnderline renders an underline for the focused element.
 	FocusStyleUnderline
+
+	// FocusStyleBorder renders a border around the focused element.
 	FocusStyleBorder
+
+	// FocusStyleHighlight renders highlighted background for the focused element.
 	FocusStyleHighlight
+
+	// FocusStyleReverse inverts foreground and background colors.
 	FocusStyleReverse
 )
 

@@ -1,0 +1,19 @@
+
+[TestWizardView_BackFromRepoStep - 1]
+TestWizardView_BackFromRepoStep
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---

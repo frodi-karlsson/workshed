@@ -1,0 +1,38 @@
+
+[TestDashboardView_InitialStates/empty_list - 1]
+TestDashboardView_InitialStates/empty_list
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_InitialStates/with_workspaces - 1]
+TestDashboardView_InitialStates/with_workspaces
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 2,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---

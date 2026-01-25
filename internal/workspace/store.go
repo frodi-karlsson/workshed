@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/handle"
 )
 
@@ -19,10 +20,11 @@ const metadataFileName = ".workshed.json"
 // FSStore is a filesystem-based workspace store that manages workspace directories and metadata.
 type FSStore struct {
 	root string
+	git  git.Git
 }
 
 // NewFSStore creates a new filesystem-based workspace store at the specified root directory.
-func NewFSStore(root string) (*FSStore, error) {
+func NewFSStore(root string, g ...git.Git) (*FSStore, error) {
 	if root == "" {
 		return nil, errors.New("root directory cannot be empty")
 	}
@@ -36,7 +38,12 @@ func NewFSStore(root string) (*FSStore, error) {
 		return nil, fmt.Errorf("creating root directory: %w", err)
 	}
 
-	return &FSStore{root: absRoot}, nil
+	var gitClient git.Git = git.RealGit{}
+	if len(g) > 0 && g[0] != nil {
+		gitClient = g[0]
+	}
+
+	return &FSStore{root: absRoot, git: gitClient}, nil
 }
 
 // Root returns the root directory for this store.
@@ -519,9 +526,6 @@ func (s *FSStore) writeMetadataToDir(ws *Workspace, dir string) error {
 func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir string) error {
 	url := repo.URL
 	ref := repo.Ref
-	if ref == "" {
-		ref = "main"
-	}
 
 	// Convert relative local paths to absolute for git clone
 	if isLocalPath(url) {
@@ -529,20 +533,32 @@ func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir string) 
 		if err != nil {
 			return fmt.Errorf("resolving local path: %w", err)
 		}
+
+		// Auto-detect current branch for local repos when no ref specified
+		if ref == "" {
+			branch, err := s.git.CurrentBranch(ctx, absPath)
+			if err != nil {
+				return fmt.Errorf("detecting current branch: %w", err)
+			}
+			ref = branch
+		}
+
 		url = absPath
+	}
+
+	// Fallback to "main" for remote repos or if branch detection failed
+	if ref == "" {
+		ref = "main"
 	}
 
 	repoDir := filepath.Join(wsDir, repo.Name)
 
-	cmd := exec.CommandContext(ctx, "git", "clone", url, repoDir)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return classifyGitError("clone", err, output)
+	if err := s.git.Clone(ctx, url, repoDir, git.CloneOptions{}); err != nil {
+		return err
 	}
 
-	cmd = exec.CommandContext(ctx, "git", "checkout", ref)
-	cmd.Dir = repoDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return classifyGitError("checkout", err, output)
+	if err := s.git.Checkout(ctx, repoDir, ref); err != nil {
+		return err
 	}
 
 	return nil
@@ -555,39 +571,6 @@ func (s *FSStore) cloneRepositories(ctx context.Context, repos []Repository, wsD
 		}
 	}
 	return nil
-}
-
-func classifyGitError(operation string, err error, output []byte) error {
-	outputStr := string(output)
-	var hint string
-
-	// Check for common error patterns
-	switch {
-	case strings.Contains(outputStr, "Repository not found") ||
-		strings.Contains(outputStr, "repository not found") ||
-		strings.Contains(outputStr, "not found"):
-		hint = "repository not found"
-	case strings.Contains(outputStr, "Authentication failed") ||
-		strings.Contains(outputStr, "Permission denied") ||
-		strings.Contains(outputStr, "could not read Username") ||
-		strings.Contains(outputStr, "fatal: Could not read from remote repository"):
-		hint = "authentication failed"
-	case strings.Contains(outputStr, "Could not resolve host") ||
-		strings.Contains(outputStr, "unable to access") ||
-		strings.Contains(outputStr, "network") ||
-		strings.Contains(outputStr, "Connection") ||
-		strings.Contains(outputStr, "timeout"):
-		hint = "network error"
-	case strings.Contains(outputStr, "pathspec") && strings.Contains(outputStr, "did not match") ||
-		strings.Contains(outputStr, "reference is not a tree"):
-		hint = "ref not found"
-	}
-
-	if hint != "" {
-		return fmt.Errorf("git %s failed (%s): %s", operation, hint, outputStr)
-	}
-
-	return fmt.Errorf("git %s failed: %w", operation, err)
 }
 
 func extractRepoName(url string) string {

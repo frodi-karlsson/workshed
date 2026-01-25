@@ -5,7 +5,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// KeyHandler processes key press events and returns whether the event was handled.
+// Implementations translate key presses into application actions.
 type KeyHandler interface {
+	// HandleKey processes a key message.
+	// Returns true if the key was handled, along with an optional command to execute.
 	HandleKey(msg tea.KeyMsg) (bool, tea.Cmd)
 }
 

@@ -1,0 +1,31 @@
+
+[TestWizardView_CancelDuringGitDetection - 1]
+TestWizardView_CancelDuringGitDetection
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.WizardView",
+      "Data": {
+        "Type": "WizardView",
+        "Step": 1,
+        "Purpose": "My project",
+        "RepoCount": 0,
+        "FinishMode": false,
+        "Loading": true,
+        "Done": false
+      }
+    }
+  ]
+}
+---

@@ -1,0 +1,57 @@
+
+[TestDashboardView_Navigation - 1]
+first_selected
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 3,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_Navigation - 2]
+second_selected
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 3,
+        "SelectedIndex": 1,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_Navigation - 3]
+third_selected
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 3,
+        "SelectedIndex": 2,
+        "HasError": false
+      }
+    }
+  ]
+}
+---

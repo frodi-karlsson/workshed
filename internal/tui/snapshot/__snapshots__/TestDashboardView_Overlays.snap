@@ -1,0 +1,75 @@
+
+[TestDashboardView_Overlays/help - 1]
+TestDashboardView_Overlays/help
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.HelpView",
+      "Data": {
+        "Type": "HelpView"
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_Overlays/wizard - 1]
+TestDashboardView_Overlays/wizard
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.WizardView",
+      "Data": {
+        "Type": "WizardView",
+        "Step": 0,
+        "Purpose": "",
+        "RepoCount": 0,
+        "FinishMode": false,
+        "Loading": false,
+        "Done": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_Overlays/keyboard_navigation - 1]
+TestDashboardView_Overlays/keyboard_navigation
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "ItemCount": 2,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
