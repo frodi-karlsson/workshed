@@ -385,3 +385,89 @@ func TestIntegrationExec(t *testing.T) {
 		}
 	})
 }
+
+func TestIntegrationRemove(t *testing.T) {
+	t.Run("should remove workspace directory completely", func(t *testing.T) {
+		store, root := CreateTestStore(t)
+		ctx := context.Background()
+
+		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"file.txt": "content"})
+
+		ws := store.CreateMust(ctx, "Test remove", []RepositoryOption{
+			{URL: repoURL, Ref: "main"},
+		})
+
+		workspacePath := filepath.Join(root, ws.Handle)
+		if !FileExists(workspacePath) {
+			t.Fatalf("Expected workspace directory to exist at %s", workspacePath)
+		}
+
+		err := store.Remove(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Remove failed: %v", err)
+		}
+
+		if FileExists(workspacePath) {
+			t.Errorf("Expected workspace directory to be removed from %s", workspacePath)
+		}
+	})
+
+	t.Run("should clean up cloned repositories", func(t *testing.T) {
+		store, root := CreateTestStore(t)
+		ctx := context.Background()
+
+		repoURL := CreateLocalGitRepo(t, "my-repo", map[string]string{"test.txt": "data"})
+
+		ws := store.CreateMust(ctx, "Test repo cleanup", []RepositoryOption{
+			{URL: repoURL, Ref: "main"},
+		})
+
+		repoPath := filepath.Join(ws.Path, "my-repo")
+		if !FileExists(repoPath) {
+			t.Fatalf("Expected cloned repository at %s", repoPath)
+		}
+
+		err := store.Remove(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Remove failed: %v", err)
+		}
+
+		workspacePath := filepath.Join(root, ws.Handle)
+		if FileExists(workspacePath) {
+			t.Errorf("Expected workspace directory to be removed")
+		}
+	})
+
+	t.Run("should handle remove of nonexistent workspace", func(t *testing.T) {
+		store, _ := CreateTestStore(t)
+		ctx := context.Background()
+
+		err := store.Remove(ctx, "nonexistent-workspace")
+		if err == nil {
+			t.Error("Expected error for nonexistent workspace")
+		}
+		if !strings.Contains(err.Error(), "workspace not found") {
+			t.Errorf("Expected 'workspace not found' error, got: %v", err)
+		}
+	})
+
+	t.Run("should handle remove of corrupted workspace directory", func(t *testing.T) {
+		store, _ := CreateTestStore(t)
+		ctx := context.Background()
+
+		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"file.txt": "content"})
+
+		ws := store.CreateMust(ctx, "Test corrupted remove", []RepositoryOption{
+			{URL: repoURL, Ref: "main"},
+		})
+
+		if err := os.RemoveAll(ws.Path); err != nil {
+			t.Fatalf("Failed to manually remove workspace: %v", err)
+		}
+
+		err := store.Remove(ctx, ws.Handle)
+		if err == nil {
+			t.Error("Expected error when workspace directory is missing")
+		}
+	})
+}

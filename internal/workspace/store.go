@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/frodi/workshed/internal/handle"
-	"github.com/frodi/workshed/internal/logger"
 )
 
 const metadataFileName = ".workshed.json"
@@ -179,7 +178,6 @@ func (s *FSStore) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 		return nil, fmt.Errorf("reading workspaces directory: %w", err)
 	}
 
-	l := logger.NewLogger(logger.ERROR, "workspace")
 	var workspaces []*Workspace
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -188,7 +186,6 @@ func (s *FSStore) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 
 		ws, err := s.Get(ctx, entry.Name())
 		if err != nil {
-			l.Error("skipping corrupted workspace directory", "handle", entry.Name(), "error", err)
 			continue
 		}
 
