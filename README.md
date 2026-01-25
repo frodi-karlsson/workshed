@@ -35,107 +35,90 @@ If `git worktree` is about checking out another branch, Workshed is about groupi
 
 ---
 
-## Example
+## Quick Start
 
 ```bash
-# Create a workspace for a specific task
-workshed create \
-  --purpose "Debug payment timeout across services" \
-  --repo git@github.com:org/api@main \
-  --repo git@github.com:org/worker@develop
+# Create a workspace (guided or with --purpose)
+workshed create --purpose "Debug payment timeout"
 
-# Or use local repositories with direct paths
-workshed create \
-  --purpose "Local development" \
-  --repo /Users/dev/my-api \
-  --repo /Users/dev/my-worker
-
-# Or create a workspace using current directory (no cloning)
-cd /path/to/your/project
-workshed create --purpose "Quick exploration"
-
-# Commands can use current directory to discover workspace
-workshed exec -- make test          # Runs in workspace (auto-discovered)
-workshed inspect                    # Shows workspace details
-workshed path                       # Prints workspace path
-workshed update --purpose "New focus"  # Updates workspace purpose
-workshed remove                     # Removes workspace (with confirmation)
-
-workshed list
-```
-
-This creates a directory containing cloned repositories and a small metadata file describing the workspace.
-
----
-
-## How It Works
-
-### Purpose
-A workspace must have a purpose. Use `--purpose` flag or enter it interactively when TUI is enabled. This is stored as metadata and used for listing and discovery. The handle itself is not intended to be meaningful.
-
-### Workspace layout
-A workspace is a directory containing:
-- A metadata file
-- One subdirectory per repository
-
-If the directory exists, the workspace exists.
-
-### Multiple repositories
-Repositories are cloned into subdirectories of the workspace. They are not coupled beyond being colocated.
-
-### Current directory workspace
-If no `--repo` is provided when creating a workspace, the current directory is used as the repository. This is useful for exploring existing projects without cloning.
-
-### Auto-discovery
-Most commands (`exec`, `inspect`, `path`, `update`, `remove`) can automatically find the workspace containing the current directory when no handle is provided. This means you can run commands directly from within a workspace without needing to remember or look up the handle.
-
-```bash
-# From within a workspace directory
+# Run commands in all repositories
 workshed exec -- make test
+
+# List and manage workspaces
+workshed list
 workshed inspect
 workshed path
 workshed update --purpose "New focus"
+workshed remove
+
+# Or use the interactive dashboard
+workshed
 ```
 
-### Batch execution (`exec`)
-`workshed exec` runs a command in each repository:
+---
 
-- Commands run sequentially by default
-- Repositories are processed in creation order
-- Each command runs from the repository root
-- Use `--repo <name>` to target a specific repository
-- Use `--repo all` to run in all repositories (default)
-- Use `--repo root` to run in workspace root
-- Output is streamed with repository headers
-- Execution stops on the first non-zero exit code
-- If no handle is provided, uses the workspace containing the current directory
+## Key Concepts
 
-```bash
-# Run in all repositories (auto-discovers workspace from current directory)
-workshed exec -- make test
+### Purpose
+A workspace must have a purpose. This is stored as metadata and used for listing and discovery. The handle (e.g. `aquatic-fish-motion`) is randomly generated and not meaningful.
 
-# Run in specific repository
-workshed exec --repo api -- make build
+### Layout
+A workspace is a directory containing:
+- A metadata file (`.workshed.json`)
+- One subdirectory per cloned repository
 
-# Run in workspace root
-workshed exec --repo root -- make setup
-```
+If the directory exists, the workspace exists.
 
-There is no rollback, retry logic, or interpretation of results.
+### Current Directory Mode
+If no `--repo` is provided when creating, the current directory becomes the repository. No cloning needed for local projects.
+
+### Auto-Discovery
+Most commands work from within a workspace without specifying a handle — Workshed finds the enclosing workspace automatically.
 
 ---
 
 ## Commands
 
-- `dashboard` — Open interactive workspace dashboard (also runs with no arguments)
-- `create` — Create a workspace (purpose required via `--purpose` or interactive wizard, repos optional)
-- `list` — List workspaces with optional filtering
-- `inspect` — Show workspace details (handle optional, auto-discovers from current directory)
-- `path` — Print the workspace path (handle optional, auto-discovers from current directory)
-- `exec` — Run a command in repositories (handle optional, auto-discovers from current directory)
-- `remove` — Delete a workspace (handle optional, auto-discovers from current directory)
-- `update` — Update workspace purpose (handle optional, auto-discovers from current directory)
-- `version` / `--version` — Show version information
+| Command | Description |
+|---------|-------------|
+| `workshed` | Open interactive dashboard |
+| `workshed create` | Create a new workspace |
+| `workshed list` | List workspaces, filter by purpose |
+| `workshed inspect` | Show workspace details |
+| `workshed path` | Print workspace path |
+| `workshed exec -- <cmd>` | Run command in repositories |
+| `workshed update` | Update workspace purpose |
+| `workshed remove` | Delete a workspace |
+| `workshed --version` | Show version |
+
+Run `workshed <command> --help` for detailed usage.
+
+---
+
+## Environment Variables
+
+- `WORKSHED_ROOT` — workspace directory (default: `~/.workshed/workspaces`)
+- `WORKSHED_LOG_FORMAT` — output format: `human`, `json`, or `raw` (default: `human`)
+
+---
+
+## Terminal UI (TUI)
+
+Workshed includes optional interactive UI for workspace selection and purpose input. Active by default in human mode.
+
+### When TUI Is Enabled
+
+Default behavior when `WORKSHED_LOG_FORMAT` is unset or `human`. Set to `json` to disable.
+
+### Features
+
+- **Workspace selector** — Interactive list when auto-discovery fails (arrow keys/`j`/`k` to navigate, `Enter` to select)
+- **Purpose autocomplete** — Suggestions from existing purposes as you type
+- **Dashboard** — Full interactive workspace management
+
+### Non-Interactive Fallback
+
+When TUI is disabled (CI, piped output), Workshed falls back to plain text prompts and error messages.
 
 ---
 
@@ -147,111 +130,37 @@ There is no rollback, retry logic, or interpretation of results.
 - A Git wrapper or branch manager
 - A background service
 
-Workshed does not try to understand your code or your workflow. It only manages directories and runs commands you explicitly ask for.
-
----
-
-## Development Status
-
-### Implemented (v0.2.0)
-- Workspace creation with required purpose
-- Multiple repositories per workspace
-- `exec` for sequential batch commands
-- Listing and filtering by purpose
-- Workspace inspection and path lookup
-- Filesystem-backed storage
-- Updating workspace purpose
-
-### Planned
-- Templates for workspace setup
-- Additional filtering and discovery
-- Optional concurrent execution
+Workshed only manages directories and runs commands you explicitly provide.
 
 ---
 
 ## Development
 
-### Build
-```bash
-make build
-./bin/workshed --help
-```
+See [docs/architecture/](docs/architecture/) for detailed documentation.
 
-### Test
-```bash
-make test              # unit tests
-make test-integration  # integration tests
-make test-e2e          # TUI e2e tests
-make test-all          # all tests (unit + integration + e2e)
-make check             # lint + all tests
-```
-
-### Lint
-```bash
-make lint         # check
-make lint-fix     # auto-fix issues
-```
-
-### Environment Variables
-- `WORKSHED_ROOT` — workspace directory (default: `~/.workshed/workspaces`)
-- `WORKSHED_LOG_FORMAT` — output format: `human`, `json`, or `raw` (default: `human`)
+| Task | Command |
+|------|---------|
+| Build | `make build` |
+| Unit tests | `make test` |
+| Integration tests | `make test-integration` |
+| TUI e2e tests | `make test-e2e` |
+| Lint | `make lint` |
+| Full check | `make check` |
 
 ---
 
-## Terminal UI (TUI)
+## Architecture
 
-Workshed includes optional interactive terminal UI components for workspace selection and purpose input. These are enabled by default when running in human mode.
+For details on how Workshed is organized and why:
 
-### When TUI Is Active
-
-The TUI is available when `WORKSHED_LOG_FORMAT` is unset or set to `human` (the default). Set to `json` or any other value to disable TUI and use plain output:
-
-```bash
-# TUI enabled (default)
-workshed create --purpose "Task"
-export WORKSHED_LOG_FORMAT=json  # Disable TUI
-```
-
-### Workspace Selector
-
-When a workspace handle is not provided and auto-discovery fails, the TUI presents an interactive list of existing workspaces:
-
-- **Navigation**: Arrow keys or `j`/`k` to move up/down
-- **Search**: Type to filter the list by handle or purpose
-- **Select**: `Enter` to confirm selection
-- **Cancel**: `Ctrl+C` or `Esc` to exit without selecting
-
-The selector displays each workspace with:
-- Handle (e.g., `aquatic-fish-motion`)
-- Purpose
-- Repository count and creation date
-
-### Purpose Input with Autocomplete
-
-When creating a workspace without `--purpose`, the TUI shows an input field with autocomplete suggestions from existing workspace purposes:
-
-- **Type** a new purpose directly
-- **Navigate** suggestions with arrow keys
-- **Select** a suggestion with `Enter` to use it
-- **Cancel** with `Ctrl+C` or `Esc`
-
-Suggestions appear below the input and update as you type, matching purposes case-insensitively.
-
-### Non-Interactive Fallback
-
-When TUI is disabled or not applicable (e.g., piped output, CI environments), Workshed falls back to plain text prompts:
-
-```
-Error: could not determine workspace, specify a handle or run from within a workspace
-```
-
-### Metadata
-Workspaces are stored as directories containing a `.workshed.json` metadata file with workspace metadata (handle, purpose, list of repositories with URL/ref/name, creation time).
+- [Architecture Overview](docs/architecture/index.md) — Guiding philosophy and module organization
+- [CLI Architecture](docs/architecture/cli.md) — Command patterns and conventions
+- [TUI Architecture](docs/architecture/tui.md) — View design and interaction patterns
 
 ---
 
 ## Summary
 
-Workshed is a small tool for organizing temporary, multi-repository work. It’s useful when a task spans several repositories and you want a clean, disposable workspace to work in.
+Workshed is a small tool for organizing temporary, multi-repository work. It's useful when a task spans several repositories and you want a clean, disposable workspace to work in.
 
-It doesn’t replace Git. It just makes this kind of work easier to manage.
+It doesn't replace Git. It just makes this kind of work easier to manage.
