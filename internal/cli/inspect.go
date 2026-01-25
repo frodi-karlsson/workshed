@@ -8,40 +8,40 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-func Inspect(args []string) {
+func (r *Runner) Inspect(args []string) {
 	l := logger.NewLogger(logger.INFO, "inspect")
 
 	fs := flag.NewFlagSet("inspect", flag.ExitOnError)
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed inspect [<handle>]\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed inspect [<handle>]\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
-		exitFunc(1)
+		r.ExitFunc(1)
 	}
 
-	store := GetOrCreateStore(l)
 	ctx := context.Background()
 
 	providedHandle := ""
 	if fs.NArg() >= 1 {
 		providedHandle = fs.Arg(0)
 	}
-	handle := ResolveHandle(ctx, store, providedHandle, l)
+	handle := r.ResolveHandle(ctx, providedHandle, l)
 
-	ws, err := store.Get(ctx, handle)
+	s := r.getStore()
+	ws, err := s.Get(ctx, handle)
 	if err != nil {
 		l.Error("failed to get workspace", "handle", handle, "error", err)
-		exitFunc(1)
+		r.ExitFunc(1)
 		return
 	}
 
 	if tui.IsHumanMode() {
-		if err := tui.ShowInspectModal(ctx, store, handle); err != nil {
+		if err := tui.ShowInspectModal(ctx, s, handle); err != nil {
 			l.Error("failed to show inspect modal", "error", err)
-			exitFunc(1)
+			r.ExitFunc(1)
 		}
 		return
 	}

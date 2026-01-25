@@ -13,7 +13,7 @@ import (
 
 const defaultCloneTimeout = 5 * time.Minute
 
-func Create(args []string) {
+func (r *Runner) Create(args []string) {
 	l := logger.NewLogger(logger.INFO, "create")
 
 	fs := flag.NewFlagSet("create", flag.ExitOnError)
@@ -24,17 +24,17 @@ func Create(args []string) {
 	fs.StringSliceVarP(&reposAlias, "repos", "", nil, "Alias for --repo (can be specified multiple times)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed create --purpose <purpose> [--repo url@ref]...\n\n")
-		logger.SafeFprintf(errWriter, "Flags:\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed create --purpose <purpose> [--repo url@ref]...\n\n")
+		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
-		exitFunc(1)
+		r.ExitFunc(1)
 	}
 
-	store := GetOrCreateStore(l)
+	s := r.getStore()
 	ctx := context.Background()
 
 	opts := workspace.CreateOptions{
@@ -43,10 +43,10 @@ func Create(args []string) {
 
 	if *purpose == "" {
 		if tui.IsHumanMode() {
-			result, err := tui.RunCreateWizard(ctx, store)
+			result, err := tui.RunCreateWizard(ctx, s)
 			if err != nil {
 				l.Help("wizard cancelled")
-				exitFunc(0)
+				r.ExitFunc(0)
 				return
 			}
 			opts.Purpose = result.Purpose
@@ -54,7 +54,7 @@ func Create(args []string) {
 		} else {
 			l.Error("missing required flag", "flag", "--purpose")
 			fs.Usage()
-			exitFunc(1)
+			r.ExitFunc(1)
 		}
 	} else {
 		opts.Purpose = *purpose
@@ -80,10 +80,10 @@ func Create(args []string) {
 	createCtx, cancel := context.WithTimeout(ctx, defaultCloneTimeout)
 	defer cancel()
 
-	ws, err := store.Create(createCtx, opts)
+	ws, err := s.Create(createCtx, opts)
 	if err != nil {
 		l.Error("workspace creation failed", "purpose", opts.Purpose, "error", err)
-		exitFunc(1)
+		r.ExitFunc(1)
 		return
 	}
 
@@ -99,28 +99,20 @@ func Create(args []string) {
 }
 
 func parseRepoFlag(repo string) (url, ref string) {
-	// For SSH URLs (git@host:path@ref), we need to find the last @ after the first :
-	// For other URLs, we split on the last @
-
 	if strings.HasPrefix(repo, "git@") {
-		// Find the first : which separates host from path
 		colonIdx := strings.Index(repo, ":")
 		if colonIdx != -1 {
-			// Look for @ after the colon
 			atIdx := strings.LastIndex(repo[colonIdx:], "@")
 			if atIdx != -1 {
-				// Found a ref separator
 				actualIdx := colonIdx + atIdx
 				url = repo[:actualIdx]
 				ref = repo[actualIdx+1:]
 				return url, ref
 			}
 		}
-		// No ref found, return whole string as URL
 		return repo, ""
 	}
 
-	// For non-SSH URLs, split on the last @
 	atIdx := strings.LastIndex(repo, "@")
 	if atIdx != -1 {
 		url = repo[:atIdx]

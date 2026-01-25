@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -32,7 +33,7 @@ type WizardResult struct {
 }
 
 type wizardModel struct {
-	store        store
+	store        store.Store
 	ctx          context.Context
 	currentStep  wizardStep
 	purposeModel *purposeStepModel
@@ -44,7 +45,7 @@ type wizardModel struct {
 	err          error
 }
 
-func newWizardModel(ctx context.Context, s store) (wizardModel, error) {
+func newWizardModel(ctx context.Context, s store.Store) (wizardModel, error) {
 	workspaces, err := s.List(ctx, workspace.ListOptions{})
 	if err != nil {
 		return wizardModel{}, err
@@ -194,8 +195,8 @@ func (m wizardModel) View() string {
 	return ""
 }
 
-func RunCreateWizard(ctx context.Context, store *workspace.FSStore) (*WizardResult, error) {
-	m, err := newWizardModel(ctx, store)
+func RunCreateWizard(ctx context.Context, s store.Store) (*WizardResult, error) {
+	m, err := newWizardModel(ctx, s)
 	if err != nil {
 		return nil, fmt.Errorf("initializing wizard: %w", err)
 	}

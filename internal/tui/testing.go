@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/teatest"
+	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -107,6 +108,15 @@ func (m *mockStore) Remove(ctx context.Context, handle string) error {
 	return errWorkspaceNotFound
 }
 
+func (m *mockStore) Path(ctx context.Context, handle string) (string, error) {
+	for _, ws := range m.workspaces {
+		if ws.Handle == handle {
+			return ws.Path, nil
+		}
+	}
+	return "", errWorkspaceNotFound
+}
+
 func (m *mockStore) Exec(ctx context.Context, handle string, opts workspace.ExecOptions) ([]workspace.ExecResult, error) {
 	return nil, nil
 }
@@ -130,11 +140,11 @@ func generateTestHandle(purpose string) string {
 	return result
 }
 
-func newTestDashboardModel(t *testing.T, store store) dashboardModel {
+func newTestDashboardModel(t *testing.T, s store.Store) dashboardModel {
 	return dashboardModel{
 		list:       newTestListModel(),
 		textInput:  newTestTextInputModel(),
-		store:      store,
+		store:      s,
 		ctx:        context.Background(),
 		workspaces: nil,
 		filterMode: false,

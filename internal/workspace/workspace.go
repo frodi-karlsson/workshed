@@ -53,4 +53,5 @@ type Store interface {
 	Path(ctx context.Context, handle string) (string, error)
 	UpdatePurpose(ctx context.Context, handle string, purpose string) error
 	FindWorkspace(ctx context.Context, dir string) (*Workspace, error)
+	Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error)
 }

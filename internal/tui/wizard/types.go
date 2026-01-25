@@ -37,6 +37,6 @@ type Step interface {
 	GetResult() interface{}
 }
 
-type store interface {
+type StoreList interface {
 	List(ctx context.Context, opts workspace.ListOptions) ([]*workspace.Workspace, error)
 }

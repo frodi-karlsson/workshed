@@ -20,7 +20,7 @@ func TestCreate(t *testing.T) {
 		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
 
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Test workspace", "--repo", repoURL})
+		env.Runner().Create([]string{"--purpose", "Test workspace", "--repo", repoURL})
 		if env.ExitCalled() {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
@@ -33,7 +33,7 @@ func TestCreate(t *testing.T) {
 		handle := ExtractHandleFromLog(t, output)
 
 		env.ResetBuffers()
-		List([]string{})
+		env.Runner().List([]string{})
 		if env.ExitCalled() {
 			t.Fatalf("List exited: %s", env.ErrorOutput())
 		}
@@ -47,7 +47,7 @@ func TestCreate(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		Inspect([]string{handle})
+		env.Runner().Inspect([]string{handle})
 		if env.ExitCalled() {
 			t.Fatalf("Inspect exited: %s", env.ErrorOutput())
 		}
@@ -64,7 +64,7 @@ func TestCreate(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		Remove([]string{"--force", handle})
+		env.Runner().Remove([]string{"--force", handle})
 		if env.ExitCalled() {
 			t.Fatalf("Remove exited: %s", env.ErrorOutput())
 		}
@@ -86,7 +86,7 @@ func TestCreate(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Test", "--repo", "/nonexistent/local/repo"})
+		env.Runner().Create([]string{"--purpose", "Test", "--repo", "/nonexistent/local/repo"})
 
 		if !env.ExitCalled() {
 			t.Error("Create should have exited with error")
@@ -105,7 +105,7 @@ func TestCreate(t *testing.T) {
 		repoURL := workspace.CreateLocalGitRepo(t, "local-test", map[string]string{"README.md": "# Test"})
 
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Local repo test", "--repo", repoURL})
+		env.Runner().Create([]string{"--purpose", "Local repo test", "--repo", repoURL})
 
 		if env.ExitCalled() {
 			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
@@ -134,7 +134,7 @@ func TestCreate(t *testing.T) {
 		defer os.Chmod(env.TempDir, 0755)
 
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Test workspace", "--repo", repoURL})
+		env.Runner().Create([]string{"--purpose", "Test workspace", "--repo", repoURL})
 
 		if !env.ExitCalled() {
 			t.Error("Create should exit with error in read-only directory")
@@ -149,7 +149,7 @@ func TestCreate(t *testing.T) {
 
 		purpose := "Debug: payment flow with café and naïve users"
 		env.ResetBuffers()
-		Create([]string{"--purpose", purpose, "--repo", repoURL})
+		env.Runner().Create([]string{"--purpose", purpose, "--repo", repoURL})
 
 		if env.ExitCalled() {
 			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
@@ -161,7 +161,7 @@ func TestCreate(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		List([]string{})
+		env.Runner().List([]string{})
 
 		listOutput := env.Output()
 		if !strings.Contains(listOutput, purpose) {
@@ -177,7 +177,7 @@ func TestCreate(t *testing.T) {
 		repoURL2 := workspace.CreateLocalGitRepo(t, "worker", map[string]string{"file.txt": "worker content"})
 
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Multi-repo test", "--repo", repoURL1, "--repo", repoURL2})
+		env.Runner().Create([]string{"--purpose", "Multi-repo test", "--repo", repoURL1, "--repo", repoURL2})
 
 		if env.ExitCalled() {
 			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
@@ -241,14 +241,14 @@ func TestList(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		List([]string{})
+		env.Runner().List([]string{})
 		output := env.Output()
 		if strings.Count(output, "Debug") != 2 {
 			t.Errorf("Should show 2 debug workspaces, got: %s", output)
 		}
 
 		env.ResetBuffers()
-		List([]string{"--purpose", "debug"})
+		env.Runner().List([]string{"--purpose", "debug"})
 		output = env.Output()
 		if !strings.Contains(output, "payment") {
 			t.Errorf("Filtered list should contain 'payment', got: %s", output)
@@ -266,7 +266,7 @@ func TestList(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		List([]string{})
+		env.Runner().List([]string{})
 
 		output := env.Output()
 		if !strings.Contains(output, "no workspaces") {
@@ -281,7 +281,7 @@ func TestRemove(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Remove([]string{"--force", "nonexistent-handle"})
+		env.Runner().Remove([]string{"--force", "nonexistent-handle"})
 
 		if !env.ExitCalled() {
 			t.Error("Remove should exit with error for nonexistent workspace")
@@ -300,7 +300,7 @@ func TestInspect(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Inspect([]string{"nonexistent-handle"})
+		env.Runner().Inspect([]string{"nonexistent-handle"})
 
 		if !env.ExitCalled() {
 			t.Error("Inspect should exit with error for nonexistent workspace")
@@ -319,7 +319,7 @@ func TestPath(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Path([]string{"nonexistent-handle"})
+		env.Runner().Path([]string{"nonexistent-handle"})
 
 		if !env.ExitCalled() {
 			t.Error("Path should exit with error for nonexistent workspace")

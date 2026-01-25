@@ -10,39 +10,34 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-// List displays all workspaces with optional filtering by purpose.
-func List(args []string) {
+func (r *Runner) List(args []string) {
 	l := logger.NewLogger(logger.INFO, "list")
 
 	fs := flag.NewFlagSet("list", flag.ExitOnError)
 	purposeFilter := fs.String("purpose", "", "Filter by purpose (case-insensitive substring match)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed list [--purpose <filter>]\n\n")
-		logger.SafeFprintf(errWriter, "Flags:\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed list [--purpose <filter>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
-		exitFunc(1)
+		r.ExitFunc(1)
 	}
 
-	store, err := workspace.NewFSStore(GetWorkshedRoot())
-	if err != nil {
-		l.Error("failed to create workspace store", "error", err)
-		exitFunc(1)
-	}
+	s := r.getStore()
 
 	opts := workspace.ListOptions{
 		PurposeFilter: *purposeFilter,
 	}
 
 	ctx := context.Background()
-	workspaces, err := store.List(ctx, opts)
+	workspaces, err := s.List(ctx, opts)
 	if err != nil {
 		l.Error("failed to list workspaces", "error", err)
-		exitFunc(1)
+		r.ExitFunc(1)
 		return
 	}
 
@@ -51,7 +46,7 @@ func List(args []string) {
 		return
 	}
 
-	w := tabwriter.NewWriter(outWriter, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(r.Stdout, 0, 0, 2, ' ', 0)
 	logger.SafeFprintln(w, "HANDLE\tPURPOSE\tREPO\tCREATED")
 
 	for _, ws := range workspaces {

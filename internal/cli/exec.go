@@ -6,25 +6,25 @@ import (
 	"os"
 
 	"github.com/frodi/workshed/internal/logger"
-	"github.com/frodi/workshed/internal/workspace"
+	"github.com/frodi/workshed/internal/store"
 	flag "github.com/spf13/pflag"
 )
 
-func Exec(args []string) {
+func (r *Runner) Exec(args []string) {
 	l := logger.NewLogger(logger.INFO, "exec")
 
 	fs := flag.NewFlagSet("exec", flag.ExitOnError)
 	target := fs.String("repo", "", "Target repository name (default: all repositories)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(errWriter, "Usage: workshed exec [<handle>] -- <command>...\n\n")
-		logger.SafeFprintf(errWriter, "Flags:\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed exec [<handle>] -- <command>...\n\n")
+		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
-		exitFunc(1)
+		r.ExitFunc(1)
 	}
 
 	sepIdx := -1
@@ -38,35 +38,35 @@ func Exec(args []string) {
 	if sepIdx == -1 {
 		l.Error("missing command separator", "separator", "--")
 		fs.Usage()
-		exitFunc(1)
+		r.ExitFunc(1)
 	}
 
 	if sepIdx+1 >= len(args) {
 		l.Error("missing command to execute")
 		fs.Usage()
-		exitFunc(1)
+		r.ExitFunc(1)
 	}
 
 	command := args[sepIdx+1:]
 
-	store := GetOrCreateStore(l)
 	ctx := context.Background()
 
 	providedHandle := ""
 	if fs.NArg() >= 1 {
 		providedHandle = fs.Arg(0)
 	}
-	handle := ResolveHandle(ctx, store, providedHandle, l)
+	handle := r.ResolveHandle(ctx, providedHandle, l)
 
-	opts := workspace.ExecOptions{
+	s := r.getStore()
+	opts := store.ExecOptions{
 		Target:  *target,
 		Command: command,
 	}
 
-	results, err := store.Exec(ctx, handle, opts)
+	results, err := s.Exec(ctx, handle, opts)
 	if err != nil {
 		l.Error("exec failed", "handle", handle, "error", err)
-		exitFunc(1)
+		r.ExitFunc(1)
 		return
 	}
 

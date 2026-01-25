@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/logger"
+	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -102,11 +103,11 @@ No workspaces found. Create one with:
 )
 
 type Selector struct {
-	store *workspace.FSStore
+	store store.Store
 }
 
-func NewSelector(store *workspace.FSStore) *Selector {
-	return &Selector{store: store}
+func NewSelector(s store.Store) *Selector {
+	return &Selector{store: s}
 }
 
 func (s *Selector) Run(ctx context.Context) (string, error) {
@@ -156,12 +157,12 @@ func IsHumanMode() bool {
 	return envFormat == "" || envFormat == "human"
 }
 
-func TrySelectWorkspace(ctx context.Context, store *workspace.FSStore, findErr error, l *logger.Logger) (string, bool) {
+func TrySelectWorkspace(ctx context.Context, s store.Store, findErr error, l *logger.Logger) (string, bool) {
 	if !IsHumanMode() {
 		return "", false
 	}
 
-	selector := NewSelector(store)
+	selector := NewSelector(s)
 	handle, err := selector.Run(ctx)
 	if err != nil {
 		l.Help("workspace selection cancelled")

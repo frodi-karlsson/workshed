@@ -3,12 +3,12 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/frodi/workshed/internal/logger"
+	"github.com/frodi/workshed/internal/workspace"
 )
 
 type CLITestEnvironment struct {
@@ -17,11 +17,7 @@ type CLITestEnvironment struct {
 	OutBuf     *bytes.Buffer
 	ErrBuf     *bytes.Buffer
 	exitCalled bool
-	originals  struct {
-		outWriter io.Writer
-		errWriter io.Writer
-		exitFunc  func(int)
-	}
+	runner     *Runner
 }
 
 func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
@@ -39,15 +35,18 @@ func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
 		t.Fatalf("Failed to set WORKSHED_LOG_FORMAT: %v", err)
 	}
 
-	env.originals.outWriter = outWriter
-	env.originals.errWriter = errWriter
-	env.originals.exitFunc = exitFunc
-
-	outWriter = env.OutBuf
-	errWriter = env.ErrBuf
-	exitFunc = func(code int) {
-		env.exitCalled = true
+	env.runner = &Runner{
+		Stderr:   env.ErrBuf,
+		Stdout:   env.OutBuf,
+		ExitFunc: func(code int) { env.exitCalled = true },
 	}
+
+	store, err := workspace.NewFSStore(env.TempDir)
+	if err != nil {
+		t.Fatalf("Failed to create store: %v", err)
+	}
+	env.runner.Store = store
+
 	logger.SetTestOutputWriter(env.OutBuf)
 
 	return env
@@ -60,10 +59,6 @@ func (e *CLITestEnvironment) Cleanup() {
 	if err := os.Unsetenv("WORKSHED_LOG_FORMAT"); err != nil {
 		e.T.Errorf("Failed to unset WORKSHED_LOG_FORMAT: %v", err)
 	}
-
-	outWriter = e.originals.outWriter
-	errWriter = e.originals.errWriter
-	exitFunc = e.originals.exitFunc
 	logger.ClearTestOutputWriter()
 }
 
@@ -71,6 +66,10 @@ func (e *CLITestEnvironment) ResetBuffers() {
 	e.OutBuf.Reset()
 	e.ErrBuf.Reset()
 	e.exitCalled = false
+	if e.runner != nil {
+		e.runner.Stdout = e.OutBuf
+		e.runner.Stderr = e.ErrBuf
+	}
 }
 
 func (e *CLITestEnvironment) ExitCalled() bool {
@@ -83,6 +82,10 @@ func (e *CLITestEnvironment) Output() string {
 
 func (e *CLITestEnvironment) ErrorOutput() string {
 	return e.ErrBuf.String()
+}
+
+func (e *CLITestEnvironment) Runner() *Runner {
+	return e.runner
 }
 
 func ExtractHandleFromLog(t *testing.T, output string) string {

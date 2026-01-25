@@ -27,30 +27,30 @@ const (
 	RAW
 )
 
-// Logger provides dual-mode structured logging for CLI operations
 type Logger struct {
 	level     LogLevel
 	format    LogFormat
 	command   string
 	log       *log.Logger
 	timestamp bool
+	writer    io.Writer
 }
 
-// Global variable for test output redirection
-// This allows tests to redirect logger output to buffers for validation
-var (
-	testOutputWriter io.Writer
-)
-
-// CommandContext provides command execution context
 type CommandContext struct {
 	Command string
 	Args    []string
 }
 
-// NewLogger creates a new logger with format detection and command context
 func NewLogger(level LogLevel, command string) *Logger {
-	format := HUMAN // default
+	var writer io.Writer = os.Stdout
+	if testOutputWriter != nil {
+		writer = testOutputWriter
+	}
+	return NewLoggerWithWriter(level, command, writer)
+}
+
+func NewLoggerWithWriter(level LogLevel, command string, writer io.Writer) *Logger {
+	format := HUMAN
 	if envFormat := os.Getenv("WORKSHED_LOG_FORMAT"); envFormat != "" {
 		switch envFormat {
 		case "json":
@@ -60,33 +60,31 @@ func NewLogger(level LogLevel, command string) *Logger {
 		}
 	}
 
-	// Use test output writer if set (for testing), otherwise use os.Stdout
-	outputWriter := getOutputWriter()
-
 	return &Logger{
 		level:     level,
 		format:    format,
 		command:   command,
-		log:       log.New(outputWriter, "", 0),
+		log:       log.New(writer, "", 0),
 		timestamp: format == JSON,
+		writer:    writer,
 	}
 }
 
-// getOutputWriter returns the appropriate output writer for logging
-func getOutputWriter() io.Writer {
-	if testOutputWriter != nil {
-		return testOutputWriter
-	}
-	return os.Stdout
+func (l *Logger) WithWriter(writer io.Writer) *Logger {
+	newLogger := *l
+	newLogger.log = log.New(writer, "", 0)
+	newLogger.writer = writer
+	return &newLogger
 }
 
-// SetTestOutputWriter configures the logger to use a specific writer for output
-// This is primarily used in testing to redirect output to buffers for validation
+var (
+	testOutputWriter io.Writer
+)
+
 func SetTestOutputWriter(writer io.Writer) {
 	testOutputWriter = writer
 }
 
-// ClearTestOutputWriter resets the logger to use os.Stdout
 func ClearTestOutputWriter() {
 	testOutputWriter = nil
 }

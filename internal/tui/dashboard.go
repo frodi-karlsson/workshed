@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/modalViews"
 	"github.com/frodi/workshed/internal/tui/wizard"
 	"github.com/frodi/workshed/internal/workspace"
@@ -17,15 +18,6 @@ import (
 type workspacesLoadedMsg struct {
 	workspaces []*workspace.Workspace
 	err        error
-}
-
-type store interface {
-	List(ctx context.Context, opts workspace.ListOptions) ([]*workspace.Workspace, error)
-	Get(ctx context.Context, handle string) (*workspace.Workspace, error)
-	Create(ctx context.Context, opts workspace.CreateOptions) (*workspace.Workspace, error)
-	UpdatePurpose(ctx context.Context, handle string, purpose string) error
-	Remove(ctx context.Context, handle string) error
-	Exec(ctx context.Context, handle string, opts workspace.ExecOptions) ([]workspace.ExecResult, error)
 }
 
 type viewState int
@@ -47,7 +39,7 @@ const (
 type dashboardModel struct {
 	list           list.Model
 	textInput      textinput.Model
-	store          store
+	store          store.Store
 	ctx            context.Context
 	workspaces     []*workspace.Workspace
 	filterMode     bool
@@ -78,7 +70,7 @@ type dashboardModel struct {
 	helpModal       *modalViews.HelpModal
 }
 
-func NewDashboardModel(ctx context.Context, store *workspace.FSStore) dashboardModel {
+func NewDashboardModel(ctx context.Context, store store.Store) dashboardModel {
 	ti := textinput.New()
 	ti.Placeholder = "Filter workspaces..."
 	ti.CharLimit = 100
@@ -551,8 +543,8 @@ func (m dashboardModel) updateFilterInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func RunDashboard(ctx context.Context, store *workspace.FSStore) error {
-	m := NewDashboardModel(ctx, store)
+func RunDashboard(ctx context.Context, s store.Store) error {
+	m := NewDashboardModel(ctx, s)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 

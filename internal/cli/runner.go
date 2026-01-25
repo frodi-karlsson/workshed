@@ -1,0 +1,131 @@
+package cli
+
+import (
+	"context"
+	"io"
+	"os"
+	"path/filepath"
+
+	"github.com/frodi/workshed/internal/logger"
+	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui"
+	"github.com/frodi/workshed/internal/workspace"
+)
+
+type Runner struct {
+	Stderr   io.Writer
+	Stdout   io.Writer
+	ExitFunc func(int)
+	Store    store.Store
+}
+
+func NewRunner() *Runner {
+	return &Runner{
+		Stderr:   os.Stderr,
+		Stdout:   os.Stdout,
+		ExitFunc: os.Exit,
+	}
+}
+
+func (r *Runner) getWorkshedRoot() string {
+	if root := os.Getenv("WORKSHED_ROOT"); root != "" {
+		return root
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		l := logger.NewLogger(logger.ERROR, "workshed")
+		l.Error("failed to determine home directory", "error", err)
+		r.ExitFunc(1)
+		return ""
+	}
+	return filepath.Join(home, ".workshed", "workspaces")
+}
+
+func (r *Runner) getStore() store.Store {
+	if r.Store != nil {
+		return r.Store
+	}
+	l := logger.NewLogger(logger.ERROR, "workshed")
+	s, err := workspace.NewFSStore(r.getWorkshedRoot())
+	if err != nil {
+		l.Error("failed to create workspace store", "error", err)
+		r.ExitFunc(1)
+		return nil
+	}
+	return s
+}
+
+func (r *Runner) Usage() {
+	msg := `workshed v0.2.0 - Intent-scoped local workspaces
+
+Usage:
+  workshed <command> [flags]
+
+Commands:
+  create    Create a new workspace
+  list      List workspaces
+  inspect   Show workspace details
+  path      Show workspace path
+  exec      Run a command in repositories
+  remove    Remove a workspace
+  update    Update workspace purpose
+
+Flags:
+  -h, --help     Show help
+
+Environment:
+  WORKSHED_ROOT  Root directory for workspaces (default: ~/.workshed/workspaces)
+  WORKSHED_LOG_FORMAT  Output format (human|json|raw, default: human)
+
+Examples:
+# Create a workspace for a specific task
+workshed create --purpose "Debug payment timeout" \
+  --repo git@github.com:org/api@main \
+  --repo git@github.com:org/worker@develop
+
+# Create a workspace using current directory
+workshed create --purpose "Local exploration"
+
+# Commands can use current directory to find workspace
+workshed exec -- make test
+workshed inspect
+workshed path
+workshed update --purpose "New purpose"
+workshed remove
+workshed list
+`
+	logger.SafeFprintf(r.Stderr, "%s\n", msg)
+}
+
+func (r *Runner) Version() {
+	logger.SafeFprintf(r.Stdout, "%s\n", version)
+}
+
+func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, l *logger.Logger) string {
+	if providedHandle != "" {
+		return providedHandle
+	}
+
+	s := r.getStore()
+	ws, err := s.FindWorkspace(ctx, ".")
+	if err != nil {
+		l.Error("failed to find workspace", "error", err)
+		if h, ok := tui.TrySelectWorkspace(ctx, s, err, l); ok {
+			return h
+		}
+		r.ExitFunc(1)
+		return ""
+	}
+	return ws.Handle
+}
+
+func (r *Runner) RunMainDashboard() {
+	l := logger.NewLogger(logger.ERROR, "workshed")
+	s := r.getStore()
+	ctx := context.Background()
+
+	if err := tui.RunDashboard(ctx, s); err != nil {
+		l.Error("dashboard error", "error", err)
+		r.ExitFunc(1)
+	}
+}

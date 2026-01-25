@@ -5,7 +5,6 @@ package cli
 
 import (
 	"bytes"
-	"os"
 	"strings"
 	"testing"
 
@@ -33,14 +32,15 @@ func TestGetWorkshedRoot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testutil.WithEnvVar(t, "WORKSHED_ROOT", tt.envVar, func() {
-				got := GetWorkshedRoot()
+				r := NewRunner()
+				got := r.getWorkshedRoot()
 
 				if tt.envVar != "" && got != tt.want {
-					t.Errorf("GetWorkshedRoot() = %v, want %v", got, tt.want)
+					t.Errorf("getWorkshedRoot() = %v, want %v", got, tt.want)
 				}
 
 				if tt.envVar == "" && !strings.Contains(got, ".workshed/workspaces") {
-					t.Errorf("GetWorkshedRoot() = %v, should contain .workshed/workspaces", got)
+					t.Errorf("getWorkshedRoot() = %v, should contain .workshed/workspaces", got)
 				}
 			})
 		})
@@ -50,9 +50,9 @@ func TestGetWorkshedRoot(t *testing.T) {
 func TestUsage(t *testing.T) {
 	t.Run("should print usage information to stderr", func(t *testing.T) {
 		var buf bytes.Buffer
-		errWriter = &buf
+		r := &Runner{Stderr: &buf}
 
-		Usage()
+		r.Usage()
 
 		output := buf.String()
 		if !strings.Contains(output, "workshed") {
@@ -64,18 +64,15 @@ func TestUsage(t *testing.T) {
 		if !strings.Contains(output, "list") {
 			t.Errorf("Usage() should contain 'list', got: %s", output)
 		}
-
-		// Reset to default
-		errWriter = os.Stderr
 	})
 }
 
 func TestVersion(t *testing.T) {
 	t.Run("should print version to stdout", func(t *testing.T) {
 		var buf bytes.Buffer
-		outWriter = &buf
+		r := &Runner{Stdout: &buf}
 
-		Version()
+		r.Version()
 
 		output := buf.String()
 		if output == "" {
@@ -84,9 +81,6 @@ func TestVersion(t *testing.T) {
 		if !strings.Contains(output, ".") {
 			t.Errorf("Version() should contain version number with dot, got: %s", output)
 		}
-
-		// Reset to default
-		outWriter = os.Stdout
 	})
 }
 
@@ -142,7 +136,7 @@ func TestExecErrors(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Exec([]string{"--", "echo", "hello"})
+		env.Runner().Exec([]string{"--", "echo", "hello"})
 
 		if !env.ExitCalled() {
 			t.Error("Exec should exit with error when handle is missing")
@@ -154,7 +148,7 @@ func TestExecErrors(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Exec([]string{"handle", "echo", "hello"})
+		env.Runner().Exec([]string{"handle", "echo", "hello"})
 
 		if !env.ExitCalled() {
 			t.Error("Exec should exit with error when separator is missing")
@@ -171,7 +165,7 @@ func TestExecErrors(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Exec([]string{"nonexistent-handle", "--", "echo", "hello"})
+		env.Runner().Exec([]string{"nonexistent-handle", "--", "echo", "hello"})
 
 		if !env.ExitCalled() {
 			t.Error("Exec should exit with error when workspace does not exist")
@@ -180,16 +174,14 @@ func TestExecErrors(t *testing.T) {
 
 	t.Run("should show exec in usage", func(t *testing.T) {
 		var buf bytes.Buffer
-		errWriter = &buf
+		r := &Runner{Stderr: &buf}
 
-		Usage()
+		r.Usage()
 
 		output := buf.String()
 		if !strings.Contains(output, "exec") {
 			t.Errorf("Usage() should contain 'exec', got: %s", output)
 		}
-
-		errWriter = os.Stderr
 	})
 }
 
@@ -199,7 +191,7 @@ func TestUpdate(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Update([]string{})
+		env.Runner().Update([]string{})
 
 		if !env.ExitCalled() {
 			t.Error("Update should exit with error when purpose is missing")
@@ -216,7 +208,7 @@ func TestUpdate(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Update([]string{"--purpose", "New purpose"})
+		env.Runner().Update([]string{"--purpose", "New purpose"})
 
 		if !env.ExitCalled() {
 			t.Error("Update should exit with error when handle is missing")
@@ -233,7 +225,7 @@ func TestUpdate(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Update([]string{"--purpose", "New purpose", "nonexistent-handle"})
+		env.Runner().Update([]string{"--purpose", "New purpose", "nonexistent-handle"})
 
 		if !env.ExitCalled() {
 			t.Error("Update should exit with error when workspace does not exist")
@@ -245,13 +237,13 @@ func TestUpdate(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		Create([]string{"--purpose", "Original purpose"})
+		env.Runner().Create([]string{"--purpose", "Original purpose"})
 
 		if !env.ExitCalled() {
 			handle := ExtractHandleFromLog(t, env.Output())
 			if handle != "" {
 				env.ResetBuffers()
-				Update([]string{"--purpose", "Updated purpose", handle})
+				env.Runner().Update([]string{"--purpose", "Updated purpose", handle})
 
 				if env.ExitCalled() {
 					t.Errorf("Update should succeed, but got error: %s", env.ErrorOutput())
@@ -270,15 +262,13 @@ func TestUpdate(t *testing.T) {
 
 	t.Run("should show update in usage", func(t *testing.T) {
 		var buf bytes.Buffer
-		errWriter = &buf
+		r := &Runner{Stderr: &buf}
 
-		Usage()
+		r.Usage()
 
 		output := buf.String()
 		if !strings.Contains(output, "update") {
 			t.Errorf("Usage() should contain 'update', got: %s", output)
 		}
-
-		errWriter = os.Stderr
 	})
 }
