@@ -97,14 +97,14 @@ func TestDashboardHelp(t *testing.T) {
 	m := newTestDashboardModel(t, store)
 
 	m1, _ := sendKey(m, "?")
-	if !m1.showHelp {
-		t.Error("Expected showHelp to be true after '?' key")
+	if m1.currentView != viewHelpModal {
+		t.Errorf("Expected currentView to be viewHelpModal after '?' key, got %v", m1.currentView)
 	}
 
-	// Toggle it back
-	m2, _ := sendKey(m1, "?")
-	if m2.showHelp {
-		t.Error("Expected showHelp to be false after second '?' key")
+	// Toggle it back by pressing any key
+	m2, _ := sendKey(m1, "q")
+	if m2.currentView != viewDashboard {
+		t.Errorf("Expected currentView to be viewDashboard after toggle back, got %v", m2.currentView)
 	}
 }
 
@@ -241,11 +241,11 @@ func TestDashboardCreateWorkspace(t *testing.T) {
 
 	updatedModel, cmd := sendKey(m, "c")
 
-	if updatedModel.pendingAction != actionCreate {
-		t.Errorf("Expected pendingAction to be actionCreate, got %v", updatedModel.pendingAction)
+	if updatedModel.currentView != viewCreateWizard {
+		t.Errorf("Expected currentView to be viewCreateWizard after 'c' key, got %v", updatedModel.currentView)
 	}
-	if cmd == nil {
-		t.Error("Expected tea.Quit command")
+	if cmd != nil {
+		t.Error("Expected no command for view switch")
 	}
 }
 

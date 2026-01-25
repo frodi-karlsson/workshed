@@ -3,6 +3,7 @@
 ## Running
 
 Make religious use of the Makefile. It defines all common tasks.
+Whenever you're verifying changes, run `go clean -testcache && make check`.
 
 ## Philosophy
 

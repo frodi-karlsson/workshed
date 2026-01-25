@@ -15,6 +15,18 @@ const (
 	StateError     State = "error"
 	StateDone      State = "done"
 	StateCancelled State = "cancelled"
+
+	StateDashboard    State = "dashboard"
+	StateContextMenu  State = "context_menu"
+	StateInspectModal State = "inspect_modal"
+	StatePathModal    State = "path_modal"
+	StateExecModal    State = "exec_modal"
+	StateExecResult   State = "exec_result"
+	StateUpdateModal  State = "update_modal"
+	StateRemoveModal  State = "remove_modal"
+	StateCreateWizard State = "create_wizard"
+	StateHelpModal    State = "help_modal"
+	StateFilterInput  State = "filter_input"
 )
 
 type StateTransition struct {
@@ -388,4 +400,16 @@ var (
 	ErrModalAlreadyOpen = ModalStackError{Message: "modal already open"}
 	ErrModalNotFound    = ModalStackError{Message: "modal not found"}
 	ErrNoModals         = ModalStackError{Message: "no modals open"}
+)
+
+const (
+	DataSelectedHandle  = "selected_handle"
+	DataWorkspace       = "workspace"
+	DataContextResult   = "context_result"
+	DataExecResult      = "exec_result"
+	DataWizardResult    = "wizard_result"
+	DataUpdatePurpose   = "update_purpose"
+	DataRemoveConfirmed = "remove_confirmed"
+	DataModalError      = "modal_error"
+	DataFilterQuery     = "filter_query"
 )

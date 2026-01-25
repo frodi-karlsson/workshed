@@ -2,9 +2,7 @@ package tui
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -12,18 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/workspace"
-)
-
-type actionType int
-
-const (
-	actionNone actionType = iota
-	actionCreate
-	actionInspect
-	actionPath
-	actionExec
-	actionUpdate
-	actionRemove
 )
 
 type workspacesLoadedMsg struct {
@@ -37,7 +23,24 @@ type store interface {
 	Create(ctx context.Context, opts workspace.CreateOptions) (*workspace.Workspace, error)
 	UpdatePurpose(ctx context.Context, handle string, purpose string) error
 	Remove(ctx context.Context, handle string) error
+	Exec(ctx context.Context, handle string, opts workspace.ExecOptions) ([]workspace.ExecResult, error)
 }
+
+type viewState int
+
+const (
+	viewDashboard viewState = iota
+	viewContextMenu
+	viewInspectModal
+	viewPathModal
+	viewExecModal
+	viewExecResult
+	viewUpdateModal
+	viewRemoveModal
+	viewCreateWizard
+	viewHelpModal
+	viewFilterInput
+)
 
 type dashboardModel struct {
 	list           list.Model
@@ -49,8 +52,19 @@ type dashboardModel struct {
 	quitting       bool
 	showHelp       bool
 	err            error
-	pendingAction  actionType
 	selectedHandle string
+
+	currentView     viewState
+	modalWorkspace  *workspace.Workspace
+	modalErr        error
+	execResults     []workspace.ExecResult
+	execCommand     string
+	wizardResult    *WizardResult
+	wizardErr       error
+	contextResult   string
+	updatePurpose   string
+	removeConfirm   bool
+	contextMenuList list.Model
 }
 
 func NewDashboardModel(ctx context.Context, store *workspace.FSStore) dashboardModel {
@@ -72,6 +86,25 @@ func NewDashboardModel(ctx context.Context, store *workspace.FSStore) dashboardM
 		ctx:        ctx,
 		filterMode: false,
 	}
+}
+
+func (m *dashboardModel) initContextMenuList(handle string) {
+	items := []list.Item{
+		menuItem{key: "i", label: "Inspect", desc: "Show workspace details", selected: false},
+		menuItem{key: "p", label: "Path", desc: "Copy path to clipboard", selected: false},
+		menuItem{key: "e", label: "Exec", desc: "Run command in repositories", selected: false},
+		menuItem{key: "u", label: "Update", desc: "Change workspace purpose", selected: false},
+		menuItem{key: "r", label: "Remove", desc: "Delete workspace (confirm)", selected: false},
+	}
+
+	l := list.New(items, list.NewDefaultDelegate(), contextMenuWidth, maxListHeight)
+	l.Title = "Actions for \"" + handle + "\""
+	l.SetShowTitle(true)
+	applyCommonListStyles(&l)
+	applyTitleStyle(&l)
+	l.Styles.Title = l.Styles.Title.Width(contextMenuWidth)
+
+	m.contextMenuList = l
 }
 
 func (m dashboardModel) loadWorkspacesCmd() tea.Msg {
@@ -143,12 +176,11 @@ func wrapText(text string, width int) string {
 }
 
 func (m dashboardModel) Init() tea.Cmd {
+	m.currentView = viewDashboard
 	return m.loadWorkspacesCmd
 }
 
 func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
-
 	if m.err != nil {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -156,13 +188,44 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter", " ":
 				m.err = nil
 				return m, m.loadWorkspacesCmd
-			case "q", "ctrl+c":
+			case "q", "ctrl+c", "esc":
 				m.quitting = true
 				return m, tea.Quit
 			}
 		}
 		return m, nil
 	}
+
+	switch m.currentView {
+	case viewDashboard:
+		return m.updateDashboard(msg)
+	case viewContextMenu:
+		return m.updateContextMenu(msg)
+	case viewInspectModal:
+		return m.updateInspectModal(msg)
+	case viewPathModal:
+		return m.updatePathModal(msg)
+	case viewExecModal:
+		return m.updateExecModal(msg)
+	case viewExecResult:
+		return m.updateExecResult(msg)
+	case viewUpdateModal:
+		return m.updateUpdateModal(msg)
+	case viewRemoveModal:
+		return m.updateRemoveModal(msg)
+	case viewCreateWizard:
+		return m.updateWizard(msg)
+	case viewHelpModal:
+		return m.updateHelpModal(msg)
+	case viewFilterInput:
+		return m.updateFilterInput(msg)
+	}
+
+	return m, nil
+}
+
+func (m dashboardModel) updateDashboard(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case workspacesLoadedMsg:
@@ -198,6 +261,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.filterMode {
 				m.filterMode = false
 				m.textInput.Blur()
+				m.currentView = viewDashboard
 				if err := m.loadWorkspaces(); err != nil {
 					m.err = err
 				}
@@ -209,16 +273,18 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case "c":
-			m.pendingAction = actionCreate
-			return m, tea.Quit
+			m.currentView = viewCreateWizard
+			return m, nil
 		case "l":
 			if !m.filterMode {
 				m.filterMode = true
+				m.currentView = viewFilterInput
 				m.textInput.Focus()
 				return m, textinput.Blink
 			}
 		case "?":
-			m.showHelp = !m.showHelp
+			m.currentView = viewHelpModal
+			return m, nil
 		}
 
 		if m.filterMode {
@@ -226,6 +292,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				m.filterMode = false
 				m.textInput.Blur()
+				m.currentView = viewDashboard
 				if err := m.loadWorkspaces(); err != nil {
 					m.err = err
 				}
@@ -244,24 +311,15 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if selected != nil {
 					if wi, ok := selected.(WorkspaceItem); ok {
 						m.selectedHandle = wi.workspace.Handle
-						result, err := ShowContextMenu(wi.workspace.Handle)
+						ws, err := m.store.Get(m.ctx, wi.workspace.Handle)
 						if err != nil {
 							m.err = err
-						} else if result != "" {
-							switch result {
-							case "i":
-								m.pendingAction = actionInspect
-							case "p":
-								m.pendingAction = actionPath
-							case "e":
-								m.pendingAction = actionExec
-							case "u":
-								m.pendingAction = actionUpdate
-							case "r":
-								m.pendingAction = actionRemove
-							}
+							return m, nil
 						}
-						return m, tea.Quit
+						m.modalWorkspace = ws
+						m.initContextMenuList(wi.workspace.Handle)
+						m.currentView = viewContextMenu
+						return m, nil
 					}
 				}
 			}
@@ -280,78 +338,38 @@ func (m dashboardModel) View() string {
 		return m.errorView()
 	}
 
-	if m.showHelp {
-		return m.helpView()
+	switch m.currentView {
+	case viewDashboard:
+		return m.viewDashboard()
+	case viewContextMenu:
+		return m.viewContextMenu()
+	case viewInspectModal:
+		return m.viewInspectModal()
+	case viewPathModal:
+		return m.viewPathModal()
+	case viewExecModal:
+		return m.viewExecModal()
+	case viewExecResult:
+		return m.viewExecResult()
+	case viewUpdateModal:
+		return m.viewUpdateModal()
+	case viewRemoveModal:
+		return m.viewRemoveModal()
+	case viewCreateWizard:
+		return m.viewWizard()
+	case viewHelpModal:
+		return m.viewHelpModal()
+	case viewFilterInput:
+		return m.viewFilterInput()
 	}
 
-	var content []string
-
-	if m.filterMode {
-		filterHint := lipgloss.NewStyle().
-			Foreground(colorSuccess).
-			Render("[FILTER MODE] ") +
-			m.textInput.View() +
-			" (Enter to apply, Esc to cancel)"
-		content = append(content, filterHint)
-	} else {
-		header := lipgloss.NewStyle().
-			Bold(true).
-			Foreground(colorText).
-			Render("Workshed Dashboard")
-		content = append(content, header)
-	}
-
-	workspaceCount := len(m.list.Items())
-	if workspaceCount == 0 {
-		content = append(content, "\nNo workspaces found. Press 'c' to create one.")
-	} else {
-		content = append(content, m.list.View())
-	}
-
-	helpHint := lipgloss.NewStyle().
-		Foreground(colorMuted).
-		MarginTop(1).
-		Render("[c] Create  [Enter] Menu  [l] Filter  [?] Help  [q/Esc] Quit")
-
-	if m.filterMode {
-		helpHint = lipgloss.NewStyle().
-			Foreground(colorMuted).
-			MarginTop(1).
-			Render("[Enter] Apply filter  [Esc] Cancel filter")
-	}
-
-	content = append(content, helpHint)
-
-	frameStyle := modalFrame()
-	if m.quitting {
-		frameStyle = frameStyle.BorderForeground(colorError)
-	}
-	return frameStyle.Render(lipgloss.JoinVertical(lipgloss.Left, content...))
-}
-
-func (m dashboardModel) helpView() string {
-	helpText := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(colorText).
-		Render("Keyboard Shortcuts") + "\n\n" +
-		"[c] Create workspace\n" +
-		"[Enter] Open action menu for selected workspace\n" +
-		"[l] Filter workspaces by purpose or handle\n" +
-		"[↑/↓/j/k] Navigate workspaces\n" +
-		"[?] Toggle this help\n" +
-		"[q/Esc] Quit\n\n" +
-		lipgloss.NewStyle().
-			Foreground(colorMuted).
-			Render("Press any key to return")
-
-	return modalFrame().Render(helpText)
+	return m.viewDashboard()
 }
 
 func (m dashboardModel) errorView() string {
 	const maxWidth = 60
 	errorMsg := m.err.Error()
 
-	// Wrap error message if it's too long
 	wrappedMsg := wrapText(errorMsg, maxWidth)
 
 	return modalFrame().
@@ -369,155 +387,121 @@ func (m dashboardModel) errorView() string {
 		)
 }
 
-func RunDashboard(ctx context.Context, store *workspace.FSStore) error {
-	var pendingError error
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		m := NewDashboardModel(ctx, store)
-		if pendingError != nil {
-			m.err = pendingError
-			pendingError = nil
-		}
-
-		p := tea.NewProgram(m, tea.WithAltScreen())
-
-		ctxCancel, cancel := context.WithCancel(ctx)
-		go func() {
-			<-ctxCancel.Done()
-			p.Quit()
-		}()
-
-		finalModel, err := p.Run()
-		cancel()
-		if err != nil {
-			return fmt.Errorf("running dashboard: %w", err)
-		}
-
-		if fm, ok := finalModel.(dashboardModel); ok {
-			m = fm
-		}
-
-		if m.err != nil {
-			return m.err
-		}
-
-		if m.quitting {
-			return nil
-		}
-
-		switch m.pendingAction {
-		case actionCreate:
-			result, err := RunCreateWizard(ctx, store)
-			if err != nil {
-				if !errors.Is(err, ErrCancelled) {
-					pendingError = err
-				}
-				continue
-			}
-			if result != nil {
-				_, err := store.Create(ctx, workspace.CreateOptions{
-					Purpose:      result.Purpose,
-					Repositories: result.Repositories,
-				})
-				if err != nil {
-					pendingError = fmt.Errorf("creating workspace: %w", err)
-					continue
-				}
-			}
-		case actionInspect:
-			if err := ShowInspectModal(ctx, store, m.selectedHandle); err != nil {
-				pendingError = err
-				continue
-			}
-		case actionPath:
-			if err := ShowPathModal(ctx, store, m.selectedHandle); err != nil {
-				pendingError = err
-				continue
-			}
-		case actionExec:
-			execResult, err := ShowExecModal(ctx, store, m.selectedHandle)
-			if err != nil {
-				pendingError = err
-				continue
-			}
-			if execResult != nil {
-				cmdParts := strings.Fields(execResult.Command)
-				if len(cmdParts) > 0 {
-					execOpts := workspace.ExecOptions{
-						Command: cmdParts,
+func (m dashboardModel) updateContextMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.currentView = viewDashboard
+			return m, nil
+		case tea.KeyEnter:
+			selected := m.contextMenuList.SelectedItem()
+			if selected != nil {
+				if mi, ok := selected.(menuItem); ok {
+					m.contextResult = mi.key
+					switch mi.key {
+					case "i":
+						m.currentView = viewInspectModal
+					case "p":
+						m.currentView = viewPathModal
+					case "e":
+						m.currentView = viewExecModal
+					case "u":
+						m.currentView = viewUpdateModal
+					case "r":
+						m.currentView = viewRemoveModal
 					}
-
-					var allResults []workspace.ExecResult
-					var execErr error
-
-					if len(execResult.RepoNames) > 0 {
-						for _, repoName := range execResult.RepoNames {
-							execOpts.Target = repoName
-							results, err := store.Exec(ctx, m.selectedHandle, execOpts)
-							if err != nil {
-								execErr = err
-								break
-							}
-							allResults = append(allResults, results...)
-						}
-					} else {
-						results, err := store.Exec(ctx, m.selectedHandle, execOpts)
-						if err != nil {
-							execErr = err
-						} else {
-							allResults = append(allResults, results...)
-						}
-					}
-
-					if len(allResults) > 0 {
-						showErr := ShowExecResultModal(allResults, execResult.Command)
-						if showErr != nil {
-							pendingError = showErr
-						}
-					} else if execErr != nil {
-						pendingError = fmt.Errorf("exec: %w", execErr)
-					}
+					return m, nil
 				}
-			}
-		case actionUpdate:
-			if err := ShowUpdateModal(ctx, store, m.selectedHandle); err != nil {
-				pendingError = err
-				continue
-			}
-		case actionRemove:
-			if err := ShowRemoveModal(ctx, store, m.selectedHandle); err != nil {
-				pendingError = err
-				continue
 			}
 		}
 	}
+
+	var cmd tea.Cmd
+	m.contextMenuList, cmd = m.contextMenuList.Update(msg)
+	return m, cmd
 }
 
-type pathModel struct {
-	path     string
-	quitting bool
+func (m dashboardModel) viewContextMenu() string {
+	frameStyle := modalFrame()
+
+	return frameStyle.Render(
+		m.contextMenuList.View() + "\n" +
+			lipgloss.NewStyle().
+				Foreground(colorVeryMuted).
+				MarginTop(1).
+				Render("[↑↓/j/k] Navigate  [Enter] Select  [Esc/q/Ctrl+C] Cancel"),
+	)
 }
 
-func (m pathModel) Init() tea.Cmd {
-	return nil
-}
-
-func (m pathModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
+func (m dashboardModel) updateInspectModal(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		m.quitting = true
-		return m, tea.Quit
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc, tea.KeyEnter:
+			m.currentView = viewDashboard
+			return m, nil
+		case tea.KeyRunes:
+			switch msg.String() {
+			case "q", " ":
+				m.currentView = viewDashboard
+				return m, nil
+			}
+		}
 	}
 	return m, nil
 }
 
-func (m pathModel) View() string {
+func (m dashboardModel) viewInspectModal() string {
+	ws := m.modalWorkspace
+
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(colorText)
+
+	purposeStyle := lipgloss.NewStyle().
+		Foreground(colorSuccess)
+
+	var repoLines []string
+	for _, repo := range ws.Repositories {
+		if repo.Ref != "" {
+			repoLines = append(repoLines, fmt.Sprintf("  • %s\t%s @ %s", repo.Name, repo.URL, repo.Ref))
+		} else {
+			repoLines = append(repoLines, fmt.Sprintf("  • %s\t%s", repo.Name, repo.URL))
+		}
+	}
+
+	helpStyle := lipgloss.NewStyle().
+		Foreground(colorVeryMuted)
+
+	return modalFrame().Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			headerStyle.Render("Workspace: ")+ws.Handle+"\n",
+			purposeStyle.Render("Purpose: ")+ws.Purpose+"\n",
+			headerStyle.Render("Path: ")+ws.Path+"\n",
+			headerStyle.Render("Created: ")+ws.CreatedAt.Format("Jan 2, 2006")+"\n",
+			"\n",
+			headerStyle.Render("Repositories:")+"\n",
+			lipgloss.JoinVertical(lipgloss.Left, repoLines...),
+			"\n",
+			helpStyle.Render("[Press any key to return]"),
+		),
+	)
+}
+
+func (m dashboardModel) updatePathModal(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg.(type) {
+	case tea.KeyMsg:
+		m.currentView = viewDashboard
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m dashboardModel) viewPathModal() string {
+	ws := m.modalWorkspace
+
 	return modalFrame().
 		BorderForeground(colorSuccess).
 		Render(
@@ -530,7 +514,7 @@ func (m pathModel) View() string {
 				"\n",
 				lipgloss.NewStyle().
 					Foreground(colorMuted).
-					Render(m.path),
+					Render(ws.Path),
 				"\n\n",
 				lipgloss.NewStyle().
 					Foreground(colorSuccess).
@@ -544,66 +528,138 @@ func (m pathModel) View() string {
 		)
 }
 
-func ShowPathModal(ctx context.Context, store *workspace.FSStore, handle string) error {
-	ws, err := store.Get(ctx, handle)
-	if err != nil {
-		return err
+func (m dashboardModel) updateExecModal(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.currentView = viewDashboard
+			return m, nil
+		case tea.KeyRunes:
+			switch msg.String() {
+			case "q":
+				m.currentView = viewDashboard
+				return m, nil
+			}
+		case tea.KeyEnter:
+			m.currentView = viewDashboard
+			return m, nil
+		case tea.KeyTab:
+			return m, nil
+		case tea.KeySpace:
+			return m, nil
+		}
+	}
+	return m, nil
+}
+
+func (m dashboardModel) viewExecModal() string {
+	return modalFrame().
+		BorderForeground(colorSuccess).
+		Render(
+			lipgloss.JoinVertical(
+				lipgloss.Left,
+				lipgloss.NewStyle().
+					Bold(true).
+					Foreground(colorText).
+					Render("Command to run in \""+m.modalWorkspace.Handle+"\""),
+				"\n",
+				lipgloss.NewStyle().
+					Foreground(colorVeryMuted).
+					Render("Exec modal placeholder"),
+				"\n",
+				lipgloss.NewStyle().
+					Foreground(colorVeryMuted).
+					MarginTop(1).
+					Render("[Tab] Switch  [Space] Toggle  [Enter] Run  [Esc] Cancel"),
+			),
+		)
+}
+
+func (m dashboardModel) updateExecResult(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "esc", "q", "enter":
+			m.currentView = viewDashboard
+			return m, nil
+		}
+	}
+	return m, nil
+}
+
+func (m dashboardModel) viewExecResult() string {
+	if len(m.execResults) == 0 {
+		return modalFrame().Render("No results")
 	}
 
-	m := pathModel{path: ws.Path}
-	p := tea.NewProgram(m, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		return fmt.Errorf("running path modal: %w", err)
+	borderColor := colorSuccess
+	allSuccess := true
+	for _, result := range m.execResults {
+		if result.ExitCode != 0 {
+			allSuccess = false
+		}
+	}
+	if !allSuccess {
+		borderColor = colorError
 	}
 
-	_ = os.WriteFile("/tmp/workshed_path", []byte(ws.Path), 0644)
+	statusText := "Success"
+	if !allSuccess {
+		statusText = "Failed"
+	}
 
-	return nil
+	status := lipgloss.NewStyle().
+		Foreground(borderColor).
+		Render("[" + statusText + "]")
+
+	return modalFrame().BorderForeground(borderColor).
+		Render(
+			lipgloss.JoinVertical(
+				lipgloss.Left,
+				lipgloss.NewStyle().
+					Bold(true).
+					Foreground(colorText).
+					Render("Command Execution Results"),
+				"",
+				lipgloss.JoinHorizontal(lipgloss.Left, status, "  ", m.execCommand),
+				"\n",
+				lipgloss.NewStyle().
+					Foreground(colorVeryMuted).
+					MarginTop(1).
+					Render("[Enter/Esc/q] Close"),
+			),
+		)
 }
 
-type updateModel struct {
-	textInput textinput.Model
-	purpose   string
-	handle    string
-	quitting  bool
-	done      bool
-}
-
-func (m updateModel) Init() tea.Cmd {
-	return textinput.Blink
-}
-
-func (m updateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
-
+func (m dashboardModel) updateUpdateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
-			m.quitting = true
-			return m, tea.Quit
+			m.currentView = viewDashboard
+			return m, nil
 		case "enter":
 			p := strings.TrimSpace(m.textInput.Value())
 			if p != "" {
-				m.purpose = p
-				m.done = true
+				m.updatePurpose = p
+				err := m.store.UpdatePurpose(m.ctx, m.selectedHandle, p)
+				if err != nil {
+					m.err = err
+				}
 			}
-			return m, tea.Quit
+			m.currentView = viewDashboard
+			return m, nil
 		}
 	}
 
 	updatedInput, cmd := m.textInput.Update(msg)
 	m.textInput = updatedInput
-	cmds = append(cmds, cmd)
-
-	return m, tea.Batch(cmds...)
+	return m, cmd
 }
 
-func (m updateModel) View() string {
+func (m dashboardModel) viewUpdateModal() string {
 	frameStyle := modalFrame()
-	if m.done {
-		frameStyle = frameStyle.BorderForeground(colorSuccess)
-	}
 
 	return frameStyle.Render(
 		lipgloss.JoinVertical(
@@ -611,7 +667,7 @@ func (m updateModel) View() string {
 			lipgloss.NewStyle().
 				Bold(true).
 				Foreground(colorText).
-				Render("Update Purpose for \""+m.handle+"\""),
+				Render("Update Purpose for \""+m.selectedHandle+"\""),
 			"\n",
 			m.textInput.View(),
 			"\n",
@@ -623,70 +679,29 @@ func (m updateModel) View() string {
 	)
 }
 
-func ShowUpdateModal(ctx context.Context, store *workspace.FSStore, handle string) error {
-	ws, err := store.Get(ctx, handle)
-	if err != nil {
-		return err
-	}
-
-	ti := textinput.New()
-	ti.Placeholder = "New purpose..."
-	ti.Focus()
-	ti.CharLimit = 100
-	ti.Prompt = ""
-	ti.SetValue(ws.Purpose)
-
-	m := updateModel{
-		textInput: ti,
-		handle:    handle,
-	}
-
-	p := tea.NewProgram(m, tea.WithAltScreen())
-	finalModel, err := p.Run()
-	if err != nil {
-		return fmt.Errorf("running update modal: %w", err)
-	}
-
-	if fm, ok := finalModel.(updateModel); ok {
-		if !fm.quitting && fm.done && fm.purpose != "" {
-			if err := store.UpdatePurpose(ctx, handle, fm.purpose); err != nil {
-				return fmt.Errorf("updating purpose: %w", err)
-			}
-		}
-	}
-
-	return nil
-}
-
-type removeModel struct {
-	handle    string
-	purpose   string
-	confirmed bool
-	quitting  bool
-}
-
-func (m removeModel) Init() tea.Cmd {
-	return nil
-}
-
-func (m removeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m dashboardModel) updateRemoveModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc", "n", "N":
-			m.quitting = true
-			return m, tea.Quit
+			m.currentView = viewDashboard
+			return m, nil
 		case "y", "Y":
-			m.confirmed = true
-			return m, tea.Quit
+			m.removeConfirm = true
+			err := m.store.Remove(m.ctx, m.selectedHandle)
+			if err != nil {
+				m.err = err
+			}
+			m.currentView = viewDashboard
+			return m, nil
 		}
 	}
 	return m, nil
 }
 
-func (m removeModel) View() string {
+func (m dashboardModel) viewRemoveModal() string {
 	frameStyle := modalFrame().BorderForeground(colorError)
-	if m.confirmed {
+	if m.removeConfirm {
 		frameStyle = frameStyle.BorderForeground(colorSuccess)
 	}
 
@@ -700,7 +715,7 @@ func (m removeModel) View() string {
 			"\n",
 			lipgloss.NewStyle().
 				Foreground(colorText).
-				Render(m.handle+" - "+m.purpose),
+				Render(m.selectedHandle),
 			"\n\n",
 			lipgloss.NewStyle().
 				Foreground(colorMuted).
@@ -714,20 +729,171 @@ func (m removeModel) View() string {
 	)
 }
 
-func ShowRemoveModal(ctx context.Context, store *workspace.FSStore, handle string) error {
-	ws, err := store.Get(ctx, handle)
-	if err != nil {
-		return err
+func (m dashboardModel) updateWizard(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.currentView = viewDashboard
+			return m, nil
+		case tea.KeyRunes:
+			if msg.String() == "q" {
+				m.currentView = viewDashboard
+				return m, nil
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m dashboardModel) viewWizard() string {
+	return modalFrame().
+		Render(
+			lipgloss.JoinVertical(
+				lipgloss.Left,
+				lipgloss.NewStyle().
+					Bold(true).
+					Foreground(colorText).
+					Render("Create Workspace"),
+				"\n",
+				lipgloss.NewStyle().
+					Foreground(colorMuted).
+					Render("Wizard placeholder - press Esc to cancel"),
+			),
+		)
+}
+
+func (m dashboardModel) updateHelpModal(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg.(type) {
+	case tea.KeyMsg:
+		m.currentView = viewDashboard
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m dashboardModel) viewHelpModal() string {
+	helpText := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(colorText).
+		Render("Keyboard Shortcuts") + "\n\n" +
+		"[c] Create workspace\n" +
+		"[Enter] Open action menu for selected workspace\n" +
+		"[l] Filter workspaces by purpose or handle\n" +
+		"[↑/↓/j/k] Navigate workspaces\n" +
+		"[?] Toggle this help\n" +
+		"[q/Esc] Quit\n\n" +
+		lipgloss.NewStyle().
+			Foreground(colorMuted).
+			Render("Press any key to return")
+
+	return modalFrame().Render(helpText)
+}
+
+func (m dashboardModel) updateFilterInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "enter":
+			m.filterMode = false
+			m.textInput.Blur()
+			m.currentView = viewDashboard
+			if err := m.loadWorkspaces(); err != nil {
+				m.err = err
+			}
+			return m, nil
+		case "esc":
+			m.filterMode = false
+			m.textInput.Blur()
+			m.currentView = viewDashboard
+			return m, nil
+		}
 	}
 
-	m := removeModel{
-		handle:  handle,
-		purpose: ws.Purpose,
+	updatedInput, cmd := m.textInput.Update(msg)
+	m.textInput = updatedInput
+	if err := m.loadWorkspaces(); err != nil {
+		m.err = err
 	}
+	return m, cmd
+}
+
+func (m dashboardModel) viewFilterInput() string {
+	filterHint := lipgloss.NewStyle().
+		Foreground(colorSuccess).
+		Render("[FILTER MODE] ") +
+		m.textInput.View() +
+		" (Enter to apply, Esc to cancel)"
+
+	content := []string{filterHint}
+
+	workspaceCount := len(m.list.Items())
+	if workspaceCount == 0 {
+		content = append(content, "\nNo workspaces found.")
+	} else {
+		content = append(content, m.list.View())
+	}
+
+	helpHint := lipgloss.NewStyle().
+		Foreground(colorMuted).
+		MarginTop(1).
+		Render("[Enter] Apply filter  [Esc] Cancel filter")
+	content = append(content, helpHint)
+
+	return modalFrame().Render(lipgloss.JoinVertical(lipgloss.Left, content...))
+}
+
+func (m dashboardModel) viewDashboard() string {
+	var content []string
+
+	header := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(colorText).
+		Render("Workshed Dashboard")
+	content = append(content, header)
+
+	workspaceCount := len(m.list.Items())
+	if workspaceCount == 0 {
+		content = append(content, "\nNo workspaces found. Press 'c' to create one.")
+	} else {
+		content = append(content, m.list.View())
+	}
+
+	helpHint := lipgloss.NewStyle().
+		Foreground(colorMuted).
+		MarginTop(1).
+		Render("[c] Create  [Enter] Menu  [l] Filter  [?] Help  [q/Esc] Quit")
+
+	content = append(content, helpHint)
+
+	frameStyle := modalFrame()
+	if m.quitting {
+		frameStyle = frameStyle.BorderForeground(colorError)
+	}
+	return frameStyle.Render(lipgloss.JoinVertical(lipgloss.Left, content...))
+}
+
+func RunDashboard(ctx context.Context, store *workspace.FSStore) error {
+	m := NewDashboardModel(ctx, store)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		return fmt.Errorf("running remove modal: %w", err)
+
+	ctxCancel, cancel := context.WithCancel(ctx)
+	go func() {
+		<-ctxCancel.Done()
+		p.Quit()
+	}()
+
+	finalModel, err := p.Run()
+	cancel()
+	if err != nil {
+		return fmt.Errorf("running dashboard: %w", err)
+	}
+
+	if fm, ok := finalModel.(dashboardModel); ok {
+		if fm.err != nil {
+			return fm.err
+		}
 	}
 
 	return nil

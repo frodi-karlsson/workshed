@@ -108,6 +108,10 @@ func (m *mockStore) Remove(ctx context.Context, handle string) error {
 	return errWorkspaceNotFound
 }
 
+func (m *mockStore) Exec(ctx context.Context, handle string, opts workspace.ExecOptions) ([]workspace.ExecResult, error) {
+	return nil, nil
+}
+
 func (m *mockStore) FindWorkspace(ctx context.Context, dir string) (*workspace.Workspace, error) {
 	return nil, errWorkspaceNotFound
 }
@@ -138,6 +142,17 @@ func newTestDashboardModel(t *testing.T, store store) dashboardModel {
 		quitting:   false,
 		showHelp:   false,
 		err:        nil,
+
+		currentView:    viewDashboard,
+		modalWorkspace: nil,
+		modalErr:       nil,
+		execResults:    nil,
+		execCommand:    "",
+		wizardResult:   nil,
+		wizardErr:      nil,
+		contextResult:  "",
+		updatePurpose:  "",
+		removeConfirm:  false,
 	}
 }
 
