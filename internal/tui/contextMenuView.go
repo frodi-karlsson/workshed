@@ -35,7 +35,7 @@ func NewContextMenuView(handle string) contextMenuView {
 		menuItem{key: "r", label: "Remove", desc: "Delete workspace (confirm)", selected: false},
 	}
 
-	l := list.New(items, list.NewDefaultDelegate(), contextMenuWidth, maxListHeight)
+	l := list.New(items, list.NewDefaultDelegate(), contextMenuWidth, 20)
 	l.Title = "Actions for \"" + handle + "\""
 	l.SetShowTitle(true)
 	applyCommonListStyles(&l)
@@ -54,6 +54,8 @@ func (v contextMenuView) Init() tea.Cmd {
 
 func (v contextMenuView) Update(msg tea.Msg) (contextMenuView, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		v.list.SetSize(contextMenuWidth, 20)
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -67,6 +69,15 @@ func (v contextMenuView) Update(msg tea.Msg) (contextMenuView, tea.Cmd) {
 				}
 			}
 			return v, nil
+		}
+		key := msg.String()
+		if len(key) == 1 {
+			for _, item := range v.list.Items() {
+				if mi, ok := item.(menuItem); ok && mi.key == key {
+					v.selectedAction = mi.key
+					return v, nil
+				}
+			}
 		}
 	}
 

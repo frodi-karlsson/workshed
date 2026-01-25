@@ -104,13 +104,23 @@ func ViewContextMenu(m *contextMenuView) string {
 
 func updateDismissableModal(m dashboardModel, isNil bool, currentView viewState, msg tea.Msg, updateFn func(*dashboardModel) bool) (dashboardModel, tea.Cmd) {
 	if isNil {
-		m.currentView = viewDashboard
+		if m.contextMenuView != nil {
+			m.contextMenuView.selectedAction = ""
+			m.currentView = viewContextMenu
+		} else {
+			m.currentView = viewDashboard
+		}
 		return m, nil
 	}
 
 	dismissed := updateFn(&m)
 	if dismissed {
-		m.currentView = viewDashboard
+		if m.contextMenuView != nil {
+			m.contextMenuView.selectedAction = ""
+			m.currentView = viewContextMenu
+		} else {
+			m.currentView = viewDashboard
+		}
 	}
 	return m, nil
 }

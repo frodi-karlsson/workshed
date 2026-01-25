@@ -6,7 +6,7 @@ import (
 	"github.com/frodi/workshed/internal/tui/components"
 )
 
-const maxListHeight = 6
+const maxListHeight = 10
 
 var (
 	colorBorder     = components.ColorBorder

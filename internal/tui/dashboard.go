@@ -403,7 +403,6 @@ func (m dashboardModel) updateContextMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.currentView = viewRemoveModal
 		}
-		m.contextMenuView = nil
 		return m, nil
 	}
 
