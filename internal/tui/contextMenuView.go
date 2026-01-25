@@ -13,29 +13,20 @@ type menuItem struct {
 	selected bool
 }
 
-func (m menuItem) Title() string {
-	if m.selected {
-		return lipgloss.NewStyle().
-			Foreground(colorSuccess).
-			Render("[" + m.key + "] " + m.label)
-	}
-	return "[" + m.key + "] " + m.label
-}
-
+func (m menuItem) Title() string       { return "[" + m.key + "] " + m.label }
 func (m menuItem) Description() string { return m.desc }
 func (m menuItem) FilterValue() string { return m.key + " " + m.label }
 
 const contextMenuWidth = 40
 
-type contextMenuModel struct {
-	list     list.Model
-	selected int
-	done     bool
-	quit     bool
-	result   string
+type contextMenuView struct {
+	list           list.Model
+	handle         string
+	selectedAction string
+	cancelled      bool
 }
 
-func newContextMenuModel(handle string) contextMenuModel {
+func NewContextMenuView(handle string) contextMenuView {
 	items := []list.Item{
 		menuItem{key: "i", label: "Inspect", desc: "Show workspace details", selected: false},
 		menuItem{key: "p", label: "Path", desc: "Copy path to clipboard", selected: false},
@@ -51,67 +42,47 @@ func newContextMenuModel(handle string) contextMenuModel {
 	applyTitleStyle(&l)
 	l.Styles.Title = l.Styles.Title.Width(contextMenuWidth)
 
-	return contextMenuModel{
-		list:     l,
-		selected: 0,
-		done:     false,
-		quit:     false,
-		result:   "",
+	return contextMenuView{
+		list:   l,
+		handle: handle,
 	}
 }
 
-func (m contextMenuModel) Init() tea.Cmd { return nil }
+func (v contextMenuView) Init() tea.Cmd {
+	return nil
+}
 
-func (m contextMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (v contextMenuView) Update(msg tea.Msg) (contextMenuView, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
-			m.quit = true
-			return m, tea.Quit
+			v.cancelled = true
+			return v, nil
 		case tea.KeyEnter:
-			items := m.list.Items()
-			if m.selected >= 0 && m.selected < len(items) {
-				if mi, ok := items[m.selected].(menuItem); ok {
-					m.result = mi.key
+			selected := v.list.SelectedItem()
+			if selected != nil {
+				if mi, ok := selected.(menuItem); ok {
+					v.selectedAction = mi.key
 				}
 			}
-			m.done = true
-			return m, tea.Quit
+			return v, nil
 		}
 	}
 
 	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
-	m.selected = m.list.Index()
-	return m, cmd
+	v.list, cmd = v.list.Update(msg)
+	return v, cmd
 }
 
-func (m contextMenuModel) View() string {
+func (v contextMenuView) View() string {
 	frameStyle := modalFrame()
-	if m.done {
-		frameStyle = frameStyle.BorderForeground(colorSuccess)
-	}
+
 	return frameStyle.Render(
-		m.list.View() + "\n\n" +
+		v.list.View() + "\n" +
 			lipgloss.NewStyle().
 				Foreground(colorVeryMuted).
+				MarginTop(1).
 				Render("[↑↓/j/k] Navigate  [Enter] Select  [Esc/q/Ctrl+C] Cancel"),
 	)
-}
-
-func ShowContextMenu(handle string) (string, error) {
-	m := newContextMenuModel(handle)
-	p := tea.NewProgram(m, tea.WithAltScreen())
-	finalModel, err := p.Run()
-	if err != nil {
-		return "", err
-	}
-	if fm, ok := finalModel.(contextMenuModel); ok {
-		if fm.quit {
-			return "", nil
-		}
-		return fm.result, nil
-	}
-	return "", nil
 }

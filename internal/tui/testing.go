@@ -10,7 +10,6 @@ import (
 	tealist "github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
 	"github.com/frodi/workshed/internal/workspace"
 )
@@ -166,38 +165,6 @@ func newTestTextInputModel() textinput.Model {
 	ti.CharLimit = 100
 	ti.Prompt = ""
 	return ti
-}
-
-func newTestContextMenuModel(handle string) contextMenuModel {
-	items := []tealist.Item{
-		menuItem{key: "i", label: "Inspect", desc: "Show workspace details", selected: false},
-		menuItem{key: "p", label: "Path", desc: "Copy path to clipboard", selected: false},
-		menuItem{key: "e", label: "Exec", desc: "Run command in repositories", selected: false},
-		menuItem{key: "u", label: "Update", desc: "Change workspace purpose", selected: false},
-		menuItem{key: "r", label: "Remove", desc: "Delete workspace (confirm)", selected: false},
-	}
-
-	l := tealist.New(items, tealist.NewDefaultDelegate(), 30, 8)
-	l.Title = "Actions for \"" + handle + "\""
-	l.SetShowTitle(true)
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(false)
-	l.Styles.Title = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(colorText).
-		Background(colorBackground).
-		Padding(0, 1)
-	l.Styles.PaginationStyle = lipgloss.NewStyle().
-		Foreground(colorMuted)
-	l.Styles.HelpStyle = lipgloss.NewStyle().
-		Foreground(colorMuted)
-
-	return contextMenuModel{
-		list:   l,
-		done:   false,
-		quit:   false,
-		result: "",
-	}
 }
 
 func pressKey(tm *teatest.TestModel, key string) {
