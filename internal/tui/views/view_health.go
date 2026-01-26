@@ -37,7 +37,9 @@ func NewHealthView(s workspace.Store, ctx context.Context, handle string) *view_
 	}
 }
 
-func (v *view_HealthView) Init() tea.Cmd { return nil }
+func (v *view_HealthView) Init() tea.Cmd {
+	return nil
+}
 
 func (v *view_HealthView) SetSize(size measure.Window) {
 	v.size = size
@@ -95,14 +97,8 @@ func (v *view_HealthView) dismiss() (ViewResult, tea.Cmd) {
 }
 
 func (v *view_HealthView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if v.loading {
-		return ViewResult{}, nil
-	}
 	if len(v.issues) == 0 {
-		v.loading = true
 		v.issues = v.detectIssues()
-		v.loading = false
-		return ViewResult{}, nil
 	}
 	if km, ok := msg.(tea.KeyMsg); ok {
 		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
@@ -141,16 +137,6 @@ func (v *view_HealthView) View() string {
 	infoStyle := lipgloss.NewStyle().Foreground(components.ColorHighlight)
 	dimStyle := lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
 	successStyle := lipgloss.NewStyle().Foreground(components.ColorSuccess)
-
-	if v.loading {
-		return ModalFrame(v.size).Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				headerStyle.Render("Checking workspace health..."),
-				subStyle.Render("Please wait"),
-			),
-		)
-	}
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,

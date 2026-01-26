@@ -88,7 +88,7 @@ TestHealthView_DryRun
         "Type": "HealthView",
         "Handle": "test-ws",
         "IssueCnt": 1,
-        "DryRun": false,
+        "DryRun": true,
         "Executed": true
       }
     }
