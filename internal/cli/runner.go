@@ -66,7 +66,7 @@ func (r *Runner) getStore() store.Store {
 }
 
 func (r *Runner) Usage() {
-	msg := `workshed v0.2.6 - Intent-scoped local workspaces
+	msg := `workshed v0.2.7 - Intent-scoped local workspaces
 
 Usage:
   workshed <command> [flags]
