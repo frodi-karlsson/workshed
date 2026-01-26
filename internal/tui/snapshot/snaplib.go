@@ -295,7 +295,7 @@ func (s *mockStore) RemoveRepository(ctx context.Context, handle string, repoNam
 	return nil
 }
 
-func (s *mockStore) RecordExecution(ctx context.Context, handle string, record workspace.ExecutionRecord) error {
+func (s *mockStore) RecordExecution(ctx context.Context, handle string, record workspace.ExecutionRecord, outputs []workspace.ExecResult) error {
 	return nil
 }
 

@@ -41,12 +41,10 @@ func (v *modal_InspectView) IsLoading() bool { return false }
 func (v *modal_InspectView) Cancel()         {}
 
 func (v *modal_InspectView) KeyBindings() []KeyBinding {
-	return []KeyBinding{
-		{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
-		{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
-		{Key: "q", Help: "[q] Dismiss", Action: v.dismiss},
-		{Key: "ctrl+c", Help: "[Ctrl+C] Dismiss", Action: v.dismiss},
-	}
+	return append(
+		[]KeyBinding{{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss}},
+		GetDismissKeyBindings(v.dismiss, "Dismiss")...,
+	)
 }
 
 func (v *modal_InspectView) dismiss() (ViewResult, tea.Cmd) {
@@ -90,11 +88,14 @@ func (v *modal_InspectView) View() string {
 		lipgloss.JoinVertical(lipgloss.Left, repoLines...),
 	)
 
+	helpText := GenerateHelp(v.KeyBindings())
+	helpHint := lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render(helpText)
+
 	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			content, "\n",
-			lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Esc/q/Enter] Dismiss"),
+			helpHint,
 		),
 	)
 }

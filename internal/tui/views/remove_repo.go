@@ -110,13 +110,14 @@ func (v *RemoveRepoView) KeyBindings() []KeyBinding {
 			{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
 		}
 	}
-	return []KeyBinding{
-		{Key: "up", Help: "[↑] Navigate", Action: nil},
-		{Key: "down", Help: "[↓] Navigate", Action: nil},
-		{Key: "enter", Help: "[Enter] Select", Action: v.selectToRemove},
-		{Key: "esc", Help: "[Esc] Cancel", Action: v.goBack},
-		{Key: "ctrl+c", Help: "[Ctrl+C] Cancel", Action: v.goBack},
-	}
+	return append(
+		[]KeyBinding{
+			{Key: "up", Help: "[↑] Navigate", Action: nil},
+			{Key: "down", Help: "[↓] Navigate", Action: nil},
+			{Key: "enter", Help: "[Enter] Select", Action: v.selectToRemove},
+		},
+		GetDismissKeyBindings(v.goBack, "Cancel")...,
+	)
 }
 
 func (v *RemoveRepoView) retry() (ViewResult, tea.Cmd) {

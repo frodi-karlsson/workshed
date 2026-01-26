@@ -2,6 +2,8 @@ package views
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -29,13 +31,26 @@ func NewExecHistoryView(s workspace.Store, ctx context.Context, handle string) *
 	}
 }
 
-func (v *ExecHistoryView) Init() tea.Cmd { return nil }
+func (v *ExecHistoryView) Init() tea.Cmd {
+	return tea.Tick(time.Millisecond*10, func(t time.Time) tea.Msg {
+		return struct{}{}
+	})
+}
 
 func (v *ExecHistoryView) SetSize(size measure.Window) {
 	v.size = size
 }
 
-func (v *ExecHistoryView) OnPush()   {}
+func (v *ExecHistoryView) OnPush() {
+	execs, err := v.store.ListExecutions(v.ctx, v.handle, workspace.ListExecutionsOptions{Limit: 20})
+	if err == nil {
+		v.executions = execs
+		if len(execs) > 0 {
+			v.selected = 0
+		}
+	}
+}
+
 func (v *ExecHistoryView) OnResume() {}
 func (v *ExecHistoryView) IsLoading() bool {
 	return v.loading
@@ -70,7 +85,12 @@ func (v *ExecHistoryView) moveDown() (ViewResult, tea.Cmd) {
 }
 
 func (v *ExecHistoryView) showDetails() (ViewResult, tea.Cmd) {
-	return ViewResult{}, nil
+	if v.selected < 0 || v.selected >= len(v.executions) {
+		return ViewResult{}, nil
+	}
+	exec := v.executions[v.selected]
+	details := NewExecDetailsView(v.store, v.ctx, v.handle, exec.ID)
+	return ViewResult{NextView: details}, nil
 }
 
 func (v *ExecHistoryView) dismiss() (ViewResult, tea.Cmd) {
@@ -78,19 +98,17 @@ func (v *ExecHistoryView) dismiss() (ViewResult, tea.Cmd) {
 }
 
 func (v *ExecHistoryView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if km.Type == tea.KeyEsc || km.Type == tea.KeyCtrlC {
+			return ViewResult{Action: StackPop{}}, nil
+		}
+	}
+
 	if v.loading {
 		return ViewResult{}, nil
 	}
+
 	if len(v.executions) == 0 {
-		v.loading = true
-		execs, err := v.store.ListExecutions(v.ctx, v.handle, workspace.ListExecutionsOptions{Limit: 20})
-		v.loading = false
-		if err == nil {
-			v.executions = execs
-			if len(execs) > 0 {
-				v.selected = 0
-			}
-		}
 		return ViewResult{}, nil
 	}
 
@@ -170,7 +188,7 @@ func (v *ExecHistoryView) View() string {
 		line += cmdStr
 
 		if isSelected {
-			line += "\n" + dimStyle.Render("     Exit: "+string(rune('0'+exec.ExitCode))+"  Duration: "+formatDuration(exec.Duration))
+			line += "\n" + dimStyle.Render(fmt.Sprintf("     Exit: %d  Duration: %s", exec.ExitCode, formatDuration(exec.Duration)))
 		}
 
 		content += line + "\n"
@@ -218,13 +236,13 @@ func joinStrings(strs []string, sep string) string {
 
 func formatDuration(ms int64) string {
 	if ms < 1000 {
-		return string(rune('0'+ms)) + "ms"
+		return fmt.Sprintf("%dms", ms)
 	}
 	s := ms / 1000
 	if s < 60 {
-		return string(rune('0'+s)) + "s"
+		return fmt.Sprintf("%ds", s)
 	}
 	m := s / 60
 	s = s % 60
-	return string(rune('0'+m)) + "m" + string(rune('0'+s)) + "s"
+	return fmt.Sprintf("%dm%ds", m, s)
 }

@@ -3,6 +3,7 @@ package views
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -10,6 +11,7 @@ import (
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
+	"github.com/oklog/ulid/v2"
 )
 
 type modal_ExecView struct {
@@ -64,6 +66,7 @@ func (v *modal_ExecView) KeyBindings() []KeyBinding {
 }
 
 func (v *modal_ExecView) run() (ViewResult, tea.Cmd) {
+	startedAt := time.Now()
 	results, err := v.store.Exec(v.ctx, v.handle, workspace.ExecOptions{
 		Command: strings.Fields(v.input.Value()),
 	})
@@ -71,6 +74,37 @@ func (v *modal_ExecView) run() (ViewResult, tea.Cmd) {
 		errView := NewErrorView(err)
 		return ViewResult{NextView: errView}, nil
 	}
+
+	var maxExitCode int
+	repoResults := make([]workspace.ExecutionRepoResult, 0, len(results))
+	for _, result := range results {
+		if result.ExitCode > maxExitCode {
+			maxExitCode = result.ExitCode
+		}
+		repoResults = append(repoResults, workspace.ExecutionRepoResult{
+			Repository: result.Repository,
+			ExitCode:   result.ExitCode,
+			Duration:   result.Duration.Milliseconds(),
+		})
+	}
+
+	record := workspace.ExecutionRecord{
+		ID:          ulid.Make().String(),
+		Timestamp:   startedAt,
+		Handle:      v.handle,
+		Command:     strings.Fields(v.input.Value()),
+		ExitCode:    maxExitCode,
+		StartedAt:   startedAt,
+		CompletedAt: time.Now(),
+		Duration:    time.Since(startedAt).Milliseconds(),
+		Results:     repoResults,
+	}
+
+	if err := v.store.RecordExecution(v.ctx, v.handle, record, results); err != nil {
+		errView := NewErrorView(err)
+		return ViewResult{NextView: errView}, nil
+	}
+
 	v.result = results
 	v.done = true
 	return ViewResult{}, nil

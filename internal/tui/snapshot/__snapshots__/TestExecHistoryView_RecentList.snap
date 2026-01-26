@@ -38,9 +38,9 @@ TestExecHistoryView_RecentList
       "Data": {
         "Type": "ExecHistoryView",
         "Handle": "test-ws",
-        "ExecCount": 0,
-        "Selected": -1,
-        "FailureCnt": 0
+        "ExecCount": 3,
+        "Selected": 0,
+        "FailureCnt": 1
       }
     }
   ]

@@ -53,12 +53,6 @@ func (v *CaptureDetailsView) Cancel() {
 }
 
 func (v *CaptureDetailsView) KeyBindings() []KeyBinding {
-	if v.done {
-		return []KeyBinding{
-			{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
-			{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
-		}
-	}
 	if v.confirm {
 		return []KeyBinding{
 			{Key: "enter", Help: "[Enter] Apply", Action: v.apply},
@@ -66,14 +60,12 @@ func (v *CaptureDetailsView) KeyBindings() []KeyBinding {
 		}
 	}
 	if !v.preflight.Valid {
-		return []KeyBinding{
-			{Key: "esc", Help: "[Esc] Back", Action: v.cancel},
-		}
+		return GetDismissKeyBindings(v.cancel, "Back")
 	}
-	return []KeyBinding{
-		{Key: "enter", Help: "[Enter] Apply", Action: v.confirmApply},
-		{Key: "esc", Help: "[Esc] Back", Action: v.cancel},
-	}
+	return append(
+		[]KeyBinding{{Key: "enter", Help: "[Enter] Apply", Action: v.confirmApply}},
+		GetDismissKeyBindings(v.cancel, "Back")...,
+	)
 }
 
 func (v *CaptureDetailsView) confirmApply() (ViewResult, tea.Cmd) {
@@ -97,10 +89,6 @@ func (v *CaptureDetailsView) apply() (ViewResult, tea.Cmd) {
 }
 
 func (v *CaptureDetailsView) cancel() (ViewResult, tea.Cmd) {
-	return ViewResult{Action: StackPop{}}, nil
-}
-
-func (v *CaptureDetailsView) dismiss() (ViewResult, tea.Cmd) {
 	return ViewResult{Action: StackPop{}}, nil
 }
 
@@ -213,7 +201,9 @@ func (v *CaptureDetailsView) View() string {
 		content += "\n" + dimStyle.Render("[Esc] Back")
 	} else {
 		content += "\n" + successStyle.Render("Ready to apply")
-		content += "\n\n" + dimStyle.Render("[Enter] Apply  [Esc] Back")
+		content += "\n"
+		helpText := GenerateHelp(v.KeyBindings())
+		content += "\n" + dimStyle.Render(helpText)
 	}
 
 	return ModalFrame(v.size).Render(content)

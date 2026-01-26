@@ -73,11 +73,10 @@ func (v *RemoveConfirmView) SetSize(size measure.Window) {
 func (v *RemoveConfirmView) Init() tea.Cmd { return nil }
 
 func (v *RemoveConfirmView) KeyBindings() []KeyBinding {
-	return []KeyBinding{
-		{Key: "enter", Help: "[Enter] Select", Action: v.selectCurrent},
-		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
-		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
-	}
+	return append(
+		[]KeyBinding{{Key: "enter", Help: "[Enter] Select", Action: v.selectCurrent}},
+		GetDismissKeyBindings(v.goBack, "Back")...,
+	)
 }
 
 func (v *RemoveConfirmView) selectCurrent() (ViewResult, tea.Cmd) {
@@ -145,8 +144,20 @@ func (v *RemoveConfirmView) handleConfirmAction(item ConfirmItem) ViewResult {
 }
 
 func (v *RemoveConfirmView) View() string {
+	helpText := GenerateHelp(v.KeyBindings())
+	helpHint := lipgloss.NewStyle().
+		Foreground(components.ColorMuted).
+		MarginTop(1).
+		Render(helpText)
+
 	frameStyle := ModalFrame(v.size)
-	return frameStyle.Render(v.list.View())
+	return frameStyle.Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			v.list.View(),
+			helpHint,
+		),
+	)
 }
 
 type RemoveConfirmViewSnapshot struct {

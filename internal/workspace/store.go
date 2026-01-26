@@ -831,7 +831,7 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	return nil
 }
 
-func (s *FSStore) RecordExecution(ctx context.Context, handle string, record ExecutionRecord) error {
+func (s *FSStore) RecordExecution(ctx context.Context, handle string, record ExecutionRecord, outputs []ExecResult) error {
 	ws, err := s.Get(ctx, handle)
 	if err != nil {
 		return err
@@ -858,10 +858,24 @@ func (s *FSStore) RecordExecution(ctx context.Context, handle string, record Exe
 		return fmt.Errorf("creating stderr directory: %w", err)
 	}
 
+	outputMap := make(map[string]ExecResult)
+	for _, out := range outputs {
+		outputMap[out.Repository] = out
+	}
+
 	for i := range record.Results {
 		result := &record.Results[i]
 		if result.Repository != "" && result.Repository != "root" {
 			result.OutputPath = filepath.Join(result.Repository + ".txt")
+
+			if out, ok := outputMap[result.Repository]; ok {
+				if len(out.Output) > 0 {
+					stdoutPath := filepath.Join(stdoutDir, result.Repository+".txt")
+					if err := os.WriteFile(stdoutPath, out.Output, 0644); err != nil {
+						return fmt.Errorf("writing stdout for %s: %w", result.Repository, err)
+					}
+				}
+			}
 		}
 	}
 

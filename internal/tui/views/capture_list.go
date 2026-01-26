@@ -52,15 +52,16 @@ func (v *CaptureListView) Cancel() {
 }
 
 func (v *CaptureListView) KeyBindings() []KeyBinding {
-	return []KeyBinding{
-		{Key: "up", Help: "[↑] Navigate", Action: v.moveUp, When: v.hasCaptures},
-		{Key: "down", Help: "[↓] Navigate", Action: v.moveDown, When: v.hasCaptures},
-		{Key: "enter", Help: "[Enter] Details", Action: v.openDetails, When: v.hasSelection},
-		{Key: "n", Help: "[n] New", Action: v.createNew},
-		{Key: "c", Help: "[c] New", Action: v.createNew},
-		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
-		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
-	}
+	return append(
+		[]KeyBinding{
+			{Key: "up", Help: "[↑] Navigate", Action: v.moveUp, When: v.hasCaptures},
+			{Key: "down", Help: "[↓] Navigate", Action: v.moveDown, When: v.hasCaptures},
+			{Key: "enter", Help: "[Enter] Details", Action: v.openDetails, When: v.hasSelection},
+			{Key: "n", Help: "[n] New", Action: v.createNew},
+			{Key: "c", Help: "[c] New", Action: v.createNew},
+		},
+		GetDismissKeyBindings(v.goBack, "Back")...,
+	)
 }
 
 func (v *CaptureListView) hasCaptures() bool {

@@ -118,7 +118,7 @@ func (r *Runner) Exec(args []string) {
 			Results:     repoResults,
 		}
 
-		if err := s.RecordExecution(ctx, handle, record); err != nil {
+		if err := s.RecordExecution(ctx, handle, record, nil); err != nil {
 			l.Debug("failed to record execution", "error", err)
 		}
 	}

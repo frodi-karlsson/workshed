@@ -90,14 +90,14 @@ second_selected
 ### Running Tests
 
 ```bash
-# Run all snapshot tests
-go test ./internal/tui/snapshot/...
+# Run all snapshot tests (5s timeout)
+go test -timeout=5s ./internal/tui/...
 
 # Update snapshots after UI changes
-UPDATE_SNAPS=true go test ./internal/tui/snapshot/...
+UPDATE_SNAPS=true go test -timeout=5s ./internal/tui/...
 
 # Run specific test
-go test ./internal/tui/snapshot/... -run "TestDashboardView_Navigation"
+go test -timeout=5s ./internal/tui/... -run "TestDashboardView_Navigation"
 ```
 
 ### Adding a Snapshot Test

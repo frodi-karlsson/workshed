@@ -37,7 +37,8 @@ Workshed maintains several artifact types under `.workshed/`:
 |----------|----------|---------|
 | Executions | `.workshed/executions/<ulid>/` | Durable records of command executions |
 | Captures | `.workshed/captures/<ulid>/` | Descriptive snapshots of git state |
-| Context | `.workshed/context.json` | Derived workspace metadata |
+
+Context is derived dynamically via `DeriveContext()` and not stored persistently.
 
 ### Store Interface
 

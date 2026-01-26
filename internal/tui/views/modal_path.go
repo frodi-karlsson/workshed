@@ -50,12 +50,10 @@ func (v *modal_PathView) IsLoading() bool { return false }
 func (v *modal_PathView) Cancel()         {}
 
 func (v *modal_PathView) KeyBindings() []KeyBinding {
-	return []KeyBinding{
-		{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
-		{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
-		{Key: "q", Help: "[q] Dismiss", Action: v.dismiss},
-		{Key: "ctrl+c", Help: "[Ctrl+C] Dismiss", Action: v.dismiss},
-	}
+	return append(
+		[]KeyBinding{{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss}},
+		GetDismissKeyBindings(v.dismiss, "Dismiss")...,
+	)
 }
 
 func (v *modal_PathView) dismiss() (ViewResult, tea.Cmd) {
@@ -99,9 +97,9 @@ func (v *modal_PathView) View() string {
 		v.workspace.Path, "\n", "\n",
 	}
 	content = append(content, statusLines...)
-	content = append(content, "\n", "\n",
-		lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Esc/q/Enter] Dismiss"),
-	)
+	helpText := GenerateHelp(v.KeyBindings())
+	helpHint := lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render(helpText)
+	content = append(content, "\n", "\n", helpHint)
 
 	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(lipgloss.Left, content...),

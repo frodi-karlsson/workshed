@@ -88,11 +88,10 @@ func (v *ApplyCaptureView) SetSize(size measure.Window) {
 func (v *ApplyCaptureView) Init() tea.Cmd { return nil }
 
 func (v *ApplyCaptureView) KeyBindings() []KeyBinding {
-	return []KeyBinding{
-		{Key: "enter", Help: "[Enter] Apply", Action: v.applyCapture},
-		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
-		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
-	}
+	return append(
+		[]KeyBinding{{Key: "enter", Help: "[Enter] Apply", Action: v.applyCapture}},
+		GetDismissKeyBindings(v.goBack, "Back")...,
+	)
 }
 
 func (v *ApplyCaptureView) goBack() (ViewResult, tea.Cmd) {
@@ -122,8 +121,20 @@ func (v *ApplyCaptureView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 }
 
 func (v *ApplyCaptureView) View() string {
+	helpText := GenerateHelp(v.KeyBindings())
+	helpHint := lipgloss.NewStyle().
+		Foreground(components.ColorMuted).
+		MarginTop(1).
+		Render(helpText)
+
 	frameStyle := ModalFrame(v.size)
-	return frameStyle.Render(v.list.View())
+	return frameStyle.Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			v.list.View(),
+			helpHint,
+		),
+	)
 }
 
 type ApplyCaptureViewSnapshot struct {

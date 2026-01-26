@@ -74,12 +74,13 @@ func (v *TemplateConfigView) KeyBindings() []KeyBinding {
 			{Key: "esc", Help: "[Esc] Finish", Action: v.finish},
 		}
 	}
-	return []KeyBinding{
-		{Key: "enter", Help: "[Enter] Next", Action: v.nextToVars},
-		{Key: "right", Help: "[→] Skip", Action: v.skipToVars},
-		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
-		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
-	}
+	return append(
+		[]KeyBinding{
+			{Key: "enter", Help: "[Enter] Next", Action: v.nextToVars},
+			{Key: "right", Help: "[→] Skip", Action: v.skipToVars},
+		},
+		GetDismissKeyBindings(v.goBack, "Back")...,
+	)
 }
 
 func (v *TemplateConfigView) nextToVars() (ViewResult, tea.Cmd) {

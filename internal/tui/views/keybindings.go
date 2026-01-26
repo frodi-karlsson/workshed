@@ -66,7 +66,14 @@ func matchesKey(msg tea.KeyMsg, key string) bool {
 }
 
 func GenerateHelp(bindings []KeyBinding) string {
-	var parts []string
+	type HelpGroup struct {
+		keys       []string
+		normalized []string
+	}
+
+	groups := make(map[string]*HelpGroup)
+	var order []string
+
 	for _, b := range bindings {
 		if b.Disabled {
 			continue
@@ -74,7 +81,27 @@ func GenerateHelp(bindings []KeyBinding) string {
 		if b.When != nil && !b.When() {
 			continue
 		}
-		parts = append(parts, b.Help)
+
+		idx := strings.Index(b.Help, "] ")
+		if idx == -1 {
+			continue
+		}
+		desc := b.Help[idx+2:]
+
+		if groups[desc] == nil {
+			groups[desc] = &HelpGroup{}
+			order = append(order, desc)
+		}
+		groups[desc].keys = append(groups[desc].keys, b.Key)
+	}
+
+	var parts []string
+	for _, desc := range order {
+		g := groups[desc]
+		for _, key := range g.keys {
+			g.normalized = append(g.normalized, normalizeKey(key))
+		}
+		parts = append(parts, "["+strings.Join(g.normalized, "/")+"] "+desc)
 	}
 	return strings.Join(parts, "  ")
 }
@@ -108,4 +135,51 @@ func BindingsHelpText(bindings []KeyBinding, condition func() bool, enabledText,
 		}
 	}
 	return enabledText
+}
+
+func GetDismissKeyBindings(dismiss func() (ViewResult, tea.Cmd), description string) []KeyBinding {
+	return []KeyBinding{
+		{Key: "q", Help: "[q] " + description, Action: dismiss},
+		{Key: "esc", Help: "[Esc] " + description, Action: dismiss},
+		{Key: "ctrl+c", Help: "[Ctrl+C] " + description, Action: dismiss},
+	}
+}
+
+func normalizeKey(key string) string {
+	switch key {
+	case "ctrl+c":
+		return "Ctrl+C"
+	case "enter":
+		return "Enter"
+	case "tab":
+		return "Tab"
+	case "shift+tab":
+		return "Shift+Tab"
+	case "pgup":
+		return "PgUp"
+	case "pgdown":
+		return "PgDown"
+	case "backspace":
+		return "Backspace"
+	case "delete":
+		return "Delete"
+	case "home":
+		return "Home"
+	case "end":
+		return "End"
+	case "space":
+		return "Space"
+	case "esc":
+		return "Esc"
+	case "up":
+		return "↑"
+	case "down":
+		return "↓"
+	case "left":
+		return "←"
+	case "right":
+		return "→"
+	default:
+		return strings.ToUpper(key[:1]) + key[1:]
+	}
 }

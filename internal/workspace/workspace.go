@@ -127,7 +127,7 @@ type Store interface {
 	RemoveRepository(ctx context.Context, handle string, repoName string) error
 
 	// Execution record operations
-	RecordExecution(ctx context.Context, handle string, record ExecutionRecord) error
+	RecordExecution(ctx context.Context, handle string, record ExecutionRecord, outputs []ExecResult) error
 	GetExecution(ctx context.Context, handle, execID string) (*ExecutionRecord, error)
 	ListExecutions(ctx context.Context, handle string, opts ListExecutionsOptions) ([]ExecutionRecord, error)
 

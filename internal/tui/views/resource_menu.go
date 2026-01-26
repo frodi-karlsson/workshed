@@ -92,11 +92,10 @@ func (v *ResourceMenuView) SetSize(size measure.Window) {
 func (v *ResourceMenuView) Init() tea.Cmd { return nil }
 
 func (v *ResourceMenuView) KeyBindings() []KeyBinding {
-	return []KeyBinding{
-		{Key: "enter", Help: "[Enter] Select", Action: v.selectCurrent},
-		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
-		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
-	}
+	return append(
+		[]KeyBinding{{Key: "enter", Help: "[Enter] Select", Action: v.selectCurrent}},
+		GetDismissKeyBindings(v.goBack, "Back")...,
+	)
 }
 
 func (v *ResourceMenuView) selectCurrent() (ViewResult, tea.Cmd) {
@@ -169,8 +168,20 @@ func (v *ResourceMenuView) handleResourceAction(item ResourceItem) ViewResult {
 }
 
 func (v *ResourceMenuView) View() string {
+	helpText := GenerateHelp(v.KeyBindings())
+	helpHint := lipgloss.NewStyle().
+		Foreground(components.ColorMuted).
+		MarginTop(1).
+		Render(helpText)
+
 	frameStyle := ModalFrame(v.size)
-	return frameStyle.Render(v.list.View())
+	return frameStyle.Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			v.list.View(),
+			helpHint,
+		),
+	)
 }
 
 type ResourceMenuViewSnapshot struct {

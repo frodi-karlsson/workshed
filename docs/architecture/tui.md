@@ -97,10 +97,11 @@ Similar behaviors use similar patterns. Lists navigate the same way. Modals dism
 
 ### Dashboard
 - `c` - Create workspace
-- `?` - Help
 - `l` - Filter
 - Navigation: arrows or `j`/`k`
 - `Enter` - Open context menu
+
+The dashboard displays available shortcuts via `GenerateHelp()` at the bottom of the screen.
 
 ### Wizard
 - `Enter` - Next / Add item
@@ -115,7 +116,12 @@ Similar behaviors use similar patterns. Lists navigate the same way. Modals dism
 - `Esc` - Dismiss suggestions
 
 ### Context Menu
-- `i/p/e/a/d/u/r` - Actions
+- `i` - Info submenu (path, health, update)
+- `e` - Exec submenu (run command, view history)
+- `r` - Repositories submenu (add, remove)
+- `c` - Captures submenu (create, list, apply)
+- `x` - Remove workspace
+- `Enter` - Select menu item
 - `Esc` - Dismiss
 
 ### Modals
