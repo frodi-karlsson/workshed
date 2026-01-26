@@ -241,7 +241,7 @@ func TestUpdate(t *testing.T) {
 		env.Runner().Create([]string{"--purpose", "Original purpose"})
 
 		if !env.ExitCalled() {
-			handle := ExtractHandleFromLog(t, env.Output())
+			handle := env.ExtractHandleFromOutput(t)
 			if handle != "" {
 				env.ResetBuffers()
 				env.Runner().Update([]string{"--purpose", "Updated purpose", handle})
@@ -250,13 +250,8 @@ func TestUpdate(t *testing.T) {
 					t.Errorf("Update should succeed, but got error: %s", env.ErrorOutput())
 				}
 
-				output := env.Output()
-				if !strings.Contains(output, "purpose updated") {
-					t.Errorf("Output should contain 'purpose updated', got: %s", output)
-				}
-				if !strings.Contains(output, "Updated purpose") {
-					t.Errorf("Output should contain new purpose, got: %s", output)
-				}
+				env.AssertLastOutputRowContains(1, 0, "purpose")
+				env.AssertLastOutputRowContains(1, 1, "Updated purpose")
 			}
 		}
 	})

@@ -246,8 +246,9 @@ outWriter = bytes.NewBuffer(nil)
 ### Output Conventions
 
 - Use logger for status messages
-- Use `tabwriter` for tabular output
-- Follow mode-specific formatting (human vs JSON vs raw)
+- Use `Output` struct with `OutputRenderer` for tabular/JSON output
+- Commands should accept `--format table|json` flag
+- The `OutputRenderer` dispatches to `FlexTableRenderer` (table) or `JSONRenderer` (json)
 
 ### Error Messages
 

@@ -11,11 +11,14 @@ func (r *Runner) Inspect(args []string) {
 	l := r.getLogger()
 
 	fs := flag.NewFlagSet("inspect", flag.ExitOnError)
+	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed inspect [<handle>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed inspect [<handle>] [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Show workspace details including repositories and creation time.\n\n")
-		logger.SafeFprintf(r.Stderr, "Examples:\n")
+		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed inspect\n")
 		logger.SafeFprintf(r.Stderr, "  workshed inspect aquatic-fish-motion\n")
 	}
@@ -41,16 +44,30 @@ func (r *Runner) Inspect(args []string) {
 		return
 	}
 
-	logger.SafeFprintf(r.Stdout, "Workspace: %s\n", ws.Handle)
-	logger.SafeFprintf(r.Stdout, "Purpose: %s\n", ws.Purpose)
-	logger.SafeFprintf(r.Stdout, "Path: %s\n", ws.Path)
-	logger.SafeFprintf(r.Stdout, "Created: %s\n", ws.CreatedAt.Format("2006-01-02 15:04:05"))
-	logger.SafeFprintln(r.Stdout, "Repositories:")
+	var rows [][]string
+	rows = append(rows, []string{"handle", ws.Handle})
+	rows = append(rows, []string{"purpose", ws.Purpose})
+	rows = append(rows, []string{"path", ws.Path})
+	rows = append(rows, []string{"created", ws.CreatedAt.Format("2006-01-02 15:04:05")})
 	for _, repo := range ws.Repositories {
+		var repoRow string
 		if repo.Ref != "" {
-			logger.SafeFprintf(r.Stdout, "  • %s @ %s\n", repo.Name, repo.Ref)
+			repoRow = repo.Name + " @ " + repo.Ref
 		} else {
-			logger.SafeFprintf(r.Stdout, "  • %s\n", repo.Name)
+			repoRow = repo.Name
 		}
+		rows = append(rows, []string{"repo", repoRow})
+	}
+
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+		},
+		Rows: rows,
+	}
+
+	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
 	}
 }

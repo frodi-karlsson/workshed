@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -12,15 +13,23 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+type ExecResultOutput struct {
+	Repository string `json:"repository"`
+	ExitCode   int    `json:"exit_code"`
+	Output     string `json:"output"`
+	DurationMs int64  `json:"duration_ms"`
+}
+
 func (r *Runner) Exec(args []string) {
 	l := r.getLogger()
 
 	fs := flag.NewFlagSet("exec", flag.ExitOnError)
 	target := fs.String("repo", "", "Target repository name (default: all repositories)")
 	noRecord := fs.Bool("no-record", false, "Do not record this execution")
+	format := fs.String("format", "stream", "Output format (stream|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed exec [<handle>] -- <command>...\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed exec [<handle>] -- <command>... [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
@@ -79,15 +88,29 @@ func (r *Runner) Exec(args []string) {
 		return
 	}
 
-	for _, result := range results {
-		if result.Repository != "root" {
-			fmt.Printf("=== %s ===\n", result.Repository)
+	if *format == "json" {
+		var outputResults []ExecResultOutput
+		for _, result := range results {
+			outputResults = append(outputResults, ExecResultOutput{
+				Repository: result.Repository,
+				ExitCode:   result.ExitCode,
+				Output:     string(result.Output),
+				DurationMs: result.Duration.Milliseconds(),
+			})
 		}
-		if _, err := os.Stdout.Write(result.Output); err != nil {
-			l.Error("failed to write output", "error", err)
-		}
-		if len(results) > 1 {
-			fmt.Println()
+		data, _ := json.MarshalIndent(outputResults, "", "  ")
+		logger.SafeFprintln(r.Stdout, string(data))
+	} else {
+		for _, result := range results {
+			if result.Repository != "root" {
+				fmt.Printf("=== %s ===\n", result.Repository)
+			}
+			if _, err := os.Stdout.Write(result.Output); err != nil {
+				l.Error("failed to write output", "error", err)
+			}
+			if len(results) > 1 {
+				fmt.Println()
+			}
 		}
 	}
 

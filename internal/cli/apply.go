@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/frodi/workshed/internal/logger"
@@ -17,7 +18,7 @@ func (r *Runner) Apply(args []string) {
 	l := r.getLogger()
 
 	fs := flag.NewFlagSet("apply", flag.ExitOnError)
-	jsonOutput := fs.Bool("json", false, "Output as JSON")
+	format := fs.String("format", "table", "Output format (table|json)")
 	nameFlag := fs.String("name", "", "Capture name to apply (alternative to providing capture ID)")
 
 	fs.Usage = func() {
@@ -93,10 +94,26 @@ func (r *Runner) Apply(args []string) {
 		return
 	}
 
-	if *jsonOutput {
+	effectiveFormat := Format(*format)
+	if effectiveFormat == FormatJSON {
 		data, _ := json.MarshalIndent(capture, "", "  ")
 		logger.SafeFprintln(r.Stdout, string(data))
-	} else {
-		l.Success("applied capture", "id", captureID, "name", capture.Name, "repos", len(capture.GitState))
+		return
+	}
+
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+		},
+		Rows: [][]string{
+			{"id", captureID},
+			{"name", capture.Name},
+			{"repos", strconv.Itoa(len(capture.GitState))},
+		},
+	}
+
+	if err := r.getOutputRenderer().Render(output, effectiveFormat, r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
 	}
 }

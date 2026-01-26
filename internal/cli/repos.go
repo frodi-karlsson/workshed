@@ -59,9 +59,10 @@ func (r *Runner) ReposAdd(args []string) {
 	fs.StringSliceVarP(&repoFlags, "repo", "r", nil, "Repository URL with optional ref (format: url@ref). Can be specified multiple times.")
 	var reposAlias []string
 	fs.StringSliceVarP(&reposAlias, "repos", "", nil, "Alias for --repo (can be specified multiple times)")
+	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed <handle> repos add --repo url[@ref]...\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed <handle> repos add --repo url[@ref]... [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Add repositories to a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
@@ -119,14 +120,28 @@ func (r *Runner) ReposAdd(args []string) {
 		return
 	}
 
-	if len(repoOpts) == 1 {
-		l.Success("repository added", "handle", handle, "repo", repoOpts[0].URL)
-	} else {
-		urls := make([]string, len(repoOpts))
-		for i, opt := range repoOpts {
-			urls[i] = opt.URL
+	var rows [][]string
+	rows = append(rows, []string{"handle", handle})
+	for _, opt := range repoOpts {
+		var repoInfo string
+		if opt.Ref != "" {
+			repoInfo = opt.URL + " @ " + opt.Ref
+		} else {
+			repoInfo = opt.URL
 		}
-		l.Success("repositories added", "handle", handle, "repos", strings.Join(urls, ", "))
+		rows = append(rows, []string{"repo", repoInfo})
+	}
+
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+		},
+		Rows: rows,
+	}
+
+	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
 	}
 }
 
@@ -135,9 +150,10 @@ func (r *Runner) ReposRemove(args []string) {
 
 	fs := flag.NewFlagSet("repos remove", flag.ExitOnError)
 	repoName := fs.String("repo", "", "Repository name to remove")
+	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed <handle> repos remove --repo <name>\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed <handle> repos remove --repo <name> [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Remove a repository from a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
@@ -172,5 +188,18 @@ func (r *Runner) ReposRemove(args []string) {
 		return
 	}
 
-	l.Success("repository removed", "handle", handle, "repo", *repoName)
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+		},
+		Rows: [][]string{
+			{"handle", handle},
+			{"repo", *repoName},
+		},
+	}
+
+	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
+	}
 }

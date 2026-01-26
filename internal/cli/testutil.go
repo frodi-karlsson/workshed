@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -38,11 +37,13 @@ func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
 	}
 
 	env.runner = &Runner{
-		Stderr:        env.ErrBuf,
-		Stdout:        env.OutBuf,
-		Stdin:         env.stdin,
-		ExitFunc:      func(code int) { env.exitCalled = true },
-		InvocationCWD: env.TempDir,
+		Stderr:         env.ErrBuf,
+		Stdout:         env.OutBuf,
+		Stdin:          env.stdin,
+		ExitFunc:       func(code int) { env.exitCalled = true },
+		InvocationCWD:  env.TempDir,
+		TableRenderer:  &MockTableRenderer{},
+		OutputRenderer: &MockOutputRenderer{},
 	}
 
 	store, err := workspace.NewFSStore(env.TempDir)
@@ -92,49 +93,101 @@ func (e *CLITestEnvironment) Runner() *Runner {
 	return e.runner
 }
 
+func (e *CLITestEnvironment) TableRenderer() *MockTableRenderer {
+	return e.runner.TableRenderer.(*MockTableRenderer)
+}
+
+func (e *CLITestEnvironment) OutputRenderer() *MockOutputRenderer {
+	return e.runner.OutputRenderer.(*MockOutputRenderer)
+}
+
+func (e *CLITestEnvironment) LastOutput() Output {
+	calls := e.OutputRenderer().Calls
+	if len(calls) == 0 {
+		e.T.Fatal("No output renderer calls recorded")
+	}
+	return calls[len(calls)-1].Output
+}
+
+func (e *CLITestEnvironment) LastFormat() Format {
+	calls := e.OutputRenderer().Calls
+	if len(calls) == 0 {
+		e.T.Fatal("No output renderer calls recorded")
+	}
+	return calls[len(calls)-1].Format
+}
+
+func (e *CLITestEnvironment) OutputCallCount() int {
+	return len(e.OutputRenderer().Calls)
+}
+
+func (e *CLITestEnvironment) ResetOutputRenderer() {
+	e.OutputRenderer().Reset()
+}
+
+func (e *CLITestEnvironment) AssertLastOutputRowContains(rowIdx int, colIdx int, substr string) {
+	lastOutput := e.LastOutput()
+	if rowIdx >= len(lastOutput.Rows) {
+		e.T.Fatalf("Row index %d out of range (have %d rows)", rowIdx, len(lastOutput.Rows))
+	}
+	row := lastOutput.Rows[rowIdx]
+	if colIdx >= len(row) {
+		e.T.Fatalf("Column index %d out of range (row has %d columns)", colIdx, len(row))
+	}
+	if !strings.Contains(row[colIdx], substr) {
+		e.T.Errorf("Row %d, column %d should contain %q, got: %q", rowIdx, colIdx, substr, row[colIdx])
+	}
+}
+
+func (e *CLITestEnvironment) AssertLastOutputRowsEqual(expectedRows [][]string) {
+	lastOutput := e.LastOutput()
+	if len(lastOutput.Rows) != len(expectedRows) {
+		e.T.Errorf("Expected %d rows, got %d", len(expectedRows), len(lastOutput.Rows))
+		return
+	}
+	for i, expectedRow := range expectedRows {
+		actualRow := lastOutput.Rows[i]
+		if len(actualRow) != len(expectedRow) {
+			e.T.Errorf("Row %d: expected %d columns, got %d", i, len(expectedRow), len(actualRow))
+			continue
+		}
+		for j, expectedCell := range expectedRow {
+			if actualRow[j] != expectedCell {
+				e.T.Errorf("Row %d, column %d: expected %q, got %q", i, j, expectedCell, actualRow[j])
+			}
+		}
+	}
+}
+
+func (e *CLITestEnvironment) AssertLastFormat(expected Format) {
+	lastFormat := e.LastFormat()
+	if lastFormat != expected {
+		e.T.Errorf("Expected format %q, got %q", expected, lastFormat)
+	}
+}
+
+func (e *CLITestEnvironment) ExtractHandleFromOutput(t *testing.T) string {
+	mockRenderer := e.OutputRenderer()
+	calls := mockRenderer.Calls
+	if len(calls) == 0 {
+		t.Fatal("No output renderer calls recorded")
+	}
+
+	lastCall := calls[len(calls)-1]
+	for _, row := range lastCall.Output.Rows {
+		if len(row) >= 2 && row[0] == "handle" {
+			return row[1]
+		}
+	}
+	t.Fatal("Handle not found in output rows")
+	return ""
+}
+
 func (e *CLITestEnvironment) SetStdin(input string) {
 	e.stdin = bytes.NewReader([]byte(input))
 	if e.runner != nil {
 		e.runner.Stdin = e.stdin
 	}
-}
-
-func ExtractHandleFromLog(t *testing.T, output string) string {
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "workspace created") {
-			var logData map[string]interface{}
-			if err := json.Unmarshal([]byte(line), &logData); err != nil {
-				t.Fatalf("Failed to parse JSON log: %v", err)
-			}
-			handle, ok := logData["handle"].(string)
-			if !ok {
-				t.Fatalf("Handle not found in log data: %v", logData)
-			}
-			return handle
-		}
-	}
-	t.Fatal("No workspace created message found in output")
-	return ""
-}
-
-func ExtractFieldFromLog(t *testing.T, output, messageType, fieldName string) interface{} {
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, messageType) {
-			var logData map[string]interface{}
-			if err := json.Unmarshal([]byte(line), &logData); err != nil {
-				t.Fatalf("Failed to parse JSON log: %v", err)
-			}
-			field, ok := logData[fieldName]
-			if !ok {
-				t.Fatalf("Field %s not found in log data: %v", fieldName, logData)
-			}
-			return field
-		}
-	}
-	t.Fatalf("No %s message found in output", messageType)
-	return nil
 }
 
 func OutputContains(t *testing.T, output, substr string) bool {

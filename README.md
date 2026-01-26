@@ -69,6 +69,11 @@ workshed capture --name "Starting point" --description "Initial workspace state"
 workshed repos add my-workspace --repo https://github.com/org/new-repo@main
 workshed repos remove my-workspace --repo new-repo
 
+# Output formats: --format table|json (default varies by command)
+workshed list --format json
+workshed captures --format json
+workshed derive --format json
+
 # List and manage workspaces
 workshed list
 workshed inspect
@@ -195,6 +200,9 @@ This output is designed for tools, scripts, and AI agents that need structured w
 workshed capture --name "Before refactor" \
   --description "API change point"
 
+# List captures in JSON format for scripting
+workshed captures --format json | jq '.[].name'
+
 # Inspect recent captures via derived context
 workshed derive | jq '.captures[:3]'
 
@@ -237,7 +245,28 @@ Run `workshed <command> --help` for detailed usage.
 ## Environment Variables
 
 - `WORKSHED_ROOT` — workspace directory (default: `~/.workshed/workspaces`)
-- `WORKSHED_LOG_FORMAT` — output format: `human`, `json`, or `raw` (default: `human`)
+- `WORKSHED_LOG_FORMAT` — logger format: `human`, `json`, or `raw` (default: `human`)
+
+## Output Formats
+
+Most commands support `--format table|json` for structured output:
+
+| Command | Default | Notes |
+|---------|---------|-------|
+| `list` | table | Lists workspaces |
+| `captures` | table | Lists captures |
+| `capture` | table | Shows capture details |
+| `apply` | table | Shows applied capture |
+| `create` | table | Shows created workspace info |
+| `inspect` | table | Shows workspace details |
+| `path` | table | Shows workspace path |
+| `repos add` | table | Shows added repositories |
+| `repos remove` | table | Shows removed repository |
+| `update` | table | Shows updated purpose |
+| `derive` | table | Auto-detects from `--output` extension |
+| `exec` | stream | Raw command output by default |
+
+JSON output is designed for scripting and automation.
 
 ---
 

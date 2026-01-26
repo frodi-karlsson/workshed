@@ -2,8 +2,7 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
-	"text/tabwriter"
+	"fmt"
 
 	"github.com/frodi/workshed/internal/logger"
 	flag "github.com/spf13/pflag"
@@ -13,7 +12,7 @@ func (r *Runner) Captures(args []string) {
 	l := r.getLogger()
 
 	fs := flag.NewFlagSet("captures", flag.ExitOnError)
-	jsonOutput := fs.Bool("json", false, "Output as JSON")
+	format := fs.String("format", "table", "Output format (table|json)")
 	reverse := fs.Bool("reverse", false, "Reverse sort order (oldest first)")
 
 	fs.Usage = func() {
@@ -24,7 +23,7 @@ func (r *Runner) Captures(args []string) {
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed captures\n")
 		logger.SafeFprintf(r.Stderr, "  workshed captures my-workspace\n")
-		logger.SafeFprintf(r.Stderr, "  workshed captures --json\n")
+		logger.SafeFprintf(r.Stderr, "  workshed captures --format json\n")
 		logger.SafeFprintf(r.Stderr, "  workshed captures --reverse\n")
 	}
 
@@ -50,19 +49,14 @@ func (r *Runner) Captures(args []string) {
 		return
 	}
 
-	if *jsonOutput {
-		data, _ := json.MarshalIndent(captures, "", "  ")
-		logger.SafeFprintln(r.Stdout, string(data))
-		return
-	}
-
 	if len(captures) == 0 {
-		l.Info("no captures found")
+		if *format == "json" {
+			logger.SafeFprintln(r.Stdout, "[]")
+		} else {
+			l.Info("no captures found")
+		}
 		return
 	}
-
-	w := tabwriter.NewWriter(r.Stdout, 0, 0, 2, ' ', 0)
-	logger.SafeFprintln(w, "ID\tNAME\tKIND\tREPOS\tCREATED")
 
 	displayCaptures := captures
 	if *reverse {
@@ -71,12 +65,24 @@ func (r *Runner) Captures(args []string) {
 		}
 	}
 
+	var rows [][]string
 	for _, cap := range displayCaptures {
 		created := cap.Timestamp.Format("2006-01-02 15:04")
-		logger.SafeFprintf(w, "%s\t%s\t%s\t%d\t%s\n", cap.ID, cap.Name, cap.Kind, len(cap.GitState), created)
+		rows = append(rows, []string{cap.ID, cap.Name, cap.Kind, fmt.Sprintf("%d", len(cap.GitState)), created})
 	}
 
-	if err := w.Flush(); err != nil {
-		l.Error("failed to flush output", "error", err)
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "ID", Min: 26, Max: 26},
+			{Type: Shrinkable, Name: "NAME", Min: 15, Max: 0},
+			{Type: Rigid, Name: "KIND", Min: 8, Max: 15},
+			{Type: Rigid, Name: "REPOS", Min: 6, Max: 8},
+			{Type: Rigid, Name: "CREATED", Min: 16, Max: 16},
+		},
+		Rows: rows,
+	}
+
+	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
 	}
 }

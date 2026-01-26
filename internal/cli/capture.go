@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 
 	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
@@ -17,7 +18,7 @@ func (r *Runner) Capture(args []string) {
 	kind := fs.String("kind", workspace.CaptureKindManual, "Capture kind: manual, execution, checkpoint")
 	desc := fs.String("description", "", "Description of this capture")
 	tags := fs.StringSlice("tag", nil, "Tags for this capture (can be specified multiple times)")
-	jsonOutput := fs.Bool("json", false, "Output as JSON")
+	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed capture [<handle>] --name <name> [flags]\n\n")
@@ -64,10 +65,27 @@ func (r *Runner) Capture(args []string) {
 		return
 	}
 
-	if *jsonOutput {
+	effectiveFormat := Format(*format)
+	if effectiveFormat == FormatJSON {
 		data, _ := json.MarshalIndent(capture, "", "  ")
 		logger.SafeFprintln(r.Stdout, string(data))
-	} else {
-		l.Success("captured state", "id", capture.ID, "name", capture.Name, "kind", capture.Kind, "repos", len(capture.GitState))
+		return
+	}
+
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+		},
+		Rows: [][]string{
+			{"id", capture.ID},
+			{"name", capture.Name},
+			{"kind", capture.Kind},
+			{"repos", strconv.Itoa(len(capture.GitState))},
+		},
+	}
+
+	if err := r.getOutputRenderer().Render(output, effectiveFormat, r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
 	}
 }

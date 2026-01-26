@@ -12,9 +12,10 @@ func (r *Runner) Update(args []string) {
 
 	fs := flag.NewFlagSet("update", flag.ExitOnError)
 	purpose := fs.String("purpose", "", "New purpose for the workspace (required)")
+	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed update --purpose <purpose> [<handle>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed update --purpose <purpose> [<handle>] [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Update the purpose of a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
@@ -32,6 +33,7 @@ func (r *Runner) Update(args []string) {
 		l.Error("missing required flag", "flag", "--purpose")
 		fs.Usage()
 		r.ExitFunc(1)
+		return
 	}
 
 	ctx := context.Background()
@@ -49,5 +51,18 @@ func (r *Runner) Update(args []string) {
 		return
 	}
 
-	l.Success("workspace purpose updated", "handle", handle, "purpose", *purpose)
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+		},
+		Rows: [][]string{
+			{"handle", handle},
+			{"purpose", *purpose},
+		},
+	}
+
+	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
+	}
 }

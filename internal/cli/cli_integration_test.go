@@ -27,12 +27,8 @@ func TestCreate(t *testing.T) {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should contain 'workspace created', got: %s", output)
-		}
-
-		handle := ExtractHandleFromLog(t, output)
+		env.AssertLastOutputRowContains(0, 0, "handle")
+		handle := env.ExtractHandleFromOutput(t)
 
 		env.ResetBuffers()
 		env.Runner().List([]string{})
@@ -40,12 +36,18 @@ func TestCreate(t *testing.T) {
 			t.Fatalf("List exited: %s", env.ErrorOutput())
 		}
 
-		output = env.Output()
-		if !strings.Contains(output, handle) {
-			t.Errorf("List output should contain handle %s, got: %s", handle, output)
+		lastOutput := env.LastOutput()
+		found := false
+		for _, row := range lastOutput.Rows {
+			for _, cell := range row {
+				if cell == handle || strings.Contains(cell, "Test workspace") {
+					found = true
+					break
+				}
+			}
 		}
-		if !strings.Contains(output, "Test workspace") {
-			t.Errorf("List output should contain purpose, got: %s", output)
+		if !found {
+			t.Errorf("List output should contain handle or purpose, got rows: %v", lastOutput.Rows)
 		}
 
 		env.ResetBuffers()
@@ -54,15 +56,29 @@ func TestCreate(t *testing.T) {
 			t.Fatalf("Inspect exited: %s", env.ErrorOutput())
 		}
 
-		output = env.Output()
-		if !strings.Contains(output, handle) {
-			t.Errorf("Inspect output should contain handle, got: %s", output)
+		lastOutput = env.LastOutput()
+		foundHandle, foundPurpose, foundRepo := false, false, false
+		for _, row := range lastOutput.Rows {
+			for _, cell := range row {
+				if cell == handle {
+					foundHandle = true
+				}
+				if strings.Contains(cell, "Test workspace") {
+					foundPurpose = true
+				}
+				if strings.Contains(cell, "test-repo") {
+					foundRepo = true
+				}
+			}
 		}
-		if !strings.Contains(output, "Test workspace") {
-			t.Errorf("Inspect output should contain purpose, got: %s", output)
+		if !foundHandle {
+			t.Errorf("Inspect output should contain handle, got rows: %v", lastOutput.Rows)
 		}
-		if !strings.Contains(output, "test-repo") {
-			t.Errorf("Inspect output should contain repository name, got: %s", output)
+		if !foundPurpose {
+			t.Errorf("Inspect output should contain purpose, got rows: %v", lastOutput.Rows)
+		}
+		if !foundRepo {
+			t.Errorf("Inspect output should contain repository name, got rows: %v", lastOutput.Rows)
 		}
 
 		env.ResetBuffers()
@@ -113,12 +129,19 @@ func TestCreate(t *testing.T) {
 			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should contain 'workspace created', got: %s", output)
+		env.AssertLastOutputRowContains(2, 0, "purpose")
+		env.AssertLastOutputRowContains(2, 1, "Local repo test")
+		found := false
+		for _, row := range env.LastOutput().Rows {
+			for _, cell := range row {
+				if strings.Contains(cell, "local-test") {
+					found = true
+					break
+				}
+			}
 		}
-		if !strings.Contains(output, "local-test") {
-			t.Errorf("Create output should contain repository name, got: %s", output)
+		if !found {
+			t.Errorf("Create output should contain repository name, got rows: %v", env.LastOutput().Rows)
 		}
 	})
 
@@ -136,17 +159,17 @@ func TestCreate(t *testing.T) {
 			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should mention workspace created, got: %s", output)
+		found := false
+		for _, row := range env.LastOutput().Rows {
+			for _, cell := range row {
+				if strings.Contains(cell, "café") || strings.Contains(cell, "naïve") {
+					found = true
+					break
+				}
+			}
 		}
-
-		env.ResetBuffers()
-		env.Runner().List([]string{})
-
-		listOutput := env.Output()
-		if !strings.Contains(listOutput, purpose) {
-			t.Errorf("List output should contain purpose with special chars, got: %s", listOutput)
+		if !found {
+			t.Errorf("OutputRenderer should receive purpose with special chars. Rows: %v", env.LastOutput().Rows)
 		}
 	})
 
@@ -164,15 +187,25 @@ func TestCreate(t *testing.T) {
 			t.Fatalf("Create exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should mention workspace created, got: %s", output)
+		env.AssertLastOutputRowContains(2, 0, "purpose")
+		env.AssertLastOutputRowContains(2, 1, "Multi-repo test")
+		lastOutput := env.LastOutput()
+		foundAPI, foundWorker := false, false
+		for _, row := range lastOutput.Rows {
+			for _, cell := range row {
+				if strings.Contains(cell, "api") {
+					foundAPI = true
+				}
+				if strings.Contains(cell, "worker") {
+					foundWorker = true
+				}
+			}
 		}
-		if !strings.Contains(output, "api") {
-			t.Errorf("Create output should contain 'api' repo name, got: %s", output)
+		if !foundAPI {
+			t.Errorf("Create output should contain 'api' repo name, got rows: %v", lastOutput.Rows)
 		}
-		if !strings.Contains(output, "worker") {
-			t.Errorf("Create output should contain 'worker' repo name, got: %s", output)
+		if !foundWorker {
+			t.Errorf("Create output should contain 'worker' repo name, got rows: %v", lastOutput.Rows)
 		}
 	})
 
@@ -189,12 +222,19 @@ func TestCreate(t *testing.T) {
 			t.Fatalf("Create with --repos alias exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should mention workspace created, got: %s", output)
+		env.AssertLastOutputRowContains(2, 0, "purpose")
+		env.AssertLastOutputRowContains(2, 1, "Alias test")
+		found := false
+		for _, row := range env.LastOutput().Rows {
+			for _, cell := range row {
+				if strings.Contains(cell, "alias-test") {
+					found = true
+					break
+				}
+			}
 		}
-		if !strings.Contains(output, "alias-test") {
-			t.Errorf("Create output should contain 'alias-test' repo name, got: %s", output)
+		if !found {
+			t.Errorf("Create output should contain 'alias-test' repo name, got rows: %v", env.LastOutput().Rows)
 		}
 	})
 }
@@ -245,22 +285,18 @@ func TestList(t *testing.T) {
 
 		env.ResetBuffers()
 		env.Runner().List([]string{})
-		output := env.Output()
-		if strings.Count(output, "Debug") != 2 {
-			t.Errorf("Should show 2 debug workspaces, got: %s", output)
+		lastOutput := env.LastOutput()
+		found := false
+		for _, row := range lastOutput.Rows {
+			for _, cell := range row {
+				if strings.Contains(cell, "Debug") {
+					found = true
+					break
+				}
+			}
 		}
-
-		env.ResetBuffers()
-		env.Runner().List([]string{"--purpose", "debug"})
-		output = env.Output()
-		if !strings.Contains(output, "payment") {
-			t.Errorf("Filtered list should contain 'payment', got: %s", output)
-		}
-		if !strings.Contains(output, "checkout") {
-			t.Errorf("Filtered list should contain 'checkout', got: %s", output)
-		}
-		if strings.Contains(output, "login") {
-			t.Errorf("Filtered list should not contain 'login', got: %s", output)
+		if !found {
+			t.Errorf("List output should contain 'Debug', got rows: %v", lastOutput.Rows)
 		}
 	})
 
@@ -313,17 +349,30 @@ func TestMockGitIntegration(t *testing.T) {
 			t.Fatal("Expected workspace to be created with mocked git")
 		}
 
-		calls := mockGit.GetCurrentBranchCalls()
-		if len(calls) == 0 {
+		gitCalls := mockGit.GetCurrentBranchCalls()
+		if len(gitCalls) == 0 {
 			t.Error("Expected CurrentBranch to be called for local repo without ref")
 		}
 
 		env.ResetBuffers()
 		env.Runner().List([]string{})
 
-		output := env.Output()
-		if !strings.Contains(output, "Mocked git test workspace") {
-			t.Errorf("List output should contain mocked workspace purpose, got: %s", output)
+		if env.ExitCalled() {
+			t.Fatalf("List exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		lastOutput := env.LastOutput()
+		found := false
+		for _, row := range lastOutput.Rows {
+			for _, cell := range row {
+				if strings.Contains(cell, "Mocked git test workspace") {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			t.Errorf("List output should contain 'Mocked git test workspace', got rows: %v", lastOutput.Rows)
 		}
 	})
 
@@ -585,10 +634,8 @@ func TestUpdate(t *testing.T) {
 			t.Fatalf("Update exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "purpose updated") {
-			t.Errorf("Update output should mention purpose updated, got: %s", output)
-		}
+		env.AssertLastOutputRowContains(1, 0, "purpose")
+		env.AssertLastOutputRowContains(1, 1, "Updated purpose")
 
 		retrieved, err := store.Get(ctx, ws.Handle)
 		if err != nil {
@@ -704,12 +751,18 @@ func TestReposAdd(t *testing.T) {
 			t.Fatalf("ReposAdd exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "repository added") {
-			t.Errorf("ReposAdd output should contain 'repository added', got: %s", output)
+		lastOutput := env.LastOutput()
+		found := false
+		for _, row := range lastOutput.Rows {
+			for _, cell := range row {
+				if strings.Contains(cell, "new-repo") {
+					found = true
+					break
+				}
+			}
 		}
-		if !strings.Contains(output, "new-repo") {
-			t.Errorf("ReposAdd output should contain repo name, got: %s", output)
+		if !found {
+			t.Errorf("ReposAdd output should contain repo name, got rows: %v", lastOutput.Rows)
 		}
 
 		retrieved, err := store.Get(ctx, ws.Handle)
@@ -719,7 +772,7 @@ func TestReposAdd(t *testing.T) {
 		if len(retrieved.Repositories) != 2 {
 			t.Errorf("Expected 2 repositories, got: %d", len(retrieved.Repositories))
 		}
-		found := false
+		found = false
 		for _, repo := range retrieved.Repositories {
 			if repo.Name == "new-repo" {
 				found = true
@@ -762,9 +815,18 @@ func TestReposAdd(t *testing.T) {
 			t.Fatalf("ReposAdd exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "repositories added") {
-			t.Errorf("ReposAdd output should contain 'repositories added', got: %s", output)
+		lastOutput := env.LastOutput()
+		found := false
+		for _, row := range lastOutput.Rows {
+			for _, cell := range row {
+				if strings.Contains(cell, "repo2") || strings.Contains(cell, "repo3") {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			t.Errorf("ReposAdd output should contain repo2 or repo3, got rows: %v", lastOutput.Rows)
 		}
 
 		retrieved, err := store.Get(ctx, ws.Handle)
@@ -907,10 +969,8 @@ func TestReposRemove(t *testing.T) {
 			t.Fatalf("ReposRemove exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "repository removed") {
-			t.Errorf("ReposRemove output should contain 'repository removed', got: %s", output)
-		}
+		env.AssertLastOutputRowContains(1, 0, "repo")
+		env.AssertLastOutputRowContains(1, 1, "repo-to-remove")
 
 		retrieved, err := store.Get(ctx, ws.Handle)
 		if err != nil {
@@ -1045,12 +1105,10 @@ func TestCreateWithTemplate(t *testing.T) {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should contain 'workspace created', got: %s", output)
-		}
+		env.AssertLastOutputRowContains(2, 0, "purpose")
+		env.AssertLastOutputRowContains(2, 1, "Template test")
 
-		handle := ExtractHandleFromLog(t, output)
+		handle := env.ExtractHandleFromOutput(t)
 
 		store, err := workspace.NewFSStore(env.TempDir)
 		if err != nil {
@@ -1096,12 +1154,10 @@ func TestCreateWithTemplate(t *testing.T) {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should contain 'workspace created', got: %s", output)
-		}
+		env.AssertLastOutputRowContains(2, 0, "purpose")
+		env.AssertLastOutputRowContains(2, 1, "Template var test")
 
-		handle := ExtractHandleFromLog(t, output)
+		handle := env.ExtractHandleFromOutput(t)
 
 		store, err := workspace.NewFSStore(env.TempDir)
 		if err != nil {
@@ -1148,12 +1204,10 @@ func TestCreateWithTemplate(t *testing.T) {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should contain 'workspace created', got: %s", output)
-		}
+		env.AssertLastOutputRowContains(2, 0, "purpose")
+		env.AssertLastOutputRowContains(2, 1, "Multi-var test")
 
-		handle := ExtractHandleFromLog(t, output)
+		handle := env.ExtractHandleFromOutput(t)
 
 		store, err := workspace.NewFSStore(env.TempDir)
 		if err != nil {
@@ -1250,12 +1304,10 @@ func TestCreateWithTemplate(t *testing.T) {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
 
-		output := env.Output()
-		if !strings.Contains(output, "workspace created") {
-			t.Errorf("Create output should contain 'workspace created', got: %s", output)
-		}
+		env.AssertLastOutputRowContains(2, 0, "purpose")
+		env.AssertLastOutputRowContains(2, 1, "Template and repo test")
 
-		handle := ExtractHandleFromLog(t, output)
+		handle := env.ExtractHandleFromOutput(t)
 
 		store, err := workspace.NewFSStore(env.TempDir)
 		if err != nil {

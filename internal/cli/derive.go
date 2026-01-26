@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/frodi/workshed/internal/logger"
 	flag "github.com/spf13/pflag"
@@ -15,7 +16,7 @@ func (r *Runner) Derive(args []string) {
 
 	fs := flag.NewFlagSet("derive", flag.ExitOnError)
 	output := fs.String("output", "", "Output file path (default: <workspace>/.workshed/context.json)")
-	jsonOutput := fs.Bool("json", false, "Output as JSON")
+	format := fs.String("format", "", "Output format (table|json), defaults based on --output extension")
 
 	fs.Usage = func() {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed derive [<handle>] [flags]\n\n")
@@ -24,7 +25,7 @@ func (r *Runner) Derive(args []string) {
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed derive\n")
-		logger.SafeFprintf(r.Stderr, "  workshed derive --json | jq '.captures'\n")
+		logger.SafeFprintf(r.Stderr, "  workshed derive --format json | jq '.captures'\n")
 		logger.SafeFprintf(r.Stderr, "  workshed derive --output /tmp/context.json\n")
 	}
 
@@ -75,9 +76,26 @@ func (r *Runner) Derive(args []string) {
 		return
 	}
 
-	if *jsonOutput {
+	effectiveFormat := Format(*format)
+	if effectiveFormat == "" {
+		effectiveFormat = DetectFormatFromFilePath(outputPath)
+	}
+
+	if effectiveFormat == FormatJSON {
 		logger.SafeFprintln(r.Stdout, string(data))
 	} else {
-		l.Success("derived context", "path", outputPath, "repos", len(contextData.Repositories))
+		output := Output{
+			Columns: []ColumnConfig{
+				{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+				{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+			},
+			Rows: [][]string{
+				{"path", outputPath},
+				{"repos", strconv.Itoa(len(contextData.Repositories))},
+			},
+		}
+		if err := r.getOutputRenderer().Render(output, FormatTable, r.Stdout); err != nil {
+			l.Error("failed to render output", "error", err)
+		}
 	}
 }

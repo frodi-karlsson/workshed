@@ -25,9 +25,10 @@ func (r *Runner) Create(args []string) {
 	template := fs.String("template", "", "Template directory to copy into workspace")
 	var templateVars []string
 	fs.StringSliceVar(&templateVars, "map", nil, "Template variable substitution (format: key=value). Can be specified multiple times.")
+	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed create --purpose <purpose> [--repo url@ref]... [--template <dir>] [--map key=value]...\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed create --purpose <purpose> [--repo url@ref]... [--template <dir>] [--map key=value]... [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
@@ -109,13 +110,29 @@ func (r *Runner) Create(args []string) {
 		return
 	}
 
-	if len(ws.Repositories) > 0 {
-		repoNames := make([]string, len(ws.Repositories))
-		for i, repo := range ws.Repositories {
-			repoNames[i] = repo.Name
+	var rows [][]string
+	rows = append(rows, []string{"handle", ws.Handle})
+	rows = append(rows, []string{"path", ws.Path})
+	rows = append(rows, []string{"purpose", ws.Purpose})
+	for _, repo := range ws.Repositories {
+		var repoInfo string
+		if repo.Ref != "" {
+			repoInfo = repo.Name + " @ " + repo.Ref
+		} else {
+			repoInfo = repo.Name
 		}
-		l.Success("workspace created", "handle", ws.Handle, "path", ws.Path, "note", "handle is auto-generated", "repos", strings.Join(repoNames, ", "))
-	} else {
-		l.Success("workspace created", "handle", ws.Handle, "path", ws.Path, "note", "handle is auto-generated")
+		rows = append(rows, []string{"repo", repoInfo})
+	}
+
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+		},
+		Rows: rows,
+	}
+
+	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
 	}
 }

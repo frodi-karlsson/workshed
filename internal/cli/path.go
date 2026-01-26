@@ -11,11 +11,14 @@ func (r *Runner) Path(args []string) {
 	l := r.getLogger()
 
 	fs := flag.NewFlagSet("path", flag.ExitOnError)
+	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed path [<handle>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed path [<handle>] [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Print the workspace directory path.\n\n")
-		logger.SafeFprintf(r.Stderr, "Examples:\n")
+		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed path\n")
 		logger.SafeFprintf(r.Stderr, "  workshed path my-workspace\n")
 		logger.SafeFprintf(r.Stderr, "  cd $(workshed path)\n")
@@ -43,5 +46,17 @@ func (r *Runner) Path(args []string) {
 		return
 	}
 
-	l.Info("workspace path", "path", path)
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
+			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
+		},
+		Rows: [][]string{
+			{"path", path},
+		},
+	}
+
+	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
+	}
 }

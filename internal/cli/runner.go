@@ -12,13 +12,15 @@ import (
 )
 
 type Runner struct {
-	Stderr        io.Writer
-	Stdout        io.Writer
-	Stdin         io.Reader
-	ExitFunc      func(int)
-	Store         workspace.Store
-	Logger        *logger.Logger
-	InvocationCWD string
+	Stderr         io.Writer
+	Stdout         io.Writer
+	Stdin          io.Reader
+	ExitFunc       func(int)
+	Store          workspace.Store
+	Logger         *logger.Logger
+	InvocationCWD  string
+	TableRenderer  TableRenderer
+	OutputRenderer OutputRenderer
 }
 
 func (r *Runner) GetInvocationCWD() string {
@@ -27,11 +29,31 @@ func (r *Runner) GetInvocationCWD() string {
 
 func NewRunner(invocationCWD string) *Runner {
 	return &Runner{
-		Stderr:        os.Stderr,
-		Stdout:        os.Stdout,
-		Stdin:         os.Stdin,
-		ExitFunc:      os.Exit,
-		InvocationCWD: invocationCWD,
+		Stderr:         os.Stderr,
+		Stdout:         os.Stdout,
+		Stdin:          os.Stdin,
+		ExitFunc:       os.Exit,
+		InvocationCWD:  invocationCWD,
+		TableRenderer:  &FlexTableRenderer{},
+		OutputRenderer: &OutputRendererImpl{},
+	}
+}
+
+type OutputRendererImpl struct{}
+
+func (r *OutputRendererImpl) Render(output Output, format Format, out io.Writer) error {
+	switch format {
+	case FormatTable:
+		tableRenderer := &FlexTableRenderer{}
+		return tableRenderer.Render(output.Columns, output.Rows, out)
+	case FormatJSON:
+		jsonRenderer := &JSONRenderer{}
+		return jsonRenderer.Render(output, format, out)
+	case FormatStream:
+		return nil
+	default:
+		tableRenderer := &FlexTableRenderer{}
+		return tableRenderer.Render(output.Columns, output.Rows, out)
 	}
 }
 
@@ -70,6 +92,13 @@ func (r *Runner) getStore() workspace.Store {
 	return s
 }
 
+func (r *Runner) getOutputRenderer() OutputRenderer {
+	if r.OutputRenderer != nil {
+		return r.OutputRenderer
+	}
+	return &OutputRendererImpl{}
+}
+
 func (r *Runner) Usage() {
 	msg := `workshed v0.3.0 - Intent-scoped local workspaces
 
@@ -82,7 +111,7 @@ Commands:
   inspect    Show workspace details
   path       Show workspace path
   exec       Run a command in repositories
-  repo       Manage repositories in a workspace
+  repos      Manage repositories in a workspace
   captures   List captures
   capture    Create a capture
   apply      Apply a captured state
@@ -92,6 +121,7 @@ Commands:
 
 Flags:
   -h, --help     Show help
+  --format       Output format (table|json) for supported commands
 
 Environment:
   WORKSHED_ROOT  Root directory for workspaces (default: ~/.workshed/workspaces)
