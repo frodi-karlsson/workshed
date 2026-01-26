@@ -31,19 +31,16 @@ func NewUpdateView(s workspace.Store, ctx context.Context, handle string) *modal
 	}
 }
 
-func (v *modal_UpdateView) Init() tea.Cmd { return textinput.Blink }
-
 func (v *modal_UpdateView) SetSize(size measure.Window) {
 	v.size = size
 }
 
-func (v *modal_UpdateView) OnPush()   {}
-func (v *modal_UpdateView) OnResume() {}
-func (v *modal_UpdateView) IsLoading() bool {
-	return false
-}
+func (v *modal_UpdateView) Init() tea.Cmd { return textinput.Blink }
 
-func (v *modal_UpdateView) Cancel() {}
+func (v *modal_UpdateView) OnPush()         {}
+func (v *modal_UpdateView) OnResume()       {}
+func (v *modal_UpdateView) IsLoading() bool { return false }
+func (v *modal_UpdateView) Cancel()         {}
 
 func (v *modal_UpdateView) KeyBindings() []KeyBinding {
 	return []KeyBinding{

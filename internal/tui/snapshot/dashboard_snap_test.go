@@ -247,7 +247,7 @@ func TestDashboardView_FilterMode(t *testing.T) {
 	})
 }
 
-func TestDashboardView_ContextMenu(t *testing.T) {
+func TestDashboardView_ResourceMenu(t *testing.T) {
 	scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
 		snapshot.WithWorkspaces([]*workspace.Workspace{
 			{
@@ -262,9 +262,9 @@ func TestDashboardView_ContextMenu(t *testing.T) {
 		}),
 	})
 
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	output := scenario.Record()
-	snapshot.Match(t, "context_menu_open", output)
+	snapshot.Match(t, "resource_menu_open", output)
 
 	scenario.Key("i", "Select inspect")
 	output = scenario.Record()
@@ -275,14 +275,14 @@ func TestDashboardView_ContextMenu(t *testing.T) {
 	snapshot.Match(t, "inspect_dismissed", output)
 }
 
-func TestDashboardView_ContextMenuActions(t *testing.T) {
+func TestDashboardView_ResourceMenuActions(t *testing.T) {
 	t.Run("path", func(t *testing.T) {
 		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
 			snapshot.WithWorkspaces([]*workspace.Workspace{
 				{Handle: "test-ws", Purpose: "Test workspace", Path: "/test/path/to/workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("p", "Select path")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -294,7 +294,7 @@ func TestDashboardView_ContextMenuActions(t *testing.T) {
 				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{{Name: "repo1", URL: "https://github.com/org/repo1"}}},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("e", "Select exec")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -306,65 +306,70 @@ func TestDashboardView_ContextMenuActions(t *testing.T) {
 				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("u", "Select update purpose")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
 	})
 
-	t.Run("remove_confirm", func(t *testing.T) {
+	t.Run("repositories", func(t *testing.T) {
 		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
 			snapshot.WithWorkspaces([]*workspace.Workspace{
 				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
-		scenario.Enter("Open context menu")
-		scenario.Key("r", "Select remove repo")
+		scenario.Enter("Open resource menu")
+		scenario.Key("r", "Select repositories")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
 	})
 
-	t.Run("capture", func(t *testing.T) {
+	t.Run("captures", func(t *testing.T) {
 		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
 			snapshot.WithWorkspaces([]*workspace.Workspace{
 				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
-		scenario.Enter("Open context menu")
-		scenario.Key("c", "Select capture")
+		scenario.Enter("Open resource menu")
+		scenario.Key("c", "Select captures")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
 	})
 
-	t.Run("pagination", func(t *testing.T) {
+	t.Run("health", func(t *testing.T) {
 		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
 			snapshot.WithWorkspaces([]*workspace.Workspace{
 				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
+		scenario.Key("k", "Select health")
 		output := scenario.Record()
-		snapshot.Match(t, "initial", output)
+		snapshot.Match(t, t.Name(), output)
+	})
 
-		scenario.Key("down", "Move down to second item")
-		output = scenario.Record()
-		snapshot.Match(t, "moved_down", output)
-
-		scenario.Key("tab", "Go to next page")
-		output = scenario.Record()
-		snapshot.Match(t, "next_page", output)
+	t.Run("remove", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Enter("Open resource menu")
+		scenario.Key("x", "Select remove")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
 	})
 }
 
-func TestDashboardView_Modals(t *testing.T) {
+func TestDashboardView_ResourceMenuModals(t *testing.T) {
 	t.Run("remove_dismiss", func(t *testing.T) {
 		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
 			snapshot.WithWorkspaces([]*workspace.Workspace{
 				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
-		scenario.Enter("Open context menu")
-		scenario.Key("r", "Select remove")
+		scenario.Enter("Open resource menu")
+		scenario.Key("x", "Select remove")
 		scenario.Key("n", "Dismiss removal")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -376,8 +381,8 @@ func TestDashboardView_Modals(t *testing.T) {
 				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
-		scenario.Enter("Open context menu")
-		scenario.Key("r", "Select remove")
+		scenario.Enter("Open resource menu")
+		scenario.Key("x", "Select remove")
 		scenario.Key("y", "Confirm removal")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -389,7 +394,7 @@ func TestDashboardView_Modals(t *testing.T) {
 				{Handle: "test-ws", Purpose: "Old purpose", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("u", "Select update")
 		scenario.Type("New purpose", "Enter new purpose")
 		scenario.Enter("Save purpose")

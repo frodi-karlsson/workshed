@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -1252,89 +1251,4 @@ func (s *FSStore) DeriveContext(ctx context.Context, handle string) (*WorkspaceC
 			LastCapturedAt:  lastCaptured,
 		},
 	}, nil
-}
-
-func (s *FSStore) ValidateAgents(ctx context.Context, handle string, agentsPath string) (AgentsValidationResult, error) {
-	result := AgentsValidationResult{
-		Valid:       true,
-		Errors:      make([]AgentsError, 0),
-		Warnings:    make([]AgentsWarning, 0),
-		Sections:    make([]AgentsSection, 0),
-		Explanation: "",
-	}
-
-	data, err := os.ReadFile(agentsPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return AgentsValidationResult{
-				Valid:       false,
-				Explanation: "AGENTS.md file not found at " + agentsPath,
-			}, nil
-		}
-		return AgentsValidationResult{}, fmt.Errorf("reading AGENTS.md: %w", err)
-	}
-
-	content := string(data)
-	lines := strings.Split(content, "\n")
-
-	sectionPattern := regexp.MustCompile(`^##\s+(.+)$`)
-	subsections := []string{"Running", "Philosophy", "Code Guidelines", "Testing Philosophy", "Design Smells to Watch For", "Final Note"}
-
-	var currentSection string
-	sectionStartLine := 0
-	sectionContent := make(map[string][]string)
-	seenSections := make(map[string]bool)
-
-	for i, line := range lines {
-		match := sectionPattern.FindStringSubmatch(line)
-		if match != nil {
-			if currentSection != "" {
-				seenSections[currentSection] = true
-				result.Sections = append(result.Sections, AgentsSection{
-					Name:     currentSection,
-					Line:     sectionStartLine + 1,
-					Valid:    true,
-					Warnings: 0,
-					Errors:   0,
-				})
-			}
-			currentSection = match[1]
-			sectionStartLine = i
-			sectionContent[currentSection] = make([]string, 0)
-		} else if currentSection != "" {
-			sectionContent[currentSection] = append(sectionContent[currentSection], strings.TrimSpace(line))
-		}
-	}
-
-	if currentSection != "" {
-		seenSections[currentSection] = true
-		result.Sections = append(result.Sections, AgentsSection{
-			Name:     currentSection,
-			Line:     sectionStartLine + 1,
-			Valid:    true,
-			Warnings: 0,
-			Errors:   0,
-		})
-	}
-
-	for _, expected := range subsections {
-		if !seenSections[expected] {
-			result.Valid = false
-			result.Errors = append(result.Errors, AgentsError{
-				Line:    0,
-				Message: "Missing required section: " + expected,
-				Field:   "structure",
-			})
-		}
-	}
-
-	sectionCount := len(result.Sections)
-	if sectionCount < 6 {
-		result.Valid = false
-		result.Explanation = fmt.Sprintf("AGENTS.md has %d sections, expected at least 6 (Running, Philosophy, Code Guidelines, Testing Philosophy, Design Smells to Watch For, Final Note)", sectionCount)
-	} else {
-		result.Explanation = fmt.Sprintf("AGENTS.md has %d sections with required sections present.", sectionCount)
-	}
-
-	return result, nil
 }

@@ -26,7 +26,7 @@ func TestHealthView_DetectsIssues(t *testing.T) {
 		}),
 		snapshot.WithExecutions(executions),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("k", "Navigate to health")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
@@ -46,7 +46,7 @@ func TestHealthView_DryRun(t *testing.T) {
 			{ID: "exec-1", Timestamp: time.Now().Add(-35 * 24 * time.Hour), Handle: "test-ws", Command: []string{"stale"}, ExitCode: 0},
 		}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("k", "Navigate to health")
 	scenario.Key("tab", "Toggle dry-run on")
 	scenario.Enter("Preview cleanup actions")
@@ -70,7 +70,7 @@ func TestHealthView_HealthyWorkspace(t *testing.T) {
 			{ID: "exec-1", Timestamp: time.Now(), Handle: "healthy-ws", Command: []string{"recent"}, ExitCode: 0},
 		}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("k", "Navigate to health")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
@@ -90,7 +90,7 @@ func TestHealthView_AfterCleanup(t *testing.T) {
 			{ID: "exec-1", Timestamp: time.Now().Add(-35 * 24 * time.Hour), Handle: "test-ws", Command: []string{"stale"}, ExitCode: 0},
 		}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("k", "Navigate to health")
 	scenario.Key("tab", "Toggle dry-run on")
 	scenario.Enter("Preview cleanup actions")
@@ -113,7 +113,7 @@ func TestHealthView_ToggleDryRun(t *testing.T) {
 			{ID: "exec-1", Timestamp: time.Now().Add(-31 * 24 * time.Hour), Handle: "test-ws", Command: []string{"old"}, ExitCode: 0},
 		}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("k", "Navigate to health")
 	scenario.Key("tab", "Toggle dry-run ON")
 	output := scenario.Record()

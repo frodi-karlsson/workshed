@@ -14,19 +14,16 @@ func NewErrorView(err error) *modal_ErrorView {
 	return &modal_ErrorView{err: err}
 }
 
-func (v *modal_ErrorView) Init() tea.Cmd { return nil }
-
 func (v *modal_ErrorView) SetSize(size measure.Window) {
 	v.size = size
 }
 
-func (v *modal_ErrorView) OnPush()   {}
-func (v *modal_ErrorView) OnResume() {}
-func (v *modal_ErrorView) IsLoading() bool {
-	return false
-}
+func (v *modal_ErrorView) Init() tea.Cmd { return nil }
 
-func (v *modal_ErrorView) Cancel() {}
+func (v *modal_ErrorView) OnPush()         {}
+func (v *modal_ErrorView) OnResume()       {}
+func (v *modal_ErrorView) IsLoading() bool { return false }
+func (v *modal_ErrorView) Cancel()         {}
 
 func (v *modal_ErrorView) KeyBindings() []KeyBinding {
 	return []KeyBinding{

@@ -1,5 +1,6 @@
-[TestModal_Exec/view - 1]
-TestModal_Exec/view
+
+[TestDashboardView_ResourceMenuModals/remove_dismiss - 1]
+TestDashboardView_ResourceMenuModals/remove_dismiss
 {
   "Views": [
     {
@@ -18,7 +19,56 @@ TestModal_Exec/view
       "Type": "*views.ResourceMenuView",
       "Data": {
         "Type": "ResourceMenuView",
-        "Handle": "multi-repo-ws",
+        "Handle": "test-ws",
+        "ItemCount": 5,
+        "SelectedIdx": 0
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenuModals/remove_confirm - 1]
+TestDashboardView_ResourceMenuModals/remove_confirm
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenuModals/update_purpose_success - 1]
+TestDashboardView_ResourceMenuModals/update_purpose_success
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
         "ItemCount": 5,
         "SelectedIdx": 0
       }
@@ -27,7 +77,7 @@ TestModal_Exec/view
       "Type": "*views.ExecMenuView",
       "Data": {
         "Type": "ExecMenuView",
-        "Handle": "multi-repo-ws",
+        "Handle": "test-ws",
         "ItemCount": 2,
         "SelectedIdx": 0
       }
@@ -36,48 +86,10 @@ TestModal_Exec/view
       "Type": "*views.modal_ExecView",
       "Data": {
         "Type": "ExecView",
-        "Handle": "multi-repo-ws",
-        "Command": "",
-        "Done": false,
-        "RepoCount": 2
-      }
-    }
-  ]
-}
----
-
-[TestModal_Exec/dismiss_esc - 1]
-TestModal_Exec/dismiss_esc
-{
-  "Views": [
-    {
-      "Type": "*views.DashboardView",
-      "Data": {
-        "Type": "DashboardView",
-        "FilterMode": false,
-        "FilterQuery": "",
-        "SortOrder": "Created ↓",
-        "ItemCount": 1,
-        "SelectedIndex": 0,
-        "HasError": false
-      }
-    },
-    {
-      "Type": "*views.ResourceMenuView",
-      "Data": {
-        "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
-        "SelectedIdx": 0
-      }
-    },
-    {
-      "Type": "*views.ExecMenuView",
-      "Data": {
-        "Type": "ExecMenuView",
-        "Handle": "test-ws",
-        "ItemCount": 2,
-        "SelectedIdx": 0
+        "Command": "pose",
+        "Done": true,
+        "RepoCount": 0
       }
     }
   ]

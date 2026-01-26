@@ -66,8 +66,8 @@ workshed exec -- make test
 workshed capture --name "Starting point" --description "Initial workspace state"
 
 # Add/remove repositories
-workshed repo add my-workspace --repo https://github.com/org/new-repo@main
-workshed repo remove my-workspace --repo new-repo
+workshed repos add my-workspace --repo https://github.com/org/new-repo@main
+workshed repos remove my-workspace --repo new-repo
 
 # List and manage workspaces
 workshed list
@@ -203,11 +203,8 @@ workshed apply 01HVABCDEFG
 workshed apply --name "Before refactor"
 workshed apply my-workspace --name "Starting point"
 
-# Validate AGENTS.md in the current workspace
-workshed validate
-
-# Validate a custom file or another workspace
-workshed validate --path CUSTOM.md my-workspace
+# List captures
+workshed captures
 ```
 
 ---
@@ -223,11 +220,12 @@ workshed validate --path CUSTOM.md my-workspace
 | `workshed path` | Print workspace path |
 | `workshed exec -- <cmd>` | Run command in repositories |
 | `workshed capture` | Record a descriptive snapshot of git state |
+| `workshed captures` | List captures for a workspace |
 | `workshed apply` | Attempt to restore git state from a capture |
 | `workshed derive` | Generate workspace context as JSON |
-| `workshed validate` | Validate AGENTS.md structure |
-| `workshed repo add` | Add repository to workspace |
-| `workshed repo remove` | Remove repository from workspace |
+| `workshed health` | Check workspace health |
+| `workshed repos add` | Add repository to workspace |
+| `workshed repos remove` | Remove repository from workspace |
 | `workshed update` | Update workspace purpose |
 | `workshed remove` | Delete a workspace |
 | `workshed --version` | Show version |

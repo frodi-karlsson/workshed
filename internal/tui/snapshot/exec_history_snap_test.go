@@ -58,7 +58,8 @@ func TestExecHistoryView_RecentList(t *testing.T) {
 		}),
 		snapshot.WithExecutions(executions),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
+	scenario.Key("e", "Navigate to exec menu")
 	scenario.Key("h", "Navigate to history")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
@@ -114,7 +115,7 @@ func TestExecHistoryView_Navigation(t *testing.T) {
 		}),
 		snapshot.WithExecutions(executions),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("h", "Navigate to history")
 	output := scenario.Record()
 	snapshot.Match(t, "first_selected", output)
@@ -140,7 +141,8 @@ func TestExecHistoryView_Empty(t *testing.T) {
 		}),
 		snapshot.WithExecutions([]workspace.ExecutionRecord{}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
+	scenario.Key("e", "Navigate to exec menu")
 	scenario.Key("h", "Navigate to history")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
@@ -175,7 +177,8 @@ func TestExecHistoryView_AllFailures(t *testing.T) {
 		}),
 		snapshot.WithExecutions(executions),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
+	scenario.Key("e", "Navigate to exec menu")
 	scenario.Key("h", "Navigate to history")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)

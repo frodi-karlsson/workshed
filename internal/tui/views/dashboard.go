@@ -246,8 +246,8 @@ func (v *DashboardView) openMenu() (ViewResult, tea.Cmd) {
 	selected := v.list.SelectedItem()
 	if selected != nil {
 		if wi, ok := selected.(WorkspaceItem); ok {
-			contextMenuView := NewContextMenuView(v.store, v.ctx, wi.workspace.Handle, v.invocationCtx)
-			return ViewResult{NextView: &contextMenuView}, nil
+			resourceMenuView := NewResourceMenuView(v.store, v.ctx, wi.workspace.Handle, v.invocationCtx)
+			return ViewResult{NextView: &resourceMenuView}, nil
 		}
 	}
 	return ViewResult{}, nil

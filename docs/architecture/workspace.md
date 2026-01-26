@@ -69,12 +69,9 @@ type Store interface {
     GetCapture(ctx context.Context, handle, captureID string) (*Capture, error)
     ListCaptures(ctx context.Context, handle string) ([]Capture, error)
 
-    // Context derivation
+// Context derivation
     DeriveContext(ctx context.Context, handle string) (*WorkspaceContext, error)
-
-    // Validation
-    ValidateAgents(ctx context.Context, handle string, agentsPath string) (AgentsValidationResult, error)
-}
+ }
 ```
 
 ### Execution Records

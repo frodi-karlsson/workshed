@@ -1,4 +1,3 @@
-
 [TestModal_Remove - 1]
 TestModal_Remove
 {
@@ -16,79 +15,19 @@ TestModal_Remove
       }
     },
     {
-      "Type": "*views.ContextMenuView",
+      "Type": "*views.ResourceMenuView",
       "Data": {
-        "Type": "ContextMenuView",
+        "Type": "ResourceMenuView",
         "Handle": "delete-me",
-        "Items": [
-          {
-            "Key": "i",
-            "Label": "Inspect",
-            "Desc": "View workspace details"
-          },
-          {
-            "Key": "p",
-            "Label": "Path",
-            "Desc": "Copy path to clipboard"
-          },
-          {
-            "Key": "u",
-            "Label": "Update",
-            "Desc": "Edit purpose"
-          },
-          {
-            "Key": "e",
-            "Label": "Exec",
-            "Desc": "Run command"
-          },
-          {
-            "Key": "h",
-            "Label": "History",
-            "Desc": "Execution history"
-          },
-          {
-            "Key": "a",
-            "Label": "Add",
-            "Desc": "Add repository"
-          },
-          {
-            "Key": "r",
-            "Label": "Remove",
-            "Desc": "Remove repository"
-          },
-          {
-            "Key": "c",
-            "Label": "Capture",
-            "Desc": "Create or view captures"
-          },
-          {
-            "Key": "D",
-            "Label": "Derive",
-            "Desc": "Generate context JSON"
-          },
-          {
-            "Key": "v",
-            "Label": "Validate",
-            "Desc": "Check AGENTS.md"
-          },
-          {
-            "Key": "k",
-            "Label": "Health",
-            "Desc": "Check workspace health"
-          }
-        ],
-        "SelectedKey": "r",
-        "CurrentPage": 2,
-        "PageCount": 3
+        "ItemCount": 5,
+        "SelectedIdx": 0
       }
     },
     {
-      "Type": "*views.RemoveRepoView",
+      "Type": "*views.RemoveConfirmView",
       "Data": {
-        "Type": "RemoveRepoView",
-        "Handle": "delete-me",
-        "RepoCount": 0,
-        "HasError": false
+        "Type": "RemoveConfirmView",
+        "Handle": "delete-me"
       }
     }
   ]

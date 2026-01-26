@@ -23,7 +23,7 @@ func TestCaptureCreateView_Success(t *testing.T) {
 			},
 		}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	scenario.Key("n", "Create new capture")
 	scenario.Type("Before migration", "Enter capture name")
@@ -47,7 +47,7 @@ func TestCaptureCreateView_WithDirtyRepo(t *testing.T) {
 		}),
 		snapshot.WithDirtyRepo("dirty-repo"),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	scenario.Key("n", "Create new capture")
 	scenario.Type("State with changes", "Enter capture name")
@@ -73,7 +73,7 @@ func TestCaptureCreateView_MultipleReposMixed(t *testing.T) {
 		snapshot.WithDirtyRepo("backend"),
 		snapshot.WithDirtyRepo("shared"),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	scenario.Key("n", "Create new capture")
 	scenario.Type("Mixed state capture", "Enter capture name")
@@ -95,7 +95,7 @@ func TestCaptureCreateView_EmptyDescription(t *testing.T) {
 			},
 		}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	scenario.Key("n", "Create new capture")
 	scenario.Type("Quick capture", "Enter capture name")
@@ -145,7 +145,7 @@ func TestCaptureListView_MultipleCaptures(t *testing.T) {
 		}),
 		snapshot.WithCaptures(captures),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	scenario.Key("l", "Open captures list")
 	output := scenario.Record()
@@ -163,7 +163,7 @@ func TestCaptureListView_Empty(t *testing.T) {
 			},
 		}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
@@ -197,7 +197,7 @@ func TestCaptureDetailsView_Success(t *testing.T) {
 		snapshot.WithCaptures([]workspace.Capture{capture}),
 		snapshot.WithPreflightResult(preflight),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	scenario.Key("l", "Open captures list")
 	scenario.Enter("Open capture details")
@@ -230,7 +230,7 @@ func TestCaptureDetailsView_ApplyConfirm(t *testing.T) {
 		snapshot.WithCaptures([]workspace.Capture{capture}),
 		snapshot.WithPreflightResult(workspace.ApplyPreflightResult{Valid: true}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	scenario.Key("l", "Open captures list")
 	scenario.Enter("Open capture details")
@@ -276,7 +276,7 @@ func TestCaptureDetailsView_PreflightBlocked(t *testing.T) {
 		snapshot.WithCaptures([]workspace.Capture{capture}),
 		snapshot.WithPreflightResult(preflight),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	scenario.Key("l", "Open captures list")
 	scenario.Enter("Open capture details")
@@ -295,7 +295,7 @@ func TestCapturesMenuView_EmptyState(t *testing.T) {
 			},
 		}),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
@@ -324,7 +324,7 @@ func TestCapturesMenuView_WithCaptures(t *testing.T) {
 		}),
 		snapshot.WithCaptures(captures),
 	})
-	scenario.Enter("Open context menu")
+	scenario.Enter("Open resource menu")
 	scenario.Key("c", "Open captures menu")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)

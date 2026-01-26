@@ -87,7 +87,6 @@ Commands:
   capture    Create a capture
   apply      Apply a captured state
   derive     Derive workspace context
-  validate   Validate AGENTS.md
   remove     Remove a workspace
   update     Update workspace purpose
 
@@ -113,7 +112,6 @@ workshed exec -- make test
 workshed inspect
 workshed captures
 workshed capture --name "Before changes"
-workshed validate
 
 # Apply a capture by name
 workshed apply --name "Before changes"
@@ -155,45 +153,4 @@ func (r *Runner) RunMainDashboard() {
 		l.Error("dashboard error", "error", err)
 		r.ExitFunc(1)
 	}
-}
-
-func (r *Runner) Repo(args []string) {
-	if len(args) < 1 {
-		r.RepoUsage()
-		r.ExitFunc(1)
-		return
-	}
-
-	subcommand := args[0]
-	switch subcommand {
-	case "add":
-		r.RepoAdd(args[1:])
-	case "remove":
-		r.RepoRemove(args[1:])
-	case "help", "-h", "--help":
-		r.RepoUsage()
-	default:
-		logger.SafeFprintf(r.Stderr, "Unknown repo subcommand: %s\n\n", subcommand)
-		r.RepoUsage()
-		r.ExitFunc(1)
-	}
-}
-
-func (r *Runner) RepoUsage() {
-	msg := `workshed repo - Manage repositories in a workspace
-
-Usage:
-  workshed repo add <handle> --repo url[@ref]...
-  workshed repo remove <handle> --repo <name>
-
-Subcommands:
-  add     Add repositories to a workspace
-  remove  Remove a repository from a workspace
-
-Examples:
-  workshed repo add my-workspace --repo https://github.com/org/repo@main
-
-  workshed repo remove my-workspace --repo my-repo
-`
-	logger.SafeFprintf(r.Stderr, "%s\n", msg)
 }

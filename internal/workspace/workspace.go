@@ -140,7 +140,4 @@ type Store interface {
 
 	// Context derivation
 	DeriveContext(ctx context.Context, handle string) (*WorkspaceContext, error)
-
-	// AGENTS.md validation
-	ValidateAgents(ctx context.Context, handle string, agentsPath string) (AgentsValidationResult, error)
 }

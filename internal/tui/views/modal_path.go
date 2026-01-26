@@ -31,6 +31,10 @@ func NewPathView(s workspace.Store, ctx context.Context, handle string) *modal_P
 	}
 }
 
+func (v *modal_PathView) SetSize(size measure.Window) {
+	v.size = size
+}
+
 func (v *modal_PathView) Init() tea.Cmd {
 	if v.workspace != nil {
 		err := clipboard.WriteAll(v.workspace.Path)
@@ -40,17 +44,10 @@ func (v *modal_PathView) Init() tea.Cmd {
 	return nil
 }
 
-func (v *modal_PathView) SetSize(size measure.Window) {
-	v.size = size
-}
-
-func (v *modal_PathView) OnPush()   {}
-func (v *modal_PathView) OnResume() {}
-func (v *modal_PathView) IsLoading() bool {
-	return false
-}
-
-func (v *modal_PathView) Cancel() {}
+func (v *modal_PathView) OnPush()         {}
+func (v *modal_PathView) OnResume()       {}
+func (v *modal_PathView) IsLoading() bool { return false }
+func (v *modal_PathView) Cancel()         {}
 
 func (v *modal_PathView) KeyBindings() []KeyBinding {
 	return []KeyBinding{

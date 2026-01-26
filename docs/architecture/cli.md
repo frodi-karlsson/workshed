@@ -17,8 +17,8 @@ Create logger -> Parse flags -> Validate inputs -> Execute -> Handle errors
 ```
 
 Commands are functions in `internal/cli/`:
-- `Create`, `List`, `Inspect`, `Path`, `Exec`, `Remove`, `Update`, `Repo`
-- `Capture`, `Apply`, `Derive`, `Validate`
+- `Create`, `List`, `Inspect`, `Path`, `Exec`, `Remove`, `Update`, `Repos`
+- `Capture`, `Apply`, `Derive`, `Captures`, `Health`
 
 ### Dependencies
 
@@ -87,11 +87,11 @@ Validation occurs at multiple levels:
 
 ### Repository Management Commands
 
-The `repo` command manages repositories within existing workspaces:
+The `repos` command manages repositories within existing workspaces:
 
 ```
-workshed repo add <handle> --repo url[@ref]...   # Add repositories
-workshed repo remove <handle> --repo <name>      # Remove repository
+workshed repos add <handle> --repo url[@ref]...   # Add repositories
+workshed repos remove <handle> --repo <name>      # Remove repository
 ```
 
 The `Repo` function dispatches to subcommands:
@@ -115,6 +115,7 @@ Both subcommands follow the standard pattern but add validation for repository u
 Workshed provides commands for state management:
 
 - **capture**: Creates descriptive snapshots of git state. Captures are not authoritative state records; they document the current state of repositories at a point in time.
+- **captures**: Lists captures for a workspace, optionally output as JSON or reversed order.
 - **apply**: Restores git state from a capture. Includes preflight validation to detect conditions that would block safe restoration.
 
   Syntax:
@@ -132,7 +133,7 @@ Workshed provides commands for state management:
   ```
 
 - **derive**: Generates workspace context as JSON, including repository paths, metadata, and artifact counts.
-- **validate**: Checks AGENTS.md structure against expected sections.
+- **health**: Checks workspace health, reporting issues like stale executions (>30 days).
 
 These commands compose primitive operations from the workspace package.
 

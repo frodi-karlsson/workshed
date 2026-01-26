@@ -29,19 +29,16 @@ func NewInspectView(s workspace.Store, ctx context.Context, handle string) *moda
 	}
 }
 
-func (v *modal_InspectView) Init() tea.Cmd { return nil }
-
 func (v *modal_InspectView) SetSize(size measure.Window) {
 	v.size = size
 }
 
-func (v *modal_InspectView) OnPush()   {}
-func (v *modal_InspectView) OnResume() {}
-func (v *modal_InspectView) IsLoading() bool {
-	return false
-}
+func (v *modal_InspectView) Init() tea.Cmd { return nil }
 
-func (v *modal_InspectView) Cancel() {}
+func (v *modal_InspectView) OnPush()         {}
+func (v *modal_InspectView) OnResume()       {}
+func (v *modal_InspectView) IsLoading() bool { return false }
+func (v *modal_InspectView) Cancel()         {}
 
 func (v *modal_InspectView) KeyBindings() []KeyBinding {
 	return []KeyBinding{

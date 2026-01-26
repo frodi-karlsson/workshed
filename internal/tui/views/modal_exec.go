@@ -38,19 +38,16 @@ func NewExecView(s workspace.Store, ctx context.Context, handle string) *modal_E
 	}
 }
 
-func (v *modal_ExecView) Init() tea.Cmd { return textinput.Blink }
-
 func (v *modal_ExecView) SetSize(size measure.Window) {
 	v.size = size
 }
 
-func (v *modal_ExecView) OnPush()   {}
-func (v *modal_ExecView) OnResume() {}
-func (v *modal_ExecView) IsLoading() bool {
-	return false
-}
+func (v *modal_ExecView) Init() tea.Cmd { return textinput.Blink }
 
-func (v *modal_ExecView) Cancel() {}
+func (v *modal_ExecView) OnPush()         {}
+func (v *modal_ExecView) OnResume()       {}
+func (v *modal_ExecView) IsLoading() bool { return false }
+func (v *modal_ExecView) Cancel()         {}
 
 func (v *modal_ExecView) KeyBindings() []KeyBinding {
 	if v.done {

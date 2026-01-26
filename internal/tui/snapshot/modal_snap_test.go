@@ -24,7 +24,7 @@ func TestModal_Inspect(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("i", "Navigate to inspect")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -44,7 +44,7 @@ func TestModal_Inspect(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("i", "Navigate to inspect")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -62,7 +62,7 @@ func TestModal_Inspect(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("i", "Navigate to inspect")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -82,7 +82,7 @@ func TestModal_Inspect(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("i", "Navigate to inspect")
 		scenario.Key("esc", "Dismiss inspect modal")
 		output := scenario.Record()
@@ -103,7 +103,7 @@ func TestModal_Path(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("p", "Navigate to path")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -121,7 +121,7 @@ func TestModal_Path(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("p", "Navigate to path")
 		scenario.Key("esc", "Dismiss path modal")
 		output := scenario.Record()
@@ -140,8 +140,8 @@ func TestModal_Remove(t *testing.T) {
 			},
 		}),
 	})
-	scenario.Enter("Open context menu")
-	scenario.Key("r", "Navigate to remove")
+	scenario.Enter("Open resource menu")
+	scenario.Key("x", "Navigate to remove")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
 }
@@ -158,7 +158,7 @@ func TestModal_UpdatePurpose(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("u", "Navigate to update")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -175,7 +175,7 @@ func TestModal_UpdatePurpose(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
+		scenario.Enter("Open resource menu")
 		scenario.Key("u", "Navigate to update")
 		scenario.Key("esc", "Dismiss update modal")
 		output := scenario.Record()
@@ -198,8 +198,9 @@ func TestModal_Exec(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
-		scenario.Key("e", "Navigate to exec")
+		scenario.Enter("Open resource menu")
+		scenario.Key("e", "Navigate to exec menu")
+		scenario.Key("enter", "Open exec view")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
 	})
@@ -217,8 +218,9 @@ func TestModal_Exec(t *testing.T) {
 				},
 			}),
 		})
-		scenario.Enter("Open context menu")
-		scenario.Key("e", "Navigate to exec")
+		scenario.Enter("Open resource menu")
+		scenario.Key("e", "Navigate to exec menu")
+		scenario.Key("enter", "Open exec view")
 		scenario.Key("esc", "Dismiss exec modal")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)

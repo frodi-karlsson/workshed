@@ -1,5 +1,6 @@
-[TestModal_Exec/view - 1]
-TestModal_Exec/view
+
+[TestDashboardView_ResourceMenu - 1]
+resource_menu_open
 {
   "Views": [
     {
@@ -18,36 +19,17 @@ TestModal_Exec/view
       "Type": "*views.ResourceMenuView",
       "Data": {
         "Type": "ResourceMenuView",
-        "Handle": "multi-repo-ws",
+        "Handle": "test-ws",
         "ItemCount": 5,
         "SelectedIdx": 0
-      }
-    },
-    {
-      "Type": "*views.ExecMenuView",
-      "Data": {
-        "Type": "ExecMenuView",
-        "Handle": "multi-repo-ws",
-        "ItemCount": 2,
-        "SelectedIdx": 0
-      }
-    },
-    {
-      "Type": "*views.modal_ExecView",
-      "Data": {
-        "Type": "ExecView",
-        "Handle": "multi-repo-ws",
-        "Command": "",
-        "Done": false,
-        "RepoCount": 2
       }
     }
   ]
 }
 ---
 
-[TestModal_Exec/dismiss_esc - 1]
-TestModal_Exec/dismiss_esc
+[TestDashboardView_ResourceMenu - 2]
+inspect_view
 {
   "Views": [
     {
@@ -72,11 +54,40 @@ TestModal_Exec/dismiss_esc
       }
     },
     {
-      "Type": "*views.ExecMenuView",
+      "Type": "*views.InfoMenuView",
       "Data": {
-        "Type": "ExecMenuView",
+        "Type": "InfoMenuView",
         "Handle": "test-ws",
-        "ItemCount": 2,
+        "ItemCount": 4,
+        "SelectedIdx": 0
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenu - 3]
+inspect_dismissed
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 5,
         "SelectedIdx": 0
       }
     }

@@ -47,8 +47,8 @@ func main() {
 		r.Remove(os.Args[2:])
 	case "update":
 		r.Update(os.Args[2:])
-	case "repo":
-		r.Repo(os.Args[2:])
+	case "repos":
+		r.Repos(os.Args[2:])
 	case "capture":
 		r.Capture(os.Args[2:])
 	case "apply":
@@ -57,8 +57,8 @@ func main() {
 		r.Derive(os.Args[2:])
 	case "captures":
 		r.Captures(os.Args[2:])
-	case "validate":
-		r.Validate(os.Args[2:])
+	case "health":
+		r.Health(os.Args[2:])
 	case "dashboard":
 		r.RunMainDashboard()
 	case "version", "-v", "--version":

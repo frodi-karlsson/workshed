@@ -236,5 +236,3 @@ When these appear, the design has drifted. Refactor toward simplicity.
 - [CLI Architecture](cli.md) - Command structure, patterns, and conventions
 - [TUI Architecture](tui.md) - View design, state management, and interaction patterns
 - [Testing Architecture](testing.md) - Snapshot testing and test patterns
-- [Workspace Package](../workspace.md) - Domain model and persistence
-- [Logger Package](../logger.md) - Logging patterns and usage (if exists)

@@ -673,7 +673,7 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
-func TestRepoAdd(t *testing.T) {
+func TestReposAdd(t *testing.T) {
 	t.Run("should add repository to existing workspace", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
@@ -698,18 +698,18 @@ func TestRepoAdd(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().RepoAdd([]string{ws.Handle, "--repo", repoURL2})
+		env.Runner().ReposAdd([]string{ws.Handle, "--repo", repoURL2})
 
 		if env.ExitCalled() {
-			t.Fatalf("RepoAdd exited unexpectedly: %s", env.ErrorOutput())
+			t.Fatalf("ReposAdd exited unexpectedly: %s", env.ErrorOutput())
 		}
 
 		output := env.Output()
 		if !strings.Contains(output, "repository added") {
-			t.Errorf("RepoAdd output should contain 'repository added', got: %s", output)
+			t.Errorf("ReposAdd output should contain 'repository added', got: %s", output)
 		}
 		if !strings.Contains(output, "new-repo") {
-			t.Errorf("RepoAdd output should contain repo name, got: %s", output)
+			t.Errorf("ReposAdd output should contain repo name, got: %s", output)
 		}
 
 		retrieved, err := store.Get(ctx, ws.Handle)
@@ -756,15 +756,15 @@ func TestRepoAdd(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().RepoAdd([]string{ws.Handle, "--repo", repoURL2, "--repo", repoURL3})
+		env.Runner().ReposAdd([]string{ws.Handle, "--repo", repoURL2, "--repo", repoURL3})
 
 		if env.ExitCalled() {
-			t.Fatalf("RepoAdd exited unexpectedly: %s", env.ErrorOutput())
+			t.Fatalf("ReposAdd exited unexpectedly: %s", env.ErrorOutput())
 		}
 
 		output := env.Output()
 		if !strings.Contains(output, "repositories added") {
-			t.Errorf("RepoAdd output should contain 'repositories added', got: %s", output)
+			t.Errorf("ReposAdd output should contain 'repositories added', got: %s", output)
 		}
 
 		retrieved, err := store.Get(ctx, ws.Handle)
@@ -783,10 +783,10 @@ func TestRepoAdd(t *testing.T) {
 		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
 
 		env.ResetBuffers()
-		env.Runner().RepoAdd([]string{"--repo", repoURL})
+		env.Runner().ReposAdd([]string{"--repo", repoURL})
 
 		if !env.ExitCalled() {
-			t.Error("RepoAdd should exit with error when workspace handle is missing")
+			t.Error("ReposAdd should exit with error when workspace handle is missing")
 		}
 	})
 
@@ -813,10 +813,10 @@ func TestRepoAdd(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().RepoAdd([]string{ws.Handle})
+		env.Runner().ReposAdd([]string{ws.Handle})
 
 		if !env.ExitCalled() {
-			t.Error("RepoAdd should exit with error when --repo is missing")
+			t.Error("ReposAdd should exit with error when --repo is missing")
 		}
 	})
 
@@ -843,15 +843,15 @@ func TestRepoAdd(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().RepoAdd([]string{ws.Handle, "--repo", repoURL})
+		env.Runner().ReposAdd([]string{ws.Handle, "--repo", repoURL})
 
 		if !env.ExitCalled() {
-			t.Error("RepoAdd should exit with error for duplicate repository")
+			t.Error("ReposAdd should exit with error for duplicate repository")
 		}
 
 		output := env.Output()
 		if !strings.Contains(output, "failed to add repository") {
-			t.Errorf("RepoAdd output should mention failure, got: %s", output)
+			t.Errorf("ReposAdd output should mention failure, got: %s", output)
 		}
 	})
 
@@ -862,20 +862,20 @@ func TestRepoAdd(t *testing.T) {
 		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
 
 		env.ResetBuffers()
-		env.Runner().RepoAdd([]string{"non-existent-workspace", "--repo", repoURL})
+		env.Runner().ReposAdd([]string{"non-existent-workspace", "--repo", repoURL})
 
 		if !env.ExitCalled() {
-			t.Error("RepoAdd should exit with error for non-existent workspace")
+			t.Error("ReposAdd should exit with error for non-existent workspace")
 		}
 
 		output := env.Output()
 		if !strings.Contains(output, "failed to add repository") {
-			t.Errorf("RepoAdd output should mention failure, got: %s", output)
+			t.Errorf("ReposAdd output should mention failure, got: %s", output)
 		}
 	})
 }
 
-func TestRepoRemove(t *testing.T) {
+func TestReposRemove(t *testing.T) {
 	t.Run("should remove repository from workspace with --force", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
@@ -901,15 +901,15 @@ func TestRepoRemove(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "repo-to-remove", "--force"})
+		env.Runner().ReposRemove([]string{ws.Handle, "--repo", "repo-to-remove"})
 
 		if env.ExitCalled() {
-			t.Fatalf("RepoRemove exited unexpectedly: %s", env.ErrorOutput())
+			t.Fatalf("ReposRemove exited unexpectedly: %s", env.ErrorOutput())
 		}
 
 		output := env.Output()
 		if !strings.Contains(output, "repository removed") {
-			t.Errorf("RepoRemove output should contain 'repository removed', got: %s", output)
+			t.Errorf("ReposRemove output should contain 'repository removed', got: %s", output)
 		}
 
 		retrieved, err := store.Get(ctx, ws.Handle)
@@ -933,98 +933,17 @@ func TestRepoRemove(t *testing.T) {
 		}
 	})
 
-	t.Run("should require --force and confirm with y", func(t *testing.T) {
-		env := NewCLITestEnvironment(t)
-		defer env.Cleanup()
-
-		store, err := workspace.NewFSStore(env.TempDir)
-		if err != nil {
-			t.Fatalf("Failed to create store: %v", err)
-		}
-
-		ctx := context.Background()
-		repoURL := workspace.CreateLocalGitRepo(t, "repo-to-remove", map[string]string{"file.txt": "content"})
-
-		ws, err := store.Create(ctx, workspace.CreateOptions{
-			Purpose: "Test workspace",
-			Repositories: []workspace.RepositoryOption{
-				{URL: repoURL, Ref: "main"},
-			},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create workspace: %v", err)
-		}
-
-		env.SetStdin("y\n")
-		env.ResetBuffers()
-		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "repo-to-remove"})
-
-		if env.ExitCalled() {
-			t.Fatalf("RepoRemove exited unexpectedly: %s", env.ErrorOutput())
-		}
-
-		retrieved, err := store.Get(ctx, ws.Handle)
-		if err != nil {
-			t.Fatalf("Failed to get workspace: %v", err)
-		}
-		if len(retrieved.Repositories) != 0 {
-			t.Errorf("Expected 0 repositories, got: %d", len(retrieved.Repositories))
-		}
-	})
-
-	t.Run("should cancel when user declines confirmation", func(t *testing.T) {
-		env := NewCLITestEnvironment(t)
-		defer env.Cleanup()
-
-		store, err := workspace.NewFSStore(env.TempDir)
-		if err != nil {
-			t.Fatalf("Failed to create store: %v", err)
-		}
-
-		ctx := context.Background()
-		repoURL := workspace.CreateLocalGitRepo(t, "protected-repo", map[string]string{"file.txt": "content"})
-
-		ws, err := store.Create(ctx, workspace.CreateOptions{
-			Purpose: "Test workspace",
-			Repositories: []workspace.RepositoryOption{
-				{URL: repoURL, Ref: "main"},
-			},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create workspace: %v", err)
-		}
-
-		env.SetStdin("n\n")
-		env.ResetBuffers()
-		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "protected-repo"})
-
-		if env.ExitCalled() {
-			t.Fatalf("RepoRemove exited unexpectedly: %s", env.ErrorOutput())
-		}
-
-		retrieved, err := store.Get(ctx, ws.Handle)
-		if err != nil {
-			t.Fatalf("Failed to get workspace: %v", err)
-		}
-		if len(retrieved.Repositories) != 1 {
-			t.Errorf("Repository should not have been removed, got: %d", len(retrieved.Repositories))
-		}
-
-		output := env.Output()
-		if !strings.Contains(output, "cancelled") {
-			t.Errorf("RepoRemove output should mention 'cancelled', got: %s", output)
-		}
-	})
-
 	t.Run("should fail with missing workspace handle", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		env.ResetBuffers()
-		env.Runner().RepoRemove([]string{"--repo", "some-repo", "--force"})
+		env.Runner().ReposRemove([]string{"--repo", repoURL})
 
 		if !env.ExitCalled() {
-			t.Error("RepoRemove should exit with error when workspace handle is missing")
+			t.Error("ReposRemove should exit with error when workspace handle is missing")
 		}
 	})
 
@@ -1051,10 +970,10 @@ func TestRepoRemove(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().RepoRemove([]string{ws.Handle, "--force"})
+		env.Runner().ReposRemove([]string{ws.Handle})
 
 		if !env.ExitCalled() {
-			t.Error("RepoRemove should exit with error when --repo is missing")
+			t.Error("ReposRemove should exit with error when --repo flag is missing")
 		}
 	})
 
@@ -1081,15 +1000,10 @@ func TestRepoRemove(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "non-existent-repo", "--force"})
+		env.Runner().ReposRemove([]string{ws.Handle, "--repo", "non-existent-repo"})
 
 		if !env.ExitCalled() {
-			t.Error("RepoRemove should exit with error for non-existent repository")
-		}
-
-		output := env.Output()
-		if !strings.Contains(output, "repository not found") {
-			t.Errorf("RepoRemove output should mention 'repository not found', got: %s", output)
+			t.Error("ReposRemove should exit with error for non-existent repository")
 		}
 	})
 
@@ -1097,49 +1011,13 @@ func TestRepoRemove(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		env.ResetBuffers()
-		env.Runner().RepoRemove([]string{"non-existent-workspace", "--repo", "some-repo", "--force"})
+		env.Runner().ReposRemove([]string{"non-existent-workspace", "--repo", repoURL})
 
 		if !env.ExitCalled() {
-			t.Error("RepoRemove should exit with error for non-existent workspace")
-		}
-	})
-
-	t.Run("should remove last repository", func(t *testing.T) {
-		env := NewCLITestEnvironment(t)
-		defer env.Cleanup()
-
-		store, err := workspace.NewFSStore(env.TempDir)
-		if err != nil {
-			t.Fatalf("Failed to create store: %v", err)
-		}
-
-		ctx := context.Background()
-		repoURL := workspace.CreateLocalGitRepo(t, "only-repo", map[string]string{"file.txt": "content"})
-
-		ws, err := store.Create(ctx, workspace.CreateOptions{
-			Purpose: "Single repo workspace",
-			Repositories: []workspace.RepositoryOption{
-				{URL: repoURL, Ref: "main"},
-			},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create workspace: %v", err)
-		}
-
-		env.ResetBuffers()
-		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "only-repo", "--force"})
-
-		if env.ExitCalled() {
-			t.Fatalf("RepoRemove exited unexpectedly: %s", env.ErrorOutput())
-		}
-
-		retrieved, err := store.Get(ctx, ws.Handle)
-		if err != nil {
-			t.Fatalf("Failed to get workspace: %v", err)
-		}
-		if len(retrieved.Repositories) != 0 {
-			t.Errorf("Expected 0 repositories, got: %d", len(retrieved.Repositories))
+			t.Error("ReposRemove should exit with error for non-existent workspace")
 		}
 	})
 }

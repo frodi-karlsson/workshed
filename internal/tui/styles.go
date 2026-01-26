@@ -16,14 +16,6 @@ func applyCommonListStyles(l *list.Model) {
 	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
 }
 
-func applyTitleStyle(l *list.Model) {
-	l.Styles.Title = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(components.ColorText).
-		Background(components.ColorBackground).
-		Padding(0, 1)
-}
-
 func modalFrame() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Margin(1, 2).

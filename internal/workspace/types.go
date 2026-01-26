@@ -94,34 +94,6 @@ type ContextMetadata struct {
 	LastCapturedAt  *time.Time `json:"last_captured_at,omitempty"`
 }
 
-type AgentsValidationResult struct {
-	Valid       bool            `json:"valid"`
-	Errors      []AgentsError   `json:"errors,omitempty"`
-	Warnings    []AgentsWarning `json:"warnings,omitempty"`
-	Sections    []AgentsSection `json:"sections,omitempty"`
-	Explanation string          `json:"explanation,omitempty"`
-}
-
-type AgentsError struct {
-	Line    int    `json:"line"`
-	Message string `json:"message"`
-	Field   string `json:"field,omitempty"`
-}
-
-type AgentsWarning struct {
-	Line    int    `json:"line"`
-	Message string `json:"message"`
-	Field   string `json:"field,omitempty"`
-}
-
-type AgentsSection struct {
-	Name     string `json:"name"`
-	Line     int    `json:"line"`
-	Valid    bool   `json:"valid"`
-	Warnings int    `json:"warnings"`
-	Errors   int    `json:"errors"`
-}
-
 type ListExecutionsOptions struct {
 	Limit   int
 	Offset  int

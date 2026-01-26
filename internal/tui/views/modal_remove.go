@@ -29,19 +29,16 @@ func NewRemoveView(s workspace.Store, ctx context.Context, handle string) *modal
 	}
 }
 
-func (v *modal_RemoveView) Init() tea.Cmd { return nil }
-
 func (v *modal_RemoveView) SetSize(size measure.Window) {
 	v.size = size
 }
 
-func (v *modal_RemoveView) OnPush()   {}
-func (v *modal_RemoveView) OnResume() {}
-func (v *modal_RemoveView) IsLoading() bool {
-	return false
-}
+func (v *modal_RemoveView) Init() tea.Cmd { return nil }
 
-func (v *modal_RemoveView) Cancel() {}
+func (v *modal_RemoveView) OnPush()         {}
+func (v *modal_RemoveView) OnResume()       {}
+func (v *modal_RemoveView) IsLoading() bool { return false }
+func (v *modal_RemoveView) Cancel()         {}
 
 func (v *modal_RemoveView) KeyBindings() []KeyBinding {
 	if v.done {

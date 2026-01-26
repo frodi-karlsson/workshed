@@ -169,12 +169,6 @@ func WithExecutions(executions []workspace.ExecutionRecord) StoreOption {
 	}
 }
 
-func WithValidationResult(result workspace.AgentsValidationResult) StoreOption {
-	return func(s *mockStore) {
-		s.validationResult = result
-	}
-}
-
 func WithPreflightResult(result workspace.ApplyPreflightResult) StoreOption {
 	return func(s *mockStore) {
 		s.preflightResult = result
@@ -199,18 +193,6 @@ func WithCaptureError(err error) StoreOption {
 	}
 }
 
-func WithDeriveError(err error) StoreOption {
-	return func(s *mockStore) {
-		s.deriveErr = err
-	}
-}
-
-func WithValidateError(err error) StoreOption {
-	return func(s *mockStore) {
-		s.validateErr = err
-	}
-}
-
 func WithDirtyRepo(name string) StoreOption {
 	return func(s *mockStore) {
 		s.dirtyRepos = append(s.dirtyRepos, name)
@@ -218,23 +200,20 @@ func WithDirtyRepo(name string) StoreOption {
 }
 
 type mockStore struct {
-	mockGit          git.Git
-	workspaces       []*workspace.Workspace
-	captures         []workspace.Capture
-	executions       []workspace.ExecutionRecord
-	validationResult workspace.AgentsValidationResult
-	preflightResult  workspace.ApplyPreflightResult
-	context          *workspace.WorkspaceContext
-	createErr        error
-	createDelay      time.Duration
-	listDelay        time.Duration
-	listErr          error
-	applyErr         error
-	captureErr       error
-	deriveErr        error
-	validateErr      error
-	dirtyRepos       []string
-	invocationCWD    string
+	mockGit         git.Git
+	workspaces      []*workspace.Workspace
+	captures        []workspace.Capture
+	executions      []workspace.ExecutionRecord
+	preflightResult workspace.ApplyPreflightResult
+	context         *workspace.WorkspaceContext
+	createErr       error
+	createDelay     time.Duration
+	listDelay       time.Duration
+	listErr         error
+	applyErr        error
+	captureErr      error
+	dirtyRepos      []string
+	invocationCWD   string
 }
 
 func (s *mockStore) GetInvocationCWD() string {
@@ -391,11 +370,6 @@ func (s *mockStore) ListCaptures(ctx context.Context, handle string) ([]workspac
 }
 
 func (s *mockStore) DeriveContext(ctx context.Context, handle string) (*workspace.WorkspaceContext, error) {
-	if s.deriveErr != nil {
-		err := s.deriveErr
-		s.deriveErr = nil
-		return nil, err
-	}
 	if s.context != nil {
 		return s.context, nil
 	}
@@ -444,15 +418,6 @@ func (s *mockStore) DeriveContext(ctx context.Context, handle string) (*workspac
 		ctxVal.Metadata.LastCapturedAt = &lastCap.Timestamp
 	}
 	return ctxVal, nil
-}
-
-func (s *mockStore) ValidateAgents(ctx context.Context, handle string, agentsPath string) (workspace.AgentsValidationResult, error) {
-	if s.validateErr != nil {
-		err := s.validateErr
-		s.validateErr = nil
-		return workspace.AgentsValidationResult{}, err
-	}
-	return s.validationResult, nil
 }
 
 func (s *mockStore) ListExecutions(ctx context.Context, handle string, opts workspace.ListExecutionsOptions) ([]workspace.ExecutionRecord, error) {

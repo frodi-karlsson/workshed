@@ -16,80 +16,12 @@ dry_run_on
       }
     },
     {
-      "Type": "*views.ContextMenuView",
+      "Type": "*views.ResourceMenuView",
       "Data": {
-        "Type": "ContextMenuView",
+        "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "Items": [
-          {
-            "Key": "i",
-            "Label": "Inspect",
-            "Desc": "View workspace details"
-          },
-          {
-            "Key": "p",
-            "Label": "Path",
-            "Desc": "Copy path to clipboard"
-          },
-          {
-            "Key": "u",
-            "Label": "Update",
-            "Desc": "Edit purpose"
-          },
-          {
-            "Key": "e",
-            "Label": "Exec",
-            "Desc": "Run command"
-          },
-          {
-            "Key": "h",
-            "Label": "History",
-            "Desc": "Execution history"
-          },
-          {
-            "Key": "a",
-            "Label": "Add",
-            "Desc": "Add repository"
-          },
-          {
-            "Key": "r",
-            "Label": "Remove",
-            "Desc": "Remove repository"
-          },
-          {
-            "Key": "c",
-            "Label": "Capture",
-            "Desc": "Create or view captures"
-          },
-          {
-            "Key": "D",
-            "Label": "Derive",
-            "Desc": "Generate context JSON"
-          },
-          {
-            "Key": "v",
-            "Label": "Validate",
-            "Desc": "Check AGENTS.md"
-          },
-          {
-            "Key": "k",
-            "Label": "Health",
-            "Desc": "Check workspace health"
-          }
-        ],
-        "SelectedKey": "k",
-        "CurrentPage": 3,
-        "PageCount": 3
-      }
-    },
-    {
-      "Type": "*views.view_HealthView",
-      "Data": {
-        "Type": "HealthView",
-        "Handle": "test-ws",
-        "IssueCnt": 1,
-        "DryRun": true,
-        "Executed": false
+        "ItemCount": 5,
+        "SelectedIdx": 0
       }
     }
   ]
@@ -113,80 +45,12 @@ dry_run_off
       }
     },
     {
-      "Type": "*views.ContextMenuView",
+      "Type": "*views.ResourceMenuView",
       "Data": {
-        "Type": "ContextMenuView",
+        "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "Items": [
-          {
-            "Key": "i",
-            "Label": "Inspect",
-            "Desc": "View workspace details"
-          },
-          {
-            "Key": "p",
-            "Label": "Path",
-            "Desc": "Copy path to clipboard"
-          },
-          {
-            "Key": "u",
-            "Label": "Update",
-            "Desc": "Edit purpose"
-          },
-          {
-            "Key": "e",
-            "Label": "Exec",
-            "Desc": "Run command"
-          },
-          {
-            "Key": "h",
-            "Label": "History",
-            "Desc": "Execution history"
-          },
-          {
-            "Key": "a",
-            "Label": "Add",
-            "Desc": "Add repository"
-          },
-          {
-            "Key": "r",
-            "Label": "Remove",
-            "Desc": "Remove repository"
-          },
-          {
-            "Key": "c",
-            "Label": "Capture",
-            "Desc": "Create or view captures"
-          },
-          {
-            "Key": "D",
-            "Label": "Derive",
-            "Desc": "Generate context JSON"
-          },
-          {
-            "Key": "v",
-            "Label": "Validate",
-            "Desc": "Check AGENTS.md"
-          },
-          {
-            "Key": "k",
-            "Label": "Health",
-            "Desc": "Check workspace health"
-          }
-        ],
-        "SelectedKey": "k",
-        "CurrentPage": 3,
-        "PageCount": 3
-      }
-    },
-    {
-      "Type": "*views.view_HealthView",
-      "Data": {
-        "Type": "HealthView",
-        "Handle": "test-ws",
-        "IssueCnt": 1,
-        "DryRun": false,
-        "Executed": false
+        "ItemCount": 5,
+        "SelectedIdx": 0
       }
     }
   ]

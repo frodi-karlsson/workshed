@@ -34,17 +34,15 @@ func NewApplyView(s workspace.Store, ctx context.Context, handle, captureID stri
 	}
 }
 
-func (v *modal_ApplyView) Init() tea.Cmd { return nil }
-
 func (v *modal_ApplyView) SetSize(size measure.Window) {
 	v.size = size
 }
 
-func (v *modal_ApplyView) OnPush()   {}
-func (v *modal_ApplyView) OnResume() {}
-func (v *modal_ApplyView) IsLoading() bool {
-	return v.loading
-}
+func (v *modal_ApplyView) Init() tea.Cmd { return nil }
+
+func (v *modal_ApplyView) OnPush()         {}
+func (v *modal_ApplyView) OnResume()       {}
+func (v *modal_ApplyView) IsLoading() bool { return v.loading }
 
 func (v *modal_ApplyView) Cancel() {
 	v.loading = false

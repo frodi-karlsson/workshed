@@ -1,0 +1,237 @@
+
+[TestDashboardView_ResourceMenuActions/path - 1]
+TestDashboardView_ResourceMenuActions/path
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 5,
+        "SelectedIdx": 0
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenuActions/exec - 1]
+TestDashboardView_ResourceMenuActions/exec
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 5,
+        "SelectedIdx": 0
+      }
+    },
+    {
+      "Type": "*views.ExecMenuView",
+      "Data": {
+        "Type": "ExecMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 2,
+        "SelectedIdx": 0
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenuActions/update_purpose - 1]
+TestDashboardView_ResourceMenuActions/update_purpose
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 5,
+        "SelectedIdx": 0
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenuActions/repositories - 1]
+TestDashboardView_ResourceMenuActions/repositories
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 5,
+        "SelectedIdx": 0
+      }
+    },
+    {
+      "Type": "*views.ReposMenuView",
+      "Data": {
+        "Type": "ReposMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 2,
+        "SelectedIdx": 0
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenuActions/captures - 1]
+TestDashboardView_ResourceMenuActions/captures
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 5,
+        "SelectedIdx": 0
+      }
+    },
+    {
+      "Type": "*views.CapturesMenuView",
+      "Data": {
+        "Type": "CapturesMenuView",
+        "Handle": "test-ws",
+        "HasCaptures": false,
+        "CaptureCnt": 0
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenuActions/health - 1]
+TestDashboardView_ResourceMenuActions/health
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 5,
+        "SelectedIdx": 0
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ResourceMenuActions/remove - 1]
+TestDashboardView_ResourceMenuActions/remove
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ResourceMenuView",
+      "Data": {
+        "Type": "ResourceMenuView",
+        "Handle": "test-ws",
+        "ItemCount": 5,
+        "SelectedIdx": 0
+      }
+    },
+    {
+      "Type": "*views.RemoveConfirmView",
+      "Data": {
+        "Type": "RemoveConfirmView",
+        "Handle": "test-ws"
+      }
+    }
+  ]
+}
+---

@@ -1,0 +1,176 @@
+package cli
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"github.com/frodi/workshed/internal/logger"
+	"github.com/frodi/workshed/internal/workspace"
+	flag "github.com/spf13/pflag"
+)
+
+func (r *Runner) Repos(args []string) {
+	if len(args) < 1 {
+		r.ReposUsage()
+		r.ExitFunc(1)
+		return
+	}
+
+	subcommand := args[0]
+	switch subcommand {
+	case "add":
+		r.ReposAdd(args[1:])
+	case "remove":
+		r.ReposRemove(args[1:])
+	case "help", "-h", "--help":
+		r.ReposUsage()
+	default:
+		logger.SafeFprintf(r.Stderr, "Unknown repos subcommand: %s\n\n", subcommand)
+		r.ReposUsage()
+		r.ExitFunc(1)
+	}
+}
+
+func (r *Runner) ReposUsage() {
+	msg := `workshed repos - Manage repositories in a workspace
+
+Usage:
+  workshed <handle> repos add --repo url[@ref]...
+  workshed <handle> repos remove --repo <name>
+
+Subcommands:
+  add     Add repositories to a workspace
+  remove  Remove a repository from a workspace
+
+Examples:
+  workshed my-workspace repos add --repo https://github.com/org/repo@main
+
+  workshed my-workspace repos remove --repo my-repo
+`
+	logger.SafeFprintf(r.Stderr, "%s\n", msg)
+}
+
+func (r *Runner) ReposAdd(args []string) {
+	l := r.getLogger()
+
+	fs := flag.NewFlagSet("repos add", flag.ExitOnError)
+	var repoFlags []string
+	fs.StringSliceVarP(&repoFlags, "repo", "r", nil, "Repository URL with optional ref (format: url@ref). Can be specified multiple times.")
+	var reposAlias []string
+	fs.StringSliceVarP(&reposAlias, "repos", "", nil, "Alias for --repo (can be specified multiple times)")
+
+	fs.Usage = func() {
+		logger.SafeFprintf(r.Stderr, "Usage: workshed <handle> repos add --repo url[@ref]...\n\n")
+		logger.SafeFprintf(r.Stderr, "Add repositories to a workspace.\n\n")
+		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed my-workspace repos add --repo github.com/org/new-repo@main\n")
+		logger.SafeFprintf(r.Stderr, "  workshed my-workspace repos add -r github.com/org/repo1 -r github.com/org/repo2\n")
+		logger.SafeFprintf(r.Stderr, "  workshed my-workspace repos add --repo ./local-lib\n")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		l.Error("failed to parse flags", "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	handle := r.ResolveHandle(context.Background(), fs.Arg(0), l)
+	if handle == "" {
+		return
+	}
+
+	repos := repoFlags
+	if len(reposAlias) > 0 {
+		repos = append(repos, reposAlias...)
+	}
+
+	if len(repos) == 0 {
+		l.Error("at least one --repo flag is required")
+		fs.Usage()
+		r.ExitFunc(1)
+		return
+	}
+
+	var repoOpts []workspace.RepositoryOption
+	for _, repo := range repos {
+		repo = strings.TrimSpace(repo)
+		if repo == "" {
+			continue
+		}
+		url, ref := workspace.ParseRepoFlag(repo)
+		repoOpts = append(repoOpts, workspace.RepositoryOption{
+			URL: url,
+			Ref: ref,
+		})
+	}
+
+	s := r.getStore()
+	ctx := context.Background()
+
+	addCtx, cancel := context.WithTimeout(ctx, defaultCloneTimeout*time.Duration(len(repoOpts)+1))
+	defer cancel()
+
+	if err := s.AddRepositories(addCtx, handle, repoOpts, r.InvocationCWD); err != nil {
+		l.Error("failed to add repository", "handle", handle, "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	if len(repoOpts) == 1 {
+		l.Success("repository added", "handle", handle, "repo", repoOpts[0].URL)
+	} else {
+		urls := make([]string, len(repoOpts))
+		for i, opt := range repoOpts {
+			urls[i] = opt.URL
+		}
+		l.Success("repositories added", "handle", handle, "repos", strings.Join(urls, ", "))
+	}
+}
+
+func (r *Runner) ReposRemove(args []string) {
+	l := r.getLogger()
+
+	fs := flag.NewFlagSet("repos remove", flag.ExitOnError)
+	repoName := fs.String("repo", "", "Repository name to remove")
+
+	fs.Usage = func() {
+		logger.SafeFprintf(r.Stderr, "Usage: workshed <handle> repos remove --repo <name>\n\n")
+		logger.SafeFprintf(r.Stderr, "Remove a repository from a workspace.\n\n")
+		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed my-workspace repos remove --repo my-repo\n")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		l.Error("failed to parse flags", "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	handle := r.ResolveHandle(context.Background(), fs.Arg(0), l)
+	if handle == "" {
+		return
+	}
+
+	if *repoName == "" {
+		l.Error("--repo flag is required")
+		fs.Usage()
+		r.ExitFunc(1)
+		return
+	}
+
+	s := r.getStore()
+	ctx := context.Background()
+
+	if err := s.RemoveRepository(ctx, handle, *repoName); err != nil {
+		l.Error("failed to remove repository", "handle", handle, "repo", *repoName, "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	l.Success("repository removed", "handle", handle, "repo", *repoName)
+}
