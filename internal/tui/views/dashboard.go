@@ -12,6 +12,7 @@ import (
 	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -22,6 +23,7 @@ type DashboardView struct {
 	textInput  textinput.Model
 	filterMode bool
 	err        error
+	size       measure.Window
 }
 
 type WorkspaceItem struct {
@@ -58,6 +60,7 @@ func NewDashboardView(ctx context.Context, s store.Store) DashboardView {
 	l.Title = "Workspaces"
 	l.SetShowTitle(true)
 	l.SetShowStatusBar(false)
+	l.SetShowHelp(false)
 	l.SetFilteringEnabled(false)
 	l.Styles.NoItems = lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
 	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
@@ -128,6 +131,11 @@ func containsCaseInsensitive(s, substr string) bool {
 
 func (v *DashboardView) Init() tea.Cmd {
 	return nil
+}
+
+func (v *DashboardView) SetSize(size measure.Window) {
+	v.size = size
+	v.list.SetSize(size.ListWidth(), size.ListHeight())
 }
 
 func (v *DashboardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
@@ -205,7 +213,7 @@ func (v *DashboardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 
 func (v *DashboardView) View() string {
 	if v.err != nil {
-		return ErrorView(v.err)
+		return ErrorView(v.err, v.size)
 	}
 
 	header := lipgloss.NewStyle().
@@ -234,7 +242,7 @@ func (v *DashboardView) View() string {
 
 	content = append(content, helpHint)
 
-	frameStyle := ModalFrame()
+	frameStyle := ModalFrame(v.size)
 	return frameStyle.Render(lipgloss.JoinVertical(lipgloss.Left, content...))
 }
 

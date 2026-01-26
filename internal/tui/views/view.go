@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/frodi/workshed/internal/tui/measure"
 )
 
 // View is the interface all TUI views must implement.
@@ -19,6 +20,10 @@ type View interface {
 
 	// View renders the view's current state as a string.
 	View() string
+
+	// SetSize updates the view's dimensions based on the terminal window size.
+	// Called when the terminal is resized.
+	SetSize(size measure.Window)
 
 	// OnPush is called when the view is pushed onto the stack.
 	// Use this to refresh data when the view becomes visible.

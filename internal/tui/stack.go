@@ -10,13 +10,15 @@ import (
 	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/tui/views"
 )
 
 type StackModel struct {
-	stack []views.View
-	store store.Store
-	ctx   context.Context
+	stack      []views.View
+	store      store.Store
+	ctx        context.Context
+	windowSize measure.Window
 }
 
 type StackSnapshot struct {
@@ -44,16 +46,30 @@ func (m StackModel) Init() tea.Cmd {
 	return m.stack[0].Init()
 }
 
+func (m *StackModel) SetSize(size measure.Window) {
+	m.windowSize = size
+	for _, v := range m.stack {
+		v.SetSize(size)
+	}
+}
+
 func (m StackModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if len(m.stack) == 0 {
 		return m, tea.Quit
 	}
 
-	if key.IsCancel(msg) {
-		top := m.stack[len(m.stack)-1]
-		if top.IsLoading() {
-			top.Cancel()
-			return m, nil
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		size := measure.Window{Width: msg.Width, Height: msg.Height}
+		m.SetSize(size)
+		return m, nil
+	case tea.KeyMsg:
+		if key.IsCancel(msg) {
+			top := m.stack[len(m.stack)-1]
+			if top.IsLoading() {
+				top.Cancel()
+				return m, nil
+			}
 		}
 	}
 
@@ -72,6 +88,9 @@ func (m StackModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if result.NextView != nil {
 		m.stack = append(m.stack, result.NextView)
 		m.stack[len(m.stack)-1].OnPush()
+		if m.windowSize.Width > 0 {
+			m.stack[len(m.stack)-1].SetSize(m.windowSize)
+		}
 		return m, cmd
 	}
 

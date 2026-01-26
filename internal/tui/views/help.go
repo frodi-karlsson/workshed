@@ -4,15 +4,22 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 )
 
-type HelpView struct{}
+type HelpView struct {
+	size measure.Window
+}
 
 func NewHelpView() HelpView {
 	return HelpView{}
 }
 
 func (v *HelpView) Init() tea.Cmd { return nil }
+
+func (v *HelpView) SetSize(size measure.Window) {
+	v.size = size
+}
 
 func (v *HelpView) OnPush()   {}
 func (v *HelpView) OnResume() {}
@@ -27,7 +34,7 @@ func (v *HelpView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 }
 
 func (v HelpView) View() string {
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			lipgloss.NewStyle().Bold(true).Foreground(components.ColorText).Render("Help"),
@@ -36,7 +43,7 @@ func (v HelpView) View() string {
 			"[Enter] Open menu for selected workspace",
 			"[l] Filter workspaces",
 			"[?] Show this help",
-			"[q/Esc] Quit",
+			"[Esc] Quit",
 			"\n",
 			"In menu:",
 			"[i] Inspect workspace details",
@@ -45,7 +52,7 @@ func (v HelpView) View() string {
 			"[u] Update workspace purpose",
 			"[r] Remove workspace",
 			"\n",
-			"[Esc/q] Back",
+			"[Esc] Back",
 		),
 	)
 }

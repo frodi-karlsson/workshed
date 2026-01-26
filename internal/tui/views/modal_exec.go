@@ -10,6 +10,7 @@ import (
 	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -21,6 +22,7 @@ type modal_ExecView struct {
 	input     textinput.Model
 	result    []workspace.ExecResult
 	done      bool
+	size      measure.Window
 }
 
 func NewExecView(s store.Store, ctx context.Context, handle string) *modal_ExecView {
@@ -39,6 +41,10 @@ func NewExecView(s store.Store, ctx context.Context, handle string) *modal_ExecV
 }
 
 func (v *modal_ExecView) Init() tea.Cmd { return textinput.Blink }
+
+func (v *modal_ExecView) SetSize(size measure.Window) {
+	v.size = size
+}
 
 func (v *modal_ExecView) OnPush()   {}
 func (v *modal_ExecView) OnResume() {}
@@ -93,7 +99,7 @@ func (v *modal_ExecView) View() string {
 			lipgloss.JoinVertical(lipgloss.Left, resultLines...),
 		)
 
-		return ModalFrame().Render(
+		return ModalFrame(v.size).Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left, content, "\n",
 				lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter/Esc] Dismiss"),
@@ -102,10 +108,10 @@ func (v *modal_ExecView) View() string {
 	}
 
 	if v.workspace == nil {
-		return ModalFrame().Render("Loading...")
+		return ModalFrame(v.size).Render("Loading...")
 	}
 
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerStyle.Render("Run command in:"), "\n",

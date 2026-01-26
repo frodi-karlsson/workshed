@@ -31,15 +31,6 @@ func (m ExecModal) Update(msg tea.Msg) (ExecModal, bool) {
 				m.onDismiss()
 			}
 			return m, true
-		case tea.KeyRunes:
-			switch msg.String() {
-			case "q":
-				m.dismissed = true
-				if m.onDismiss != nil {
-					m.onDismiss()
-				}
-				return m, true
-			}
 		case tea.KeyEnter:
 			m.dismissed = true
 			if m.onDismiss != nil {

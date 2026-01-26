@@ -25,6 +25,7 @@ type PathCompleter struct {
 	onCancel    func()
 	placeholder string
 	prompt      string
+	width       int
 }
 
 type pathCompleterItem struct {
@@ -75,7 +76,13 @@ func NewPathCompleter() PathCompleter {
 		list:      l,
 		selected:  0,
 		visible:   false,
+		width:     50,
 	}
+}
+
+func (c *PathCompleter) SetWidth(width int) {
+	c.width = width
+	c.list.SetSize(width, 5)
 }
 
 func (c *PathCompleter) SetPlaceholder(placeholder string) *PathCompleter {

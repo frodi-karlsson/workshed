@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -16,6 +17,7 @@ type modal_InspectView struct {
 	ctx       context.Context
 	handle    string
 	workspace *workspace.Workspace
+	size      measure.Window
 }
 
 func NewInspectView(s store.Store, ctx context.Context, handle string) *modal_InspectView {
@@ -29,6 +31,10 @@ func NewInspectView(s store.Store, ctx context.Context, handle string) *modal_In
 }
 
 func (v *modal_InspectView) Init() tea.Cmd { return nil }
+
+func (v *modal_InspectView) SetSize(size measure.Window) {
+	v.size = size
+}
 
 func (v *modal_InspectView) OnPush()   {}
 func (v *modal_InspectView) OnResume() {}
@@ -55,7 +61,7 @@ func (v *modal_InspectView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 
 func (v *modal_InspectView) View() string {
 	if v.workspace == nil {
-		return ModalFrame().Render("Loading...")
+		return ModalFrame(v.size).Render("Loading...")
 	}
 
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorText)
@@ -81,7 +87,7 @@ func (v *modal_InspectView) View() string {
 		lipgloss.JoinVertical(lipgloss.Left, repoLines...),
 	)
 
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			content, "\n",

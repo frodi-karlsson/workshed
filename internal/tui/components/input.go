@@ -41,6 +41,7 @@ func NewUnifiedInput() UnifiedInput {
 	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 50, 6)
 	l.SetShowTitle(false)
 	l.SetShowStatusBar(false)
+	l.SetShowHelp(false)
 	l.SetFilteringEnabled(false)
 
 	return UnifiedInput{

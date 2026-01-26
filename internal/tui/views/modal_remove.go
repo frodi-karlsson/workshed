@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 )
 
 type modal_RemoveView struct {
@@ -16,6 +17,7 @@ type modal_RemoveView struct {
 	handle  string
 	done    bool
 	confirm bool
+	size    measure.Window
 }
 
 func NewRemoveView(s store.Store, ctx context.Context, handle string) *modal_RemoveView {
@@ -28,6 +30,10 @@ func NewRemoveView(s store.Store, ctx context.Context, handle string) *modal_Rem
 }
 
 func (v *modal_RemoveView) Init() tea.Cmd { return nil }
+
+func (v *modal_RemoveView) SetSize(size measure.Window) {
+	v.size = size
+}
 
 func (v *modal_RemoveView) OnPush()   {}
 func (v *modal_RemoveView) OnResume() {}
@@ -66,7 +72,7 @@ func (v *modal_RemoveView) View() string {
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorError)
 
 	if v.done && v.confirm {
-		return ModalFrame().Render(
+		return ModalFrame(v.size).Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerStyle.Render("Workspace removed!"), "\n",
@@ -75,7 +81,7 @@ func (v *modal_RemoveView) View() string {
 		)
 	}
 
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerStyle.Render("Remove Workspace?"), "\n",

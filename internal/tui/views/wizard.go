@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,6 +12,7 @@ import (
 	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -46,6 +46,7 @@ type WizardView struct {
 	done         bool
 	loadingType  string
 	finishMode   bool
+	size         measure.Window
 }
 
 func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView {
@@ -82,12 +83,12 @@ func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView 
 }
 
 func (v *WizardView) Init() tea.Cmd {
-	return tea.Tick(
-		time.Second,
-		func(time.Time) tea.Msg {
-			return nil
-		},
-	)
+	return nil
+}
+
+func (v *WizardView) SetSize(size measure.Window) {
+	v.size = size
+	v.repoInput.SetWidth(size.ContentWidth())
 }
 
 func (v *WizardView) OnPush()   {}
@@ -272,7 +273,7 @@ func (v *WizardView) View() string {
 		Foreground(components.ColorText)
 
 	if v.done {
-		return ModalFrame().Render(
+		return ModalFrame(v.size).Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerStyle.Render("Workspace created!"), "\n",
@@ -282,7 +283,7 @@ func (v *WizardView) View() string {
 	}
 
 	if v.step == 0 {
-		return ModalFrame().Render(
+		return ModalFrame(v.size).Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerStyle.Render("Create Workspace"), "\n", "\n",
@@ -342,7 +343,7 @@ func (v *WizardView) View() string {
 		lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render(helpText),
 	)
 
-	return ModalFrame().Render(content)
+	return ModalFrame(v.size).Render(content)
 }
 
 type WizardViewSnapshot struct {

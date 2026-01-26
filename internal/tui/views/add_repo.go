@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -22,6 +23,7 @@ type AddRepoView struct {
 	err       error
 	stale     bool
 	cancelled bool
+	size      measure.Window
 }
 
 func NewAddRepoView(s store.Store, ctx context.Context, handle string) AddRepoView {
@@ -42,6 +44,10 @@ func NewAddRepoView(s store.Store, ctx context.Context, handle string) AddRepoVi
 
 func (v *AddRepoView) Init() tea.Cmd {
 	return textinput.Blink
+}
+
+func (v *AddRepoView) SetSize(size measure.Window) {
+	v.size = size
 }
 
 func (v *AddRepoView) OnPush() {}
@@ -154,7 +160,7 @@ func parseRepoURL(input string) (url, ref string) {
 
 func (v *AddRepoView) View() string {
 	if v.err != nil {
-		return ErrorView(v.err)
+		return ErrorView(v.err, v.size)
 	}
 
 	var repoLines []string
@@ -175,7 +181,7 @@ func (v *AddRepoView) View() string {
 		helpText = "[Enter] Add more  [Esc] Done"
 	}
 
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			lipgloss.NewStyle().

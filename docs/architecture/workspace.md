@@ -210,7 +210,7 @@ ws, err := s.Create(createCtx, opts)
 
 CLI handles:
 - Flag parsing and validation
-- Interactive TUI fallback when purpose is missing
+- Errors if --purpose is missing 
 - Output formatting and exit codes
 
 Workspace handles:

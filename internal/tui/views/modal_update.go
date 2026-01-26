@@ -9,6 +9,7 @@ import (
 	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 )
 
 type modal_UpdateView struct {
@@ -16,6 +17,7 @@ type modal_UpdateView struct {
 	ctx    context.Context
 	handle string
 	input  textinput.Model
+	size   measure.Window
 }
 
 func NewUpdateView(s store.Store, ctx context.Context, handle string) *modal_UpdateView {
@@ -31,6 +33,10 @@ func NewUpdateView(s store.Store, ctx context.Context, handle string) *modal_Upd
 }
 
 func (v *modal_UpdateView) Init() tea.Cmd { return textinput.Blink }
+
+func (v *modal_UpdateView) SetSize(size measure.Window) {
+	v.size = size
+}
 
 func (v *modal_UpdateView) OnPush()   {}
 func (v *modal_UpdateView) OnResume() {}
@@ -61,7 +67,7 @@ func (v *modal_UpdateView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 func (v *modal_UpdateView) View() string {
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorText)
 
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerStyle.Render("Update Purpose"), "\n", "\n",

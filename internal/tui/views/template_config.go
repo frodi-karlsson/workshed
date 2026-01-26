@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 )
 
 type TemplateConfigView struct {
@@ -21,6 +22,7 @@ type TemplateConfigView struct {
 	templateVars  map[string]string
 	varsInputMode bool
 	errorMsg      string
+	size          measure.Window
 }
 
 func NewTemplateConfigView(ctx context.Context, s store.Store, template string, templateVars map[string]string) TemplateConfigView {
@@ -50,6 +52,11 @@ func NewTemplateConfigView(ctx context.Context, s store.Store, template string, 
 
 func (v *TemplateConfigView) Init() tea.Cmd {
 	return textinput.Blink
+}
+
+func (v *TemplateConfigView) SetSize(size measure.Window) {
+	v.size = size
+	v.pathInput.SetWidth(size.ContentWidth())
 }
 
 func (v *TemplateConfigView) OnPush()   {}
@@ -130,7 +137,7 @@ func (v *TemplateConfigView) View() string {
 		Bold(true).
 		Foreground(components.ColorText)
 
-	borderStyle := ModalFrame()
+	borderStyle := ModalFrame(v.size)
 
 	if !v.varsInputMode {
 		var errorDisplay string

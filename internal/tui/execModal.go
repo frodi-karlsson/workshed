@@ -62,12 +62,6 @@ func (m execModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			m.quit = true
 			return m, tea.Quit
-		case tea.KeyRunes:
-			switch msg.String() {
-			case "q":
-				m.quit = true
-				return m, tea.Quit
-			}
 		case tea.KeyEnter:
 			if m.focus == focusInput {
 				m.focus = focusList
@@ -188,6 +182,7 @@ func ShowExecModal(ctx context.Context, store *workspace.FSStore, handle string)
 	l := list.New(repoItems, list.NewDefaultDelegate(), 30, maxListHeight)
 	l.Title = ""
 	l.SetShowTitle(false)
+	l.SetShowHelp(false)
 	applyCommonListStyles(&l)
 
 	m := execModel{

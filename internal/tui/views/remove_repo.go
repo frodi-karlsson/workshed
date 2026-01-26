@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -39,6 +40,7 @@ type RemoveRepoView struct {
 	workspace *workspace.Workspace
 	err       error
 	stale     bool
+	size      measure.Window
 }
 
 func NewRemoveRepoView(s store.Store, ctx context.Context, handle string) *RemoveRepoView {
@@ -46,6 +48,7 @@ func NewRemoveRepoView(s store.Store, ctx context.Context, handle string) *Remov
 	l.Title = "Select repository to remove from \"" + handle + "\""
 	l.SetShowTitle(true)
 	l.SetShowStatusBar(false)
+	l.SetShowHelp(false)
 	l.SetFilteringEnabled(false)
 	l.Styles.NoItems = lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
 	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
@@ -63,6 +66,11 @@ func NewRemoveRepoView(s store.Store, ctx context.Context, handle string) *Remov
 
 func (v *RemoveRepoView) Init() tea.Cmd {
 	return nil
+}
+
+func (v *RemoveRepoView) SetSize(size measure.Window) {
+	v.size = size
+	v.list.SetSize(size.ListWidth(), size.ListHeight())
 }
 
 func (v *RemoveRepoView) OnPush() {
@@ -147,11 +155,11 @@ func (v *RemoveRepoView) confirmRemove(repo *workspace.Repository) ViewResult {
 
 func (v *RemoveRepoView) View() string {
 	if v.err != nil {
-		return ErrorView(v.err)
+		return ErrorView(v.err, v.size)
 	}
 
 	if len(v.workspace.Repositories) == 0 {
-		return ModalFrame().Render(
+		return ModalFrame(v.size).Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				lipgloss.NewStyle().
@@ -167,7 +175,7 @@ func (v *RemoveRepoView) View() string {
 		)
 	}
 
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		v.list.View() + "\n" +
 			lipgloss.NewStyle().
 				Foreground(components.ColorVeryMuted).
@@ -198,6 +206,7 @@ type RemoveRepoConfirmView struct {
 	handle   string
 	repoName string
 	err      error
+	size     measure.Window
 }
 
 func NewRemoveRepoConfirmView(s store.Store, ctx context.Context, handle, repoName string) *RemoveRepoConfirmView {
@@ -211,6 +220,10 @@ func NewRemoveRepoConfirmView(s store.Store, ctx context.Context, handle, repoNa
 
 func (v *RemoveRepoConfirmView) Init() tea.Cmd {
 	return nil
+}
+
+func (v *RemoveRepoConfirmView) SetSize(size measure.Window) {
+	v.size = size
 }
 
 func (v *RemoveRepoConfirmView) OnPush() {}
@@ -243,10 +256,10 @@ func (v *RemoveRepoConfirmView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 
 func (v *RemoveRepoConfirmView) View() string {
 	if v.err != nil {
-		return ErrorView(v.err)
+		return ErrorView(v.err, v.size)
 	}
 
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			lipgloss.NewStyle().

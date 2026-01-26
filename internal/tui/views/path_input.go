@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 )
 
 type PathInputView struct {
@@ -18,6 +19,7 @@ type PathInputView struct {
 	onSelect    func(path string)
 	onCancel    func()
 	focused     bool
+	size        measure.Window
 }
 
 func NewPathInputView(placeholder string, prompt string, onSelect func(path string), onCancel func()) PathInputView {
@@ -39,6 +41,10 @@ func NewPathInputView(placeholder string, prompt string, onSelect func(path stri
 
 func (v *PathInputView) Init() tea.Cmd {
 	return textinput.Blink
+}
+
+func (v *PathInputView) SetSize(size measure.Window) {
+	v.size = size
 }
 
 func (v *PathInputView) OnPush()   {}
@@ -81,7 +87,7 @@ func (v *PathInputView) View() string {
 		Bold(true).
 		Foreground(components.ColorText)
 
-	borderStyle := ModalFrame()
+	borderStyle := ModalFrame(v.size)
 
 	return borderStyle.Render(
 		lipgloss.JoinVertical(

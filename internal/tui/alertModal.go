@@ -27,12 +27,6 @@ func (m *AlertModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc, tea.KeyEnter:
 			m.quitting = true
 			return m, tea.Quit
-		case tea.KeyRunes:
-			switch msg.String() {
-			case "q":
-				m.quitting = true
-				return m, tea.Quit
-			}
 		}
 	}
 	return m, nil
@@ -47,7 +41,7 @@ func (m *AlertModal) View() string {
 			lipgloss.Left,
 			m.content,
 			"\n",
-			helpStyle.Render("[Esc/q/Enter] Dismiss"),
+			helpStyle.Render("[Esc/Enter] Dismiss"),
 		),
 	)
 }
@@ -77,12 +71,6 @@ func (m *embeddableAlertModal) Update(msg tea.Msg) bool {
 		case tea.KeyCtrlC, tea.KeyEsc, tea.KeyEnter:
 			m.quitting = true
 			return true
-		case tea.KeyRunes:
-			switch msg.String() {
-			case "q":
-				m.quitting = true
-				return true
-			}
 		}
 	}
 	return false
@@ -97,7 +85,7 @@ func (m *embeddableAlertModal) View() string {
 			lipgloss.Left,
 			m.content,
 			"\n",
-			helpStyle.Render("[Esc/q/Enter] Dismiss"),
+			helpStyle.Render("[Esc/Enter] Dismiss"),
 		),
 	)
 }

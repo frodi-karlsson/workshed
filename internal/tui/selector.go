@@ -129,6 +129,7 @@ func (s *Selector) Run(ctx context.Context) (string, error) {
 	l.Title = "Select workspace"
 	l.SetFilteringEnabled(true)
 	l.SetShowStatusBar(false)
+	l.SetShowHelp(false)
 	l.Styles.NoItems = lipgloss.NewStyle().Foreground(colorVeryMuted)
 	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(colorMuted)
 	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(colorMuted)

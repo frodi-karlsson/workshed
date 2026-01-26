@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 )
 
 type MenuItem struct {
@@ -21,14 +22,13 @@ func (m MenuItem) Title() string       { return "[" + m.key + "] " + m.label }
 func (m MenuItem) Description() string { return m.desc }
 func (m MenuItem) FilterValue() string { return m.key + " " + m.label }
 
-const ContextMenuWidth = 40
-
 type ContextMenuView struct {
 	store  store.Store
 	ctx    context.Context
 	handle string
 	list   list.Model
 	stale  bool
+	size   measure.Window
 }
 
 func NewContextMenuView(s store.Store, ctx context.Context, handle string) ContextMenuView {
@@ -42,15 +42,15 @@ func NewContextMenuView(s store.Store, ctx context.Context, handle string) Conte
 		MenuItem{key: "r", label: "Remove", desc: "Delete workspace (confirm)", selected: false},
 	}
 
-	l := list.New(items, list.NewDefaultDelegate(), ContextMenuWidth, 20)
+	l := list.New(items, list.NewDefaultDelegate(), 30, 10)
 	l.Title = "Actions for \"" + handle + "\""
 	l.SetShowTitle(true)
 	l.SetShowStatusBar(false)
+	l.SetShowHelp(false)
 	l.SetFilteringEnabled(false)
 	l.Styles.NoItems = lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
 	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
 	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
-	l.Styles.Title = l.Styles.Title.Width(ContextMenuWidth)
 
 	return ContextMenuView{
 		store:  s,
@@ -62,6 +62,11 @@ func NewContextMenuView(s store.Store, ctx context.Context, handle string) Conte
 
 func (v *ContextMenuView) Init() tea.Cmd {
 	return nil
+}
+
+func (v *ContextMenuView) SetSize(size measure.Window) {
+	v.size = size
+	v.list.SetSize(size.ListWidth(), size.ListHeight())
 }
 
 func (v *ContextMenuView) OnPush() {}
@@ -84,8 +89,6 @@ func (v *ContextMenuView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		v.list.SetSize(ContextMenuWidth, 20)
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -142,14 +145,14 @@ func (v ContextMenuView) handleMenuAction(key string) ViewResult {
 }
 
 func (v ContextMenuView) View() string {
-	frameStyle := ModalFrame()
+	frameStyle := ModalFrame(v.size)
 
 	return frameStyle.Render(
 		v.list.View() + "\n" +
 			lipgloss.NewStyle().
 				Foreground(components.ColorVeryMuted).
 				MarginTop(1).
-				Render("[↑↓/j/k] Navigate  [Enter] Select  [Esc/q/Ctrl+C] Cancel"),
+				Render("[↑↓/j/k] Navigate  [Enter] Select  [Esc/Ctrl+C] Cancel"),
 	)
 }
 

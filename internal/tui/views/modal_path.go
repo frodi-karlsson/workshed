@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
+	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -17,6 +18,7 @@ type modal_PathView struct {
 	handle    string
 	workspace *workspace.Workspace
 	copied    bool
+	size      measure.Window
 }
 
 func NewPathView(s store.Store, ctx context.Context, handle string) *modal_PathView {
@@ -35,6 +37,10 @@ func (v *modal_PathView) Init() tea.Cmd {
 		v.copied = true
 	}
 	return nil
+}
+
+func (v *modal_PathView) SetSize(size measure.Window) {
+	v.size = size
 }
 
 func (v *modal_PathView) OnPush()   {}
@@ -62,7 +68,7 @@ func (v *modal_PathView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 
 func (v *modal_PathView) View() string {
 	if v.workspace == nil {
-		return ModalFrame().Render("Loading...")
+		return ModalFrame(v.size).Render("Loading...")
 	}
 
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorText)
@@ -74,7 +80,7 @@ func (v *modal_PathView) View() string {
 
 	statusStyle := lipgloss.NewStyle().Foreground(components.ColorSuccess).Render(statusMsg)
 
-	return ModalFrame().Render(
+	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerStyle.Render("Path:"), "\n",

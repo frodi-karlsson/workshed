@@ -84,6 +84,64 @@ Most commands work from within a workspace without specifying a handle — Works
 
 ---
 
+## Use Cases
+
+### Cross-Repository Refactoring
+When a feature spans multiple services (e.g., updating an API contract shared across frontend and backend):
+
+```bash
+workshed create --purpose "Update user API contract" \
+  --repo git@github.com:org/frontend.git \
+  --repo git@github.com:org/backend.git \
+  --repo git@github.com:org/api-client.git
+```
+
+### Agent-Driven Development
+For Claude/AI agents working in isolated environments:
+
+```bash
+# Create clean workspace per task
+workshed create --purpose "Fix auth bug in payment flow" --repo ./current-project
+
+# Agent works in workspace, can be discarded after
+workshed exec -- "npm test && git diff"
+workshed remove
+```
+
+### Exploratory Work
+Trying changes without affecting your main development setup:
+
+```bash
+workshed create --purpose "Experiment with new auth library" --repo ./my-app
+cd $(workshed path)
+# ... experiment ...
+workshed remove  # Clean slate when done
+```
+
+### Monorepo Without the Monorepo
+Group related repositories for focused work:
+
+```bash
+workshed create --purpose "Q3 OKR delivery" \
+  --repo git@github.com:org/orders.git@feature/q3 \
+  --repo git@github.com:org/inventory.git@feature/q3 \
+  --repo git@github.com:org/billing.git@feature/q3
+```
+
+### Templates for Standard Setups
+Create workspaces from templates with variable substitution:
+
+```bash
+# Template directory: ~/templates/react-app
+#   {{name}}/package.json -> my-app/package.json
+workshed create --purpose "New SPA" \
+  --template ~/templates/react-app \
+  --map name=my-app \
+  --map env=production
+```
+
+---
+
 ## Commands
 
 | Command | Description |
@@ -129,7 +187,9 @@ Default behavior when `WORKSHED_LOG_FORMAT` is unset or `human`. Set to `json` t
 
 ### Non-Interactive Fallback
 
-When TUI is disabled (CI, piped output), Workshed falls back to plain text prompts and error messages.
+When `WORKSHED_LOG_FORMAT` is set to `json`, or when running in CI environments, the TUI is not available. Commands that would normally show interactive selection will fail with an error instead.
+
+To use Workshed non-interactively, provide all required flags explicitly.
 
 ---
 
