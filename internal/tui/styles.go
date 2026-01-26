@@ -8,30 +8,19 @@ import (
 
 const maxListHeight = 10
 
-var (
-	colorBorder     = components.ColorBorder
-	colorSuccess    = components.ColorSuccess
-	colorError      = components.ColorError
-	colorText       = components.ColorText
-	colorMuted      = components.ColorMuted
-	colorVeryMuted  = components.ColorVeryMuted
-	colorBackground = components.ColorBackground
-	colorWarning    = components.ColorWarning
-)
-
 func applyCommonListStyles(l *list.Model) {
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.Styles.NoItems = lipgloss.NewStyle().Foreground(colorVeryMuted)
-	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(colorMuted)
-	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(colorMuted)
+	l.Styles.NoItems = lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
+	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
+	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
 }
 
 func applyTitleStyle(l *list.Model) {
 	l.Styles.Title = lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText).
-		Background(colorBackground).
+		Foreground(components.ColorText).
+		Background(components.ColorBackground).
 		Padding(0, 1)
 }
 
@@ -39,7 +28,7 @@ func modalFrame() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Margin(1, 2).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(colorBorder).
+		BorderForeground(components.ColorBorder).
 		Padding(1)
 }
 

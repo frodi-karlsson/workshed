@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -16,6 +15,7 @@ type view_ValidateView struct {
 	ctx     context.Context
 	handle  string
 	result  *workspace.AgentsValidationResult
+	errMsg  string
 	loading bool
 	size    measure.Window
 }
@@ -28,7 +28,24 @@ func NewValidateView(s workspace.Store, ctx context.Context, handle string) *vie
 	}
 }
 
-func (v *view_ValidateView) Init() tea.Cmd { return nil }
+type validationResultMsg struct {
+	result *workspace.AgentsValidationResult
+}
+
+type validationErrorMsg struct {
+	err string
+}
+
+func (v *view_ValidateView) Init() tea.Cmd {
+	v.loading = true
+	return func() tea.Msg {
+		result, err := v.store.ValidateAgents(v.ctx, v.handle, "AGENTS.md")
+		if err == nil {
+			return validationResultMsg{result: &result}
+		}
+		return validationErrorMsg{err: err.Error()}
+	}
+}
 
 func (v *view_ValidateView) SetSize(size measure.Window) {
 	v.size = size
@@ -44,28 +61,30 @@ func (v *view_ValidateView) Cancel() {
 	v.loading = false
 }
 
+func (v *view_ValidateView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+		{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
+	}
+}
+
+func (v *view_ValidateView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *view_ValidateView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
-	if key.IsEnter(msg) {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
-	if v.loading {
-		return ViewResult{}, nil
-	}
-
-	if v.result == nil {
-		v.loading = true
-		result, err := v.store.ValidateAgents(v.ctx, v.handle, "AGENTS.md")
+	switch m := msg.(type) {
+	case validationResultMsg:
 		v.loading = false
-		if err == nil {
-			v.result = &result
+		v.result = m.result
+	case validationErrorMsg:
+		v.loading = false
+		v.errMsg = m.err
+	case tea.KeyMsg:
+		if result, _, handled := HandleKey(v.KeyBindings(), m); handled {
+			return result, nil
 		}
 	}
-
 	return ViewResult{}, nil
 }
 
@@ -76,12 +95,50 @@ func (v *view_ValidateView) View() string {
 	warningStyle := lipgloss.NewStyle().Foreground(components.ColorWarning)
 	successStyle := lipgloss.NewStyle().Foreground(components.ColorSuccess)
 
-	if v.loading {
+	if v.loading || (v.result == nil && v.errMsg == "") {
 		return ModalFrame(v.size).Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerStyle.Render("Validating AGENTS.md..."),
 				subStyle.Render("Please wait"),
+			),
+		)
+	}
+
+	if v.result != nil && !v.result.Valid {
+		content := lipgloss.JoinVertical(
+			lipgloss.Left,
+			headerStyle.Render("AGENTS.md Validation Failed"),
+			"",
+			errorStyle.Render(v.result.Explanation),
+			"",
+		)
+
+		content += subStyle.Render("Required sections:")
+		content += "\n"
+		for _, section := range []string{
+			"Running",
+			"Philosophy",
+			"Code Guidelines",
+			"Testing Philosophy",
+			"Design Smells to Watch For",
+			"Final Note",
+		} {
+			content += "  - " + section + "\n"
+		}
+
+		content += "\n" + subStyle.Render("[Enter/Esc] Dismiss")
+		return ModalFrame(v.size).Render(content)
+	}
+
+	if v.errMsg != "" {
+		return ModalFrame(v.size).Render(
+			lipgloss.JoinVertical(
+				lipgloss.Left,
+				headerStyle.Render("AGENTS.md Validation Error"),
+				"",
+				errorStyle.Render("Error: "+v.errMsg),
+				"",
 			),
 		)
 	}
@@ -168,6 +225,7 @@ type ValidateViewSnapshot struct {
 	SectionCnt int
 	ErrorCnt   int
 	WarnCnt    int
+	ErrMsg     string
 }
 
 func (v *view_ValidateView) Snapshot() interface{} {
@@ -188,5 +246,6 @@ func (v *view_ValidateView) Snapshot() interface{} {
 		SectionCnt: sectionCnt,
 		ErrorCnt:   errorCnt,
 		WarnCnt:    warnCnt,
+		ErrMsg:     v.errMsg,
 	}
 }

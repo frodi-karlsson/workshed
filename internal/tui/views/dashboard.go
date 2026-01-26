@@ -10,7 +10,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -86,7 +85,6 @@ func (w WorkspaceItem) FilterValue() string {
 	return fmt.Sprintf("%s %s", w.workspace.Handle, w.workspace.Purpose)
 }
 
-// NewDashboardView creates a new dashboard view.
 func NewDashboardView(ctx context.Context, s workspace.Store, invocationCtx workspace.InvocationContext) DashboardView {
 	ti := textinput.New()
 	ti.Placeholder = "Filter workspaces..."
@@ -210,89 +208,104 @@ func (v *DashboardView) SetSize(size measure.Window) {
 	v.list.SetSize(size.ListWidth(), size.ListHeight())
 }
 
+func (v *DashboardView) KeyBindings() []KeyBinding {
+	if v.err != nil {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Retry", Action: v.retry},
+			{Key: "esc", Help: "[Esc] Quit", Action: v.quit},
+			{Key: "ctrl+c", Help: "[Ctrl+C] Quit", Action: v.quit},
+		}
+	}
+	if v.filterMode {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Menu", Action: v.openMenu},
+			{Key: "up", Help: "[↑] Navigate", Action: nil},
+			{Key: "down", Help: "[↓] Navigate", Action: nil},
+			{Key: "k", Help: "[k] Navigate", Action: nil},
+			{Key: "j", Help: "[j] Navigate", Action: nil},
+			{Key: "s", Help: "[s] Sort", Action: v.cycleSort},
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancelFilter},
+		}
+	}
+	return []KeyBinding{
+		{Key: "c", Help: "[c] Create", Action: v.createWorkspace},
+		{Key: "enter", Help: "[Enter] Menu", Action: v.openMenu},
+		{Key: "l", Help: "[l] Filter", Action: v.enableFilter},
+		{Key: "q", Help: "[q] Quit", Action: v.quit},
+		{Key: "esc", Help: "[Esc] Quit", Action: v.quit},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Quit", Action: v.quit},
+	}
+}
+
+func (v *DashboardView) createWorkspace() (ViewResult, tea.Cmd) {
+	wizardView := NewWizardView(v.ctx, v.store)
+	return ViewResult{NextView: &wizardView}, nil
+}
+
+func (v *DashboardView) openMenu() (ViewResult, tea.Cmd) {
+	selected := v.list.SelectedItem()
+	if selected != nil {
+		if wi, ok := selected.(WorkspaceItem); ok {
+			contextMenuView := NewContextMenuView(v.store, v.ctx, wi.workspace.Handle, v.invocationCtx)
+			return ViewResult{NextView: &contextMenuView}, nil
+		}
+	}
+	return ViewResult{}, nil
+}
+
+func (v *DashboardView) enableFilter() (ViewResult, tea.Cmd) {
+	v.filterMode = true
+	v.textInput.Focus()
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *DashboardView) cycleSort() (ViewResult, tea.Cmd) {
+	v.sortOrder = v.sortOrder.Next()
+	_ = v.refreshWorkspaces()
+	return ViewResult{}, nil
+}
+
+func (v *DashboardView) cancelFilter() (ViewResult, tea.Cmd) {
+	v.filterMode = false
+	v.textInput.Blur()
+	v.textInput.SetValue("")
+	_ = v.refreshWorkspaces()
+	return ViewResult{}, nil
+}
+
+func (v *DashboardView) quit() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackDismissAll{}}, nil
+}
+
+func (v *DashboardView) retry() (ViewResult, tea.Cmd) {
+	v.err = nil
+	_ = v.refreshWorkspaces()
+	return ViewResult{}, nil
+}
+
 func (v *DashboardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	if v.err != nil {
-		if key.IsEnter(msg) {
-			v.err = nil
-			_ = v.refreshWorkspaces()
-			return ViewResult{}, nil
-		}
-		if key.IsCancel(msg) {
-			return ViewResult{Action: StackDismissAll{}}, nil
+		if km, ok := msg.(tea.KeyMsg); ok {
+			if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+				return result, nil
+			}
 		}
 		return ViewResult{}, nil
 	}
-
-	if key.IsCancel(msg) {
-		if v.filterMode {
-			v.filterMode = false
-			v.textInput.Blur()
-			v.textInput.SetValue("")
-			_ = v.refreshWorkspaces()
-			return ViewResult{}, nil
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
-		return ViewResult{Action: StackPop{}}, nil
 	}
-
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-
-		if v.filterMode {
-			if key.IsEnter(msg) {
-				selected := v.list.SelectedItem()
-				if selected != nil {
-					if wi, ok := selected.(WorkspaceItem); ok {
-						contextMenuView := NewContextMenuView(v.store, v.ctx, wi.workspace.Handle, v.invocationCtx)
-						return ViewResult{NextView: &contextMenuView}, nil
-					}
-				}
-				return ViewResult{}, nil
-			}
-
-			if key.IsUp(msg) || key.IsDown(msg) {
-				var cmd tea.Cmd
-				v.list, cmd = v.list.Update(msg)
-				return ViewResult{}, cmd
-			}
-
-			if msg.String() == "s" {
-				v.sortOrder = v.sortOrder.Next()
-				_ = v.refreshWorkspaces()
-				return ViewResult{}, nil
-			}
-
-			updatedInput, cmd := v.textInput.Update(msg)
-			v.textInput = updatedInput
-			_ = v.refreshWorkspaces()
-			return ViewResult{}, cmd
-		}
-
-		switch msg.String() {
-		case "c":
-			wizardView := NewWizardView(v.ctx, v.store)
-			return ViewResult{NextView: &wizardView}, nil
-		case "l":
-			v.filterMode = true
-			v.textInput.Focus()
-			return ViewResult{}, textinput.Blink
-		}
-
-		if key.IsEnter(msg) {
-			selected := v.list.SelectedItem()
-			if selected != nil {
-				if wi, ok := selected.(WorkspaceItem); ok {
-					contextMenuView := NewContextMenuView(v.store, v.ctx, wi.workspace.Handle, v.invocationCtx)
-					return ViewResult{NextView: &contextMenuView}, nil
-				}
-			}
-		}
-
-		var cmd tea.Cmd
-		v.list, cmd = v.list.Update(msg)
+	if v.filterMode {
+		updatedInput, cmd := v.textInput.Update(msg)
+		v.textInput = updatedInput
+		_ = v.refreshWorkspaces()
 		return ViewResult{}, cmd
 	}
-
-	return ViewResult{}, nil
+	var cmd tea.Cmd
+	v.list, cmd = v.list.Update(msg)
+	return ViewResult{}, cmd
 }
 
 func (v *DashboardView) View() string {
@@ -314,10 +327,7 @@ func (v *DashboardView) View() string {
 		content = append(content, v.list.View())
 	}
 
-	helpText := "[c] Create  [Enter] Menu  [l] Filter  [q/Esc] Quit"
-	if v.filterMode {
-		helpText = "[Enter] Menu  [↑/↓] Navigate  [s] Sort  [Esc] Cancel"
-	}
+	helpText := GenerateHelp(v.KeyBindings())
 
 	helpHint := lipgloss.NewStyle().
 		Foreground(components.ColorMuted).

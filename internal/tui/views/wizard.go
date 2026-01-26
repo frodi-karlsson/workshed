@@ -128,15 +128,133 @@ func createWorkspaceCmd(ctx context.Context, s workspace.Store, purpose string, 
 	}
 }
 
+func (v *WizardView) KeyBindings() []KeyBinding {
+	if v.done {
+		return []KeyBinding{
+			{Key: "c", Help: "[c] Copy path", Action: v.copyPath},
+			{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+		}
+	}
+	if v.loadingType != "" {
+		return []KeyBinding{
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancelLoading},
+		}
+	}
+	if v.step == 0 {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Next", Action: v.nextStep},
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		}
+	}
+	if v.finishMode {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Create workspace", Action: v.createWorkspace},
+			{Key: "left", Help: "[←] Add more", Action: v.addMoreRepos},
+			{Key: "t", Help: "[t] Template", Action: v.openTemplate},
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		}
+	}
+	if len(v.repos) > 0 {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Add repo", Action: v.addRepo},
+			{Key: "right", Help: "[→] Finish", Action: v.finish},
+			{Key: "tab", Help: "[Tab] Complete path", Action: nil},
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		}
+	}
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Add repo", Action: v.addRepo},
+		{Key: "tab", Help: "[Tab] Complete path", Action: nil},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+	}
+}
+
+func (v *WizardView) nextStep() (ViewResult, tea.Cmd) {
+	purpose := v.input.Value()
+	if purpose == "" {
+		return ViewResult{}, nil
+	}
+	v.purpose = purpose
+	v.step = 1
+	v.repoInput.Focus()
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *WizardView) addRepo() (ViewResult, tea.Cmd) {
+	repoInput := strings.TrimSpace(v.repoInput.Value())
+	if repoInput == "" {
+		if len(v.repos) == 0 {
+			v.loadingType = "git"
+			return ViewResult{}, v.detectCurrentRepoCmd()
+		}
+		v.loadingType = "create"
+		return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.template, v.templateVars, v.repos)
+	}
+	url, ref := workspace.ParseRepoFlag(repoInput)
+	v.repos = append(v.repos, workspace.RepositoryOption{URL: url, Ref: ref})
+	v.repoInput.SetValue("")
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *WizardView) finish() (ViewResult, tea.Cmd) {
+	v.finishMode = true
+	v.input.Blur()
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *WizardView) addMoreRepos() (ViewResult, tea.Cmd) {
+	v.finishMode = false
+	v.input.Focus()
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *WizardView) createWorkspace() (ViewResult, tea.Cmd) {
+	if v.loadingType != "" {
+		return ViewResult{}, nil
+	}
+	if len(v.repos) == 0 {
+		v.loadingType = "git"
+		return ViewResult{}, v.detectCurrentRepoCmd()
+	}
+	v.loadingType = "create"
+	return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.template, v.templateVars, v.repos)
+}
+
+func (v *WizardView) openTemplate() (ViewResult, tea.Cmd) {
+	templateView := NewTemplateConfigView(v.ctx, v.store, v.template, v.templateVars)
+	return ViewResult{NextView: &templateView}, nil
+}
+
+func (v *WizardView) copyPath() (ViewResult, tea.Cmd) {
+	if v.createdWorkspace != nil {
+		v.copyAttempted = true
+		err := clipboard.WriteAll(v.createdWorkspace.Path)
+		v.pathCopied = err == nil
+	}
+	return ViewResult{}, nil
+}
+
+func (v *WizardView) cancelLoading() (ViewResult, tea.Cmd) {
+	v.loadingType = ""
+	return ViewResult{}, nil
+}
+
+func (v *WizardView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *WizardView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case currentRepoResultMsg:
-		if v.loadingType != "git" {
-			return ViewResult{}, nil
+		if v.loadingType == "git" {
+			v.loadingType = ""
 		}
-		v.loadingType = ""
 
 		if msg.err != nil {
 			errView := NewErrorView(ErrNoRepositories)
@@ -147,10 +265,9 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 		return ViewResult{}, textinput.Blink
 
 	case workspaceCreateResultMsg:
-		if v.loadingType != "create" {
-			return ViewResult{}, nil
+		if v.loadingType == "create" {
+			v.loadingType = ""
 		}
-		v.loadingType = ""
 
 		if msg.err != nil {
 			errView := NewErrorView(msg.err)
@@ -160,84 +277,11 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 		v.createdWorkspace = msg.ws
 		v.done = true
 		return ViewResult{}, nil
+	}
 
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			if v.loadingType != "" {
-				v.loadingType = ""
-				return ViewResult{}, nil
-			}
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyRight:
-			if v.step == 1 && len(v.repos) > 0 && !v.finishMode {
-				v.finishMode = true
-				v.input.Blur()
-				return ViewResult{}, textinput.Blink
-			}
-		case tea.KeyLeft:
-			if v.step == 1 && v.finishMode {
-				v.finishMode = false
-				v.input.Focus()
-				return ViewResult{}, textinput.Blink
-			}
-		case tea.KeyEnter:
-			if v.done {
-				return ViewResult{Action: StackPop{}}, nil
-			}
-			if v.step == 0 {
-				purpose := v.input.Value()
-				if purpose == "" {
-					return ViewResult{}, nil
-				}
-				v.purpose = purpose
-				v.step = 1
-				v.repoInput.Focus()
-				return ViewResult{}, textinput.Blink
-			} else {
-				if v.finishMode {
-					if v.loadingType != "" {
-						return ViewResult{}, nil
-					}
-					if len(v.repos) == 0 {
-						v.loadingType = "git"
-						return ViewResult{}, v.detectCurrentRepoCmd()
-					}
-					v.loadingType = "create"
-					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.template, v.templateVars, v.repos)
-				}
-
-				repoInput := strings.TrimSpace(v.repoInput.Value())
-				if repoInput == "" {
-					if v.loadingType != "" {
-						return ViewResult{}, nil
-					}
-					if len(v.repos) == 0 {
-						v.loadingType = "git"
-						return ViewResult{}, v.detectCurrentRepoCmd()
-					}
-					v.loadingType = "create"
-					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.template, v.templateVars, v.repos)
-				}
-
-				url, ref := workspace.ParseRepoFlag(repoInput)
-				v.repos = append(v.repos, workspace.RepositoryOption{URL: url, Ref: ref})
-				v.repoInput.SetValue("")
-				return ViewResult{}, textinput.Blink
-			}
-		case tea.KeyRunes:
-			if v.done && msg.String() == "c" {
-				if v.createdWorkspace != nil {
-					v.copyAttempted = true
-					err := clipboard.WriteAll(v.createdWorkspace.Path)
-					v.pathCopied = err == nil
-				}
-				return ViewResult{}, nil
-			}
-			if v.finishMode && msg.String() == "t" {
-				templateView := NewTemplateConfigView(v.ctx, v.store, v.template, v.templateVars)
-				return ViewResult{NextView: &templateView}, nil
-			}
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, keyCmd, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, keyCmd
 		}
 	}
 

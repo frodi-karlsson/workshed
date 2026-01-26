@@ -52,11 +52,6 @@ func NewFSStore(root string, g ...git.Git) (*FSStore, error) {
 	return &FSStore{root: absRoot, git: gitClient}, nil
 }
 
-// Root returns the root directory for this store.
-func (s *FSStore) Root() string {
-	return s.root
-}
-
 // Create creates a new workspace with the given options and returns the workspace metadata.
 func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, error) {
 	if opts.Purpose == "" {
@@ -101,13 +96,9 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 	for i, opt := range repos {
 		url := opt.URL
 		if isLocalPath(url) {
-			expandedPath, err := expandPath(url, opts.InvocationCWD)
+			absPath, err := resolveLocalPath(url, opts.InvocationCWD)
 			if err != nil {
-				return nil, fmt.Errorf("expanding local path %s: %w", url, err)
-			}
-			absPath, err := filepath.Abs(expandedPath)
-			if err != nil {
-				return nil, fmt.Errorf("resolving absolute local path %s: %w", url, err)
+				return nil, fmt.Errorf("resolving local path %s: %w", url, err)
 			}
 			url = absPath
 		}
@@ -314,13 +305,9 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 	for i, opt := range repos {
 		url := opt.URL
 		if isLocalPath(url) {
-			expandedPath, err := expandPath(url, invocationCWD)
+			absPath, err := resolveLocalPath(url, invocationCWD)
 			if err != nil {
-				return fmt.Errorf("expanding local path %s: %w", url, err)
-			}
-			absPath, err := filepath.Abs(expandedPath)
-			if err != nil {
-				return fmt.Errorf("resolving absolute local path %s: %w", url, err)
+				return fmt.Errorf("resolving local path %s: %w", url, err)
 			}
 			url = absPath
 		}
@@ -556,6 +543,18 @@ func isLocalPath(path string) bool {
 	return !strings.HasPrefix(path, "git@") && !strings.Contains(path, "://")
 }
 
+func resolveLocalPath(url, invocationCWD string) (string, error) {
+	expandedPath, err := expandPath(url, invocationCWD)
+	if err != nil {
+		return "", err
+	}
+	absPath, err := filepath.Abs(expandedPath)
+	if err != nil {
+		return "", err
+	}
+	return absPath, nil
+}
+
 func validateLocalRepository(path, invocationCWD string) error {
 	if path == "" {
 		return errors.New("path cannot be empty")
@@ -682,13 +681,9 @@ func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir, invocat
 
 	// Convert relative local paths to absolute for git clone
 	if isLocalPath(url) {
-		expandedPath, err := expandPath(url, invocationCWD)
+		absPath, err := resolveLocalPath(url, invocationCWD)
 		if err != nil {
-			return fmt.Errorf("expanding local path: %w", err)
-		}
-		absPath, err := filepath.Abs(expandedPath)
-		if err != nil {
-			return fmt.Errorf("resolving absolute local path: %w", err)
+			return fmt.Errorf("resolving local path: %w", err)
 		}
 
 		// Auto-detect current branch for local repos when no ref specified

@@ -14,7 +14,6 @@ type LogLevel int
 const (
 	DEBUG LogLevel = iota
 	INFO
-	HELP
 	SUCCESS
 	ERROR
 )
@@ -81,12 +80,6 @@ func (l *Logger) Error(msg string, args ...interface{}) {
 func (l *Logger) Info(msg string, args ...interface{}) {
 	if l.level <= INFO {
 		l.logMessage("INFO", msg, args)
-	}
-}
-
-func (l *Logger) Help(msg string, args ...interface{}) {
-	if l.level <= HELP {
-		l.logMessage("HELP", msg, args)
 	}
 }
 

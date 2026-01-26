@@ -42,7 +42,6 @@ type Capture struct {
 // Captures are descriptive snapshots, not authoritative state.
 const (
 	CaptureKindManual     = "manual"     // User-initiated capture for documentation
-	CaptureKindExecution  = "execution"  // Capture created from an execution record
 	CaptureKindCheckpoint = "checkpoint" // Periodic state snapshot
 )
 

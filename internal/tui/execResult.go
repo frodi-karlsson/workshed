@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -54,9 +55,9 @@ func (m execResultModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m execResultModel) View() string {
-	borderColor := colorSuccess
+	borderColor := components.ColorSuccess
 	if !m.success {
-		borderColor = colorError
+		borderColor = components.ColorError
 	}
 
 	frameStyle := modalFrame().BorderForeground(borderColor)
@@ -68,10 +69,10 @@ func (m execResultModel) View() string {
 	}
 
 	statusText := "Success"
-	statusColor := colorSuccess
+	statusColor := components.ColorSuccess
 	if !m.success {
 		statusText = "Failed"
-		statusColor = colorError
+		statusColor = components.ColorError
 	}
 
 	status := lipgloss.NewStyle().
@@ -80,16 +81,16 @@ func (m execResultModel) View() string {
 
 	commandLabel := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText).
+		Foreground(components.ColorText).
 		Render("Command:")
 
 	commandValue := lipgloss.NewStyle().
-		Foreground(colorMuted).
+		Foreground(components.ColorMuted).
 		Render(m.command)
 
 	repoLabel := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText).
+		Foreground(components.ColorText).
 		Render("Repository:")
 
 	repoName := m.results[m.currentIdx].Repository
@@ -97,18 +98,18 @@ func (m execResultModel) View() string {
 		repoName = "(workspace root)"
 	}
 	repoValue := lipgloss.NewStyle().
-		Foreground(colorMuted).
+		Foreground(components.ColorMuted).
 		Render(repoName)
 
 	exitLabel := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText).
+		Foreground(components.ColorText).
 		Render("Exit Code:")
 
 	exitCode := m.results[m.currentIdx].ExitCode
-	exitColor := colorSuccess
+	exitColor := components.ColorSuccess
 	if exitCode != 0 {
-		exitColor = colorError
+		exitColor = components.ColorError
 	}
 	exitValue := lipgloss.NewStyle().
 		Foreground(exitColor).
@@ -116,16 +117,16 @@ func (m execResultModel) View() string {
 
 	durationLabel := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText).
+		Foreground(components.ColorText).
 		Render("Duration:")
 
 	durationValue := lipgloss.NewStyle().
-		Foreground(colorMuted).
+		Foreground(components.ColorMuted).
 		Render(formatDuration(m.duration))
 
 	outputLabel := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText).
+		Foreground(components.ColorText).
 		Render("Output:")
 
 	truncatedStr, isTruncated := truncateOutput(string(m.results[m.currentIdx].Output), 30)
@@ -133,7 +134,7 @@ func (m execResultModel) View() string {
 
 	outputBox := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(colorBorder).
+		BorderForeground(components.ColorBorder).
 		Padding(0, 1).
 		Width(60).
 		Render(truncatedStr)
@@ -141,23 +142,23 @@ func (m execResultModel) View() string {
 	var toggleHint string
 	if m.truncated {
 		toggleHint = lipgloss.NewStyle().
-			Foreground(colorWarning).
+			Foreground(components.ColorWarning).
 			Render("[f] Show full output")
 	} else {
 		toggleHint = lipgloss.NewStyle().
-			Foreground(colorMuted).
+			Foreground(components.ColorMuted).
 			Render("[f] Toggle output")
 	}
 
 	var navHint string
 	if len(m.results) > 1 {
 		navHint = lipgloss.NewStyle().
-			Foreground(colorMuted).
+			Foreground(components.ColorMuted).
 			Render("[n/p or j/k] Next/Previous repository  ")
 	}
 
 	helpHint := lipgloss.NewStyle().
-		Foreground(colorVeryMuted).
+		Foreground(components.ColorVeryMuted).
 		MarginTop(1).
 		Render(navHint + "[Enter/Esc/q] Close")
 
@@ -166,7 +167,7 @@ func (m execResultModel) View() string {
 			lipgloss.Left,
 			lipgloss.NewStyle().
 				Bold(true).
-				Foreground(colorText).
+				Foreground(components.ColorText).
 				Render(titleText),
 			"",
 			lipgloss.JoinHorizontal(lipgloss.Left, status, "  ", commandLabel, " ", commandValue),

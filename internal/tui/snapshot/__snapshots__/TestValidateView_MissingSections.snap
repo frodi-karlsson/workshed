@@ -88,9 +88,10 @@ TestValidateView_MissingSections
         "Type": "ValidateView",
         "Handle": "test-ws",
         "Valid": false,
-        "SectionCnt": 0,
-        "ErrorCnt": 0,
-        "WarnCnt": 0
+        "SectionCnt": 4,
+        "ErrorCnt": 2,
+        "WarnCnt": 0,
+        "ErrMsg": ""
       }
     }
   ]

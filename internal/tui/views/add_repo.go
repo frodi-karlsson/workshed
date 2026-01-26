@@ -68,67 +68,81 @@ func (v *AddRepoView) Cancel() {
 	v.cancelled = true
 }
 
-func (v *AddRepoView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if v.stale || v.cancelled {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
+func (v *AddRepoView) KeyBindings() []KeyBinding {
 	if v.err != nil {
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			if msg.Type == tea.KeyEnter || msg.String() == "r" {
-				v.err = nil
-				v.input.Reset()
-				return ViewResult{}, textinput.Blink
-			}
-			if msg.Type == tea.KeyEsc {
-				return ViewResult{Action: StackPop{}}, nil
-			}
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Retry", Action: v.retry},
+			{Key: "r", Help: "[r] Retry", Action: v.retry},
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		}
+	}
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Add", Action: v.addRepo},
+		{Key: "esc", Help: "[Esc] Done", Action: v.done},
+	}
+}
+
+func (v *AddRepoView) retry() (ViewResult, tea.Cmd) {
+	v.err = nil
+	v.input.Reset()
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *AddRepoView) addRepo() (ViewResult, tea.Cmd) {
+	url := strings.TrimSpace(v.input.Value())
+	if url == "" {
+		if len(v.repos) > 0 {
+			return v.confirmAndAdd()
 		}
 		return ViewResult{}, nil
 	}
-
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEsc:
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyEnter:
-			url := strings.TrimSpace(v.input.Value())
-			if url == "" {
-				if len(v.repos) > 0 {
-					return v.confirmAndAdd()
-				}
-				return ViewResult{}, nil
-			}
-
-			url, ref := workspace.ParseRepoFlag(url)
-			v.repos = append(v.repos, workspace.RepositoryOption{
-				URL: url,
-				Ref: ref,
-			})
-			v.input.Reset()
-			return ViewResult{}, textinput.Blink
-		}
-	}
-
-	updatedInput, cmd := v.input.Update(msg)
-	v.input = updatedInput
-	return ViewResult{}, cmd
+	url, ref := workspace.ParseRepoFlag(url)
+	v.repos = append(v.repos, workspace.RepositoryOption{
+		URL: url,
+		Ref: ref,
+	})
+	v.input.Reset()
+	return ViewResult{}, textinput.Blink
 }
 
 func (v *AddRepoView) confirmAndAdd() (ViewResult, tea.Cmd) {
 	if len(v.repos) == 0 {
 		return ViewResult{Action: StackPop{}}, nil
 	}
-
 	err := v.store.AddRepositories(v.ctx, v.handle, v.repos, v.invocationCtx.GetInvocationCWD())
 	if err != nil {
 		v.err = err
 		return ViewResult{}, nil
 	}
-
 	return ViewResult{Action: StackPopCount{Count: 2}}, nil
+}
+
+func (v *AddRepoView) done() (ViewResult, tea.Cmd) {
+	if len(v.repos) > 0 {
+		return v.confirmAndAdd()
+	}
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *AddRepoView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *AddRepoView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
+	if v.stale || v.cancelled {
+		return ViewResult{Action: StackPop{}}, nil
+	}
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
+		}
+	}
+	if v.err == nil {
+		updatedInput, cmd := v.input.Update(msg)
+		v.input = updatedInput
+		return ViewResult{}, cmd
+	}
+	return ViewResult{}, nil
 }
 
 func (v *AddRepoView) View() string {

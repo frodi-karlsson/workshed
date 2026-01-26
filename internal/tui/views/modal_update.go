@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -46,19 +45,32 @@ func (v *modal_UpdateView) IsLoading() bool {
 
 func (v *modal_UpdateView) Cancel() {}
 
+func (v *modal_UpdateView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Save", Action: v.save},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Cancel", Action: v.cancel},
+	}
+}
+
+func (v *modal_UpdateView) save() (ViewResult, tea.Cmd) {
+	if err := v.store.UpdatePurpose(v.ctx, v.handle, v.input.Value()); err != nil {
+		errView := NewErrorView(err)
+		return ViewResult{NextView: errView}, nil
+	}
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *modal_UpdateView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *modal_UpdateView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
-	if key.IsEnter(msg) {
-		if err := v.store.UpdatePurpose(v.ctx, v.handle, v.input.Value()); err != nil {
-			errView := NewErrorView(err)
-			return ViewResult{NextView: errView}, nil
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
-		return ViewResult{Action: StackPop{}}, nil
 	}
-
 	updatedInput, cmd := v.input.Update(msg)
 	v.input = updatedInput
 	return ViewResult{}, cmd

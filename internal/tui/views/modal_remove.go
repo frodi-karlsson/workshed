@@ -43,26 +43,47 @@ func (v *modal_RemoveView) IsLoading() bool {
 
 func (v *modal_RemoveView) Cancel() {}
 
+func (v *modal_RemoveView) KeyBindings() []KeyBinding {
+	if v.done {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+		}
+	}
+	return []KeyBinding{
+		{Key: "y", Help: "[y] Yes", Action: v.confirmRemove},
+		{Key: "Y", Help: "[Y] Yes", Action: v.confirmRemove},
+		{Key: "n", Help: "[n] No", Action: v.cancel},
+		{Key: "N", Help: "[N] No", Action: v.cancel},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		{Key: "q", Help: "[q] Cancel", Action: v.cancel},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Cancel", Action: v.cancel},
+	}
+}
+
+func (v *modal_RemoveView) confirmRemove() (ViewResult, tea.Cmd) {
+	if !v.done {
+		if err := v.store.Remove(v.ctx, v.handle); err != nil {
+			errView := NewErrorView(err)
+			return ViewResult{NextView: errView}, nil
+		}
+		v.done = true
+		v.confirm = true
+	}
+	return ViewResult{Action: StackPopUntilType{reflect.TypeOf(&DashboardView{})}}, nil
+}
+
+func (v *modal_RemoveView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *modal_RemoveView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPopUntilType{reflect.TypeOf(&DashboardView{})}}, nil
+}
+
 func (v *modal_RemoveView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "y", "Y":
-			if !v.done {
-				if err := v.store.Remove(v.ctx, v.handle); err != nil {
-					errView := NewErrorView(err)
-					return ViewResult{NextView: errView}, nil
-				}
-				v.done = true
-				v.confirm = true
-			}
-			return ViewResult{Action: StackPopUntilType{reflect.TypeOf(&DashboardView{})}}, nil
-		case "n", "N", "esc", "q", "ctrl+c":
-			return ViewResult{Action: StackPop{}}, nil
-		case "enter":
-			if v.done {
-				return ViewResult{Action: StackPopUntilType{reflect.TypeOf(&DashboardView{})}}, nil
-			}
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
 	}
 	return ViewResult{}, nil

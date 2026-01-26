@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -46,35 +45,42 @@ func (v *ExecHistoryView) Cancel() {
 	v.loading = false
 }
 
+func (v *ExecHistoryView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "up", Help: "[↑] Navigate", Action: v.moveUp},
+		{Key: "down", Help: "[↓] Navigate", Action: v.moveDown},
+		{Key: "enter", Help: "[Enter] Details", Action: v.showDetails},
+		{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Dismiss", Action: v.dismiss},
+	}
+}
+
+func (v *ExecHistoryView) moveUp() (ViewResult, tea.Cmd) {
+	if v.selected > 0 {
+		v.selected--
+	}
+	return ViewResult{}, nil
+}
+
+func (v *ExecHistoryView) moveDown() (ViewResult, tea.Cmd) {
+	if v.selected < len(v.executions)-1 {
+		v.selected++
+	}
+	return ViewResult{}, nil
+}
+
+func (v *ExecHistoryView) showDetails() (ViewResult, tea.Cmd) {
+	return ViewResult{}, nil
+}
+
+func (v *ExecHistoryView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *ExecHistoryView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
-	if key.IsDown(msg) {
-		if v.selected < len(v.executions)-1 {
-			v.selected++
-		}
-	} else if km, ok := msg.(tea.KeyMsg); ok && len(km.Runes) == 1 {
-		if string(km.Runes[0]) == "j" && v.selected < len(v.executions)-1 {
-			v.selected++
-		}
-	}
-
-	if key.IsUp(msg) {
-		if v.selected > 0 {
-			v.selected--
-		}
-	} else if km, ok := msg.(tea.KeyMsg); ok && len(km.Runes) == 1 {
-		if string(km.Runes[0]) == "k" && v.selected > 0 {
-			v.selected--
-		}
-	}
-
 	if v.loading {
 		return ViewResult{}, nil
 	}
-
 	if len(v.executions) == 0 {
 		v.loading = true
 		execs, err := v.store.ListExecutions(v.ctx, v.handle, workspace.ListExecutionsOptions{Limit: 20})
@@ -85,8 +91,14 @@ func (v *ExecHistoryView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 				v.selected = 0
 			}
 		}
+		return ViewResult{}, nil
 	}
 
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
+		}
+	}
 	return ViewResult{}, nil
 }
 
@@ -164,7 +176,7 @@ func (v *ExecHistoryView) View() string {
 		content += line + "\n"
 	}
 
-	content += "\n" + dimStyle.Render("[↑↓/j/k] Navigate  [Enter] Details  [Esc] Dismiss")
+	content += "\n" + dimStyle.Render(GenerateHelp(v.KeyBindings()))
 
 	return ModalFrame(v.size).Render(content)
 }

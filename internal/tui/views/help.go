@@ -29,7 +29,22 @@ func (v *HelpView) IsLoading() bool {
 
 func (v *HelpView) Cancel() {}
 
+func (v *HelpView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
+	}
+}
+
+func (v *HelpView) goBack() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *HelpView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
+		}
+	}
 	return ViewResult{Action: StackPop{}}, nil
 }
 

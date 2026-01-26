@@ -119,11 +119,11 @@ func TestExecHistoryView_Navigation(t *testing.T) {
 	output := scenario.Record()
 	snapshot.Match(t, "first_selected", output)
 
-	scenario.Key("j", "Navigate down")
+	scenario.Key("down", "Navigate down")
 	output = scenario.Record()
 	snapshot.Match(t, "second_selected", output)
 
-	scenario.Key("j", "Navigate down again")
+	scenario.Key("down", "Navigate down again")
 	output = scenario.Record()
 	snapshot.Match(t, "third_selected", output)
 }

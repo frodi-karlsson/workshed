@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -64,52 +63,83 @@ func (v *CaptureCreateView) Cancel() {
 	v.loading = false
 }
 
-func (v *CaptureCreateView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
+func (v *CaptureCreateView) KeyBindings() []KeyBinding {
+	if v.done {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+			{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
+		}
 	}
+	if v.step == 0 {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Next", Action: v.nextStep},
+			{Key: "tab", Help: "[Tab] Skip description", Action: v.skipToDescription},
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+			{Key: "ctrl+c", Help: "[Ctrl+C] Cancel", Action: v.cancel},
+		}
+	}
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Create", Action: v.create},
+		{Key: "tab", Help: "[Tab] Back to name", Action: v.backToName},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Cancel", Action: v.cancel},
+	}
+}
 
+func (v *CaptureCreateView) nextStep() (ViewResult, tea.Cmd) {
+	v.step = 1
+	return ViewResult{}, nil
+}
+
+func (v *CaptureCreateView) skipToDescription() (ViewResult, tea.Cmd) {
+	v.step = 1
+	return ViewResult{}, nil
+}
+
+func (v *CaptureCreateView) create() (ViewResult, tea.Cmd) {
+	v.loading = true
+	go func() {
+		capture, err := v.store.CaptureState(v.ctx, v.handle, workspace.CaptureOptions{
+			Name:        v.nameInput.Value(),
+			Kind:        workspace.CaptureKindManual,
+			Description: v.descInput.Value(),
+		})
+		v.loading = false
+		if err == nil {
+			v.capture = capture
+			v.done = true
+		}
+	}()
+	return ViewResult{}, nil
+}
+
+func (v *CaptureCreateView) backToName() (ViewResult, tea.Cmd) {
+	v.step = 0
+	return ViewResult{}, nil
+}
+
+func (v *CaptureCreateView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *CaptureCreateView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *CaptureCreateView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
+		}
+	}
 	if v.loading {
 		return ViewResult{}, nil
 	}
-
-	if key.IsEnter(msg) {
-		if v.done {
-			return ViewResult{Action: StackPop{}}, nil
-		}
-
-		if v.step == 0 {
-			v.step = 1
-			return ViewResult{}, nil
-		}
-
-		v.loading = true
-		go func() {
-			capture, err := v.store.CaptureState(v.ctx, v.handle, workspace.CaptureOptions{
-				Name:        v.nameInput.Value(),
-				Kind:        workspace.CaptureKindManual,
-				Description: v.descInput.Value(),
-			})
-			v.loading = false
-			if err == nil {
-				v.capture = capture
-				v.done = true
-			}
-		}()
-		return ViewResult{}, nil
-	}
-
-	if key.IsTab(msg) {
-		v.step = (v.step + 1) % 2
-		return ViewResult{}, nil
-	}
-
 	if v.step == 0 {
 		updated, cmd := v.nameInput.Update(msg)
 		v.nameInput = updated
 		return ViewResult{}, cmd
 	}
-
 	updated, cmd := v.descInput.Update(msg)
 	v.descInput = updated
 	return ViewResult{}, cmd

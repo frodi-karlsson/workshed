@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 type AlertModal struct {
@@ -34,7 +35,7 @@ func (m *AlertModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *AlertModal) View() string {
 	helpStyle := lipgloss.NewStyle().
-		Foreground(colorVeryMuted)
+		Foreground(components.ColorVeryMuted)
 
 	return modalFrame().Render(
 		lipgloss.JoinVertical(
@@ -53,39 +54,4 @@ func ShowAlertModal(content string) error {
 		return fmt.Errorf("running alert modal: %w", err)
 	}
 	return nil
-}
-
-type embeddableAlertModal struct {
-	content  string
-	quitting bool
-}
-
-func NewEmbeddableAlertModal(content string) *embeddableAlertModal {
-	return &embeddableAlertModal{content: content}
-}
-
-func (m *embeddableAlertModal) Update(msg tea.Msg) bool {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc, tea.KeyEnter:
-			m.quitting = true
-			return true
-		}
-	}
-	return false
-}
-
-func (m *embeddableAlertModal) View() string {
-	helpStyle := lipgloss.NewStyle().
-		Foreground(colorVeryMuted)
-
-	return modalFrame().Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.content,
-			"\n",
-			helpStyle.Render("[Esc/Enter] Dismiss"),
-		),
-	)
 }

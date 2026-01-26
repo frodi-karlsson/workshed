@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -93,7 +94,7 @@ No workspaces found. Create one with:
 
 `, lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorError).
+		Foreground(components.ColorError).
 		Render("No workspaces available"))
 
 	docStyle = modalFrame()
@@ -127,9 +128,9 @@ func (s *Selector) Run(ctx context.Context) (string, error) {
 	l.SetFilteringEnabled(true)
 	l.SetShowStatusBar(false)
 	l.SetShowHelp(false)
-	l.Styles.NoItems = lipgloss.NewStyle().Foreground(colorVeryMuted)
-	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(colorMuted)
-	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(colorMuted)
+	l.Styles.NoItems = lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
+	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
+	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
 	applyTitleStyle(&l)
 
 	m := model{

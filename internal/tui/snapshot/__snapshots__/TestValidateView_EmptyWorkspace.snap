@@ -89,8 +89,9 @@ TestValidateView_EmptyWorkspace
         "Handle": "test-ws",
         "Valid": false,
         "SectionCnt": 0,
-        "ErrorCnt": 0,
-        "WarnCnt": 0
+        "ErrorCnt": 1,
+        "WarnCnt": 0,
+        "ErrMsg": ""
       }
     }
   ]

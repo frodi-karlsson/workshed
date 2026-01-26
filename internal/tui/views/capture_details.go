@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -53,40 +52,64 @@ func (v *CaptureDetailsView) Cancel() {
 	v.loading = false
 }
 
+func (v *CaptureDetailsView) KeyBindings() []KeyBinding {
+	if v.done {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+			{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
+		}
+	}
+	if v.confirm {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Apply", Action: v.apply},
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		}
+	}
+	if !v.preflight.Valid {
+		return []KeyBinding{
+			{Key: "esc", Help: "[Esc] Back", Action: v.cancel},
+		}
+	}
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Apply", Action: v.confirmApply},
+		{Key: "esc", Help: "[Esc] Back", Action: v.cancel},
+	}
+}
+
+func (v *CaptureDetailsView) confirmApply() (ViewResult, tea.Cmd) {
+	if !v.preflight.Valid {
+		return ViewResult{}, nil
+	}
+	v.confirm = true
+	return ViewResult{}, nil
+}
+
+func (v *CaptureDetailsView) apply() (ViewResult, tea.Cmd) {
+	v.loading = true
+	go func() {
+		err := v.store.ApplyCapture(v.ctx, v.handle, v.captureID)
+		v.loading = false
+		if err == nil {
+			v.done = true
+		}
+	}()
+	return ViewResult{}, nil
+}
+
+func (v *CaptureDetailsView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *CaptureDetailsView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *CaptureDetailsView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
-	if v.loading {
-		return ViewResult{}, nil
-	}
-
-	if key.IsEnter(msg) {
-		if v.done {
-			return ViewResult{Action: StackPop{}}, nil
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
-
-		if v.confirm {
-			v.loading = true
-			go func() {
-				err := v.store.ApplyCapture(v.ctx, v.handle, v.captureID)
-				v.loading = false
-				if err == nil {
-					v.done = true
-				}
-			}()
-			return ViewResult{}, nil
-		}
-
-		if !v.preflight.Valid {
-			return ViewResult{}, nil
-		}
-
-		v.confirm = true
-		return ViewResult{}, nil
 	}
-
 	return ViewResult{}, nil
 }
 

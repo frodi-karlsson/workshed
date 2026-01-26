@@ -66,70 +66,90 @@ func (v *TemplateConfigView) IsLoading() bool {
 }
 func (v *TemplateConfigView) Cancel() {}
 
-func (v *TemplateConfigView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEsc, tea.KeyCtrlC:
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyEnter:
-			if !v.varsInputMode {
-				path := strings.TrimSpace(v.pathInput.Value())
-				if path != "" {
-					info, err := os.Stat(path)
-					if err != nil {
-						v.errorMsg = "Path does not exist: " + path
-						v.pathInput.SetValue("")
-						return ViewResult{}, nil
-					}
-					if !info.IsDir() {
-						v.errorMsg = "Not a directory: " + path
-						v.pathInput.SetValue("")
-						return ViewResult{}, nil
-					}
-				}
-				v.template = path
-				v.varsInputMode = true
-				return ViewResult{}, textinput.Blink
-			} else {
-				varInput := strings.TrimSpace(v.varsInput.Value())
-				if varInput != "" {
-					parts := strings.SplitN(varInput, "=", 2)
-					if len(parts) == 2 {
-						v.templateVars[parts[0]] = parts[1]
-					}
-				}
-				v.varsInput = textinput.New()
-				v.varsInput.Placeholder = "key=value (press Enter to add, leave empty to finish)"
-				v.varsInput.Prompt = "> "
-				v.varsInput.CharLimit = 100
-				v.varsInput.Focus()
-				return ViewResult{}, textinput.Blink
-			}
-		case tea.KeyRight:
-			if !v.varsInputMode {
-				v.varsInputMode = true
-				return ViewResult{}, textinput.Blink
-			}
-		case tea.KeyLeft:
-			if v.varsInputMode {
-				v.varsInputMode = false
-				return ViewResult{}, textinput.Blink
-			}
-		}
-
-		if !v.varsInputMode {
-			_, cmd := v.pathInput.Update(msg)
-			v.errorMsg = ""
-			return ViewResult{}, cmd
-		} else {
-			updated, cmd := v.varsInput.Update(msg)
-			v.varsInput = updated
-			return ViewResult{}, cmd
+func (v *TemplateConfigView) KeyBindings() []KeyBinding {
+	if v.varsInputMode {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Add variable", Action: v.addVariable},
+			{Key: "left", Help: "[←] Back to path", Action: v.backToPath},
+			{Key: "esc", Help: "[Esc] Finish", Action: v.finish},
 		}
 	}
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Next", Action: v.nextToVars},
+		{Key: "right", Help: "[→] Skip", Action: v.skipToVars},
+		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
+	}
+}
 
-	return ViewResult{}, nil
+func (v *TemplateConfigView) nextToVars() (ViewResult, tea.Cmd) {
+	path := strings.TrimSpace(v.pathInput.Value())
+	if path != "" {
+		info, err := os.Stat(path)
+		if err != nil {
+			v.errorMsg = "Path does not exist: " + path
+			v.pathInput.SetValue("")
+			return ViewResult{}, nil
+		}
+		if !info.IsDir() {
+			v.errorMsg = "Not a directory: " + path
+			v.pathInput.SetValue("")
+			return ViewResult{}, nil
+		}
+	}
+	v.template = path
+	v.varsInputMode = true
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *TemplateConfigView) skipToVars() (ViewResult, tea.Cmd) {
+	v.varsInputMode = true
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *TemplateConfigView) addVariable() (ViewResult, tea.Cmd) {
+	varInput := strings.TrimSpace(v.varsInput.Value())
+	if varInput != "" {
+		parts := strings.SplitN(varInput, "=", 2)
+		if len(parts) == 2 {
+			v.templateVars[parts[0]] = parts[1]
+		}
+	}
+	v.varsInput = textinput.New()
+	v.varsInput.Placeholder = "key=value (press Enter to add, leave empty to finish)"
+	v.varsInput.Prompt = "> "
+	v.varsInput.CharLimit = 100
+	v.varsInput.Focus()
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *TemplateConfigView) backToPath() (ViewResult, tea.Cmd) {
+	v.varsInputMode = false
+	return ViewResult{}, textinput.Blink
+}
+
+func (v *TemplateConfigView) goBack() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *TemplateConfigView) finish() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *TemplateConfigView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
+		}
+	}
+	if !v.varsInputMode {
+		_, cmd := v.pathInput.Update(msg)
+		v.errorMsg = ""
+		return ViewResult{}, cmd
+	}
+	updated, cmd := v.varsInput.Update(msg)
+	v.varsInput = updated
+	return ViewResult{}, cmd
 }
 
 func (v *TemplateConfigView) View() string {

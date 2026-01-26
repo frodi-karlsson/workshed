@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -53,33 +52,52 @@ func (v *modal_ExecView) IsLoading() bool {
 
 func (v *modal_ExecView) Cancel() {}
 
+func (v *modal_ExecView) KeyBindings() []KeyBinding {
+	if v.done {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+			{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
+		}
+	}
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Run", Action: v.run},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Cancel", Action: v.cancel},
+	}
+}
+
+func (v *modal_ExecView) run() (ViewResult, tea.Cmd) {
+	results, err := v.store.Exec(v.ctx, v.handle, workspace.ExecOptions{
+		Command: strings.Fields(v.input.Value()),
+	})
+	if err != nil {
+		errView := NewErrorView(err)
+		return ViewResult{NextView: errView}, nil
+	}
+	v.result = results
+	v.done = true
+	return ViewResult{}, nil
+}
+
+func (v *modal_ExecView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *modal_ExecView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *modal_ExecView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
-	if key.IsEnter(msg) {
-		if v.done {
-			return ViewResult{Action: StackPop{}}, nil
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
-		results, err := v.store.Exec(v.ctx, v.handle, workspace.ExecOptions{
-			Command: strings.Fields(v.input.Value()),
-		})
-		if err != nil {
-			errView := NewErrorView(err)
-			return ViewResult{NextView: errView}, nil
-		}
-		v.result = results
-		v.done = true
-		return ViewResult{}, nil
 	}
-
 	if !v.done {
 		updatedInput, cmd := v.input.Update(msg)
 		v.input = updatedInput
 		return ViewResult{}, cmd
 	}
-
 	return ViewResult{}, nil
 }
 

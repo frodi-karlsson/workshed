@@ -4,7 +4,6 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -64,15 +63,37 @@ func (v *CapturesMenuView) Cancel() {
 	v.loading = false
 }
 
-func (v *CapturesMenuView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
+func (v *CapturesMenuView) KeyBindings() []KeyBinding {
+	bindings := []KeyBinding{
+		{Key: "n", Help: "[n] New", Action: v.createNew},
+		{Key: "c", Help: "[c] New", Action: v.createNew},
+		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
 	}
+	if len(v.captures) > 0 {
+		bindings = append(bindings, KeyBinding{Key: "l", Help: "[l] List", Action: v.listCaptures})
+	}
+	return bindings
+}
 
+func (v *CapturesMenuView) createNew() (ViewResult, tea.Cmd) {
+	createView := NewCaptureCreateView(v.store, v.ctx, v.handle)
+	return ViewResult{NextView: createView}, nil
+}
+
+func (v *CapturesMenuView) listCaptures() (ViewResult, tea.Cmd) {
+	listView := NewCaptureListView(v.store, v.ctx, v.handle)
+	return ViewResult{NextView: listView}, nil
+}
+
+func (v *CapturesMenuView) goBack() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *CapturesMenuView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	if v.loading {
 		return ViewResult{}, nil
 	}
-
 	if len(v.captures) == 0 {
 		captures, err := v.store.ListCaptures(v.ctx, v.handle)
 		if err == nil {
@@ -80,30 +101,27 @@ func (v *CapturesMenuView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 			v.updateMenuForCaptures()
 		}
 	}
-
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyEnter:
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if km.Type == tea.KeyRunes && len(km.Runes) == 1 {
+			key := string(km.Runes[0])
+			selected := v.menu.SelectByKey(key)
+			if selected != nil {
+				return v.handleMenuAction(key), nil
+			}
+		}
+		if km.Type == tea.KeyEnter {
 			selected := v.menu.SelectedItem()
 			if selected != nil {
 				return v.handleMenuAction(selected.Key), nil
 			}
-			return ViewResult{}, nil
-		case tea.KeyRunes:
-			if len(msg.Runes) == 1 {
-				key := string(msg.Runes[0])
-				selected := v.menu.SelectByKey(key)
-				if selected != nil {
-					return v.handleMenuAction(key), nil
-				}
-			}
 		}
-		v.menu.Update(msg)
+		v.menu.Update(km)
 	}
-
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
+		}
+	}
 	return ViewResult{}, nil
 }
 

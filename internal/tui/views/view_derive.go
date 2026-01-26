@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -51,18 +50,30 @@ func (v *view_DeriveView) IsLoading() bool {
 
 func (v *view_DeriveView) Cancel() {}
 
+func (v *view_DeriveView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Copy JSON", Action: v.copyJSON},
+		{Key: "esc", Help: "[Esc] Close", Action: v.close},
+	}
+}
+
+func (v *view_DeriveView) copyJSON() (ViewResult, tea.Cmd) {
+	if v.context != nil {
+		v.copied = true
+	}
+	return ViewResult{}, nil
+}
+
+func (v *view_DeriveView) close() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *view_DeriveView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
-	if key.IsEnter(msg) {
-		if v.context != nil {
-			v.copied = true
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
-		return ViewResult{}, nil
 	}
-
 	return ViewResult{}, nil
 }
 

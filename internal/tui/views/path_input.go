@@ -54,31 +54,43 @@ func (v *PathInputView) IsLoading() bool {
 }
 func (v *PathInputView) Cancel() {}
 
+func (v *PathInputView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Select", Action: v.doSelect},
+		{Key: "tab", Help: "[Tab] Complete", Action: nil},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.doCancel},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Cancel", Action: v.doCancel},
+	}
+}
+
+func (v *PathInputView) doSelect() (ViewResult, tea.Cmd) {
+	value := strings.TrimSpace(v.textInput.Value())
+	if value != "" {
+		absPath, _ := filepath.Abs(value)
+		if v.onSelect != nil {
+			v.onSelect(absPath)
+		}
+		return ViewResult{Action: StackPop{}}, nil
+	}
+	return ViewResult{}, nil
+}
+
+func (v *PathInputView) doCancel() (ViewResult, tea.Cmd) {
+	if v.onCancel != nil {
+		v.onCancel()
+	}
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *PathInputView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEsc, tea.KeyCtrlC:
-			if v.onCancel != nil {
-				v.onCancel()
-			}
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyEnter:
-			value := strings.TrimSpace(v.textInput.Value())
-			if value != "" {
-				absPath, _ := filepath.Abs(value)
-				if v.onSelect != nil {
-					v.onSelect(absPath)
-				}
-				return ViewResult{Action: StackPop{}}, nil
-			}
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
 	}
-
 	updatedInput, cmd := v.textInput.Update(msg)
 	v.textInput = updatedInput
 	v.value = v.textInput.Value()
-
 	return ViewResult{}, cmd
 }
 

@@ -378,6 +378,21 @@ func (m *MenuModel) View() string {
 	body := lipgloss.JoinVertical(lipgloss.Left, lines...)
 	indicator := m.renderPageIndicator()
 
+	bodyHeight := m.height - 1
+	if indicator != "" {
+		bodyHeight -= 2
+	}
+
+	body = lipgloss.NewStyle().Width(m.width).Height(bodyHeight).Render(body)
+
+	if indicator != "" {
+		indicator = lipgloss.NewStyle().
+			Width(m.width).
+			Align(lipgloss.Center).
+			MarginTop(1).
+			Render(indicator)
+	}
+
 	return lipgloss.JoinVertical(lipgloss.Left, body, indicator)
 }
 

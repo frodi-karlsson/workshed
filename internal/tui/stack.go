@@ -7,7 +7,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/tui/views"
@@ -66,7 +65,7 @@ func (m StackModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SetSize(size)
 		return m, nil
 	case tea.KeyMsg:
-		if key.IsCancel(msg) {
+		if msg.Type == tea.KeyEsc || msg.Type == tea.KeyCtrlC {
 			top := m.stack[len(m.stack)-1]
 			if top.IsLoading() {
 				top.Cancel()

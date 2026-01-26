@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -52,15 +51,59 @@ func (v *CaptureListView) Cancel() {
 	v.loading = false
 }
 
-func (v *CaptureListView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
+func (v *CaptureListView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "up", Help: "[↑] Navigate", Action: v.moveUp, When: v.hasCaptures},
+		{Key: "down", Help: "[↓] Navigate", Action: v.moveDown, When: v.hasCaptures},
+		{Key: "enter", Help: "[Enter] Details", Action: v.openDetails, When: v.hasSelection},
+		{Key: "n", Help: "[n] New", Action: v.createNew},
+		{Key: "c", Help: "[c] New", Action: v.createNew},
+		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
 	}
+}
 
+func (v *CaptureListView) hasCaptures() bool {
+	return len(v.captures) > 0
+}
+
+func (v *CaptureListView) hasSelection() bool {
+	return v.selected >= 0 && v.selected < len(v.captures)
+}
+
+func (v *CaptureListView) moveUp() (ViewResult, tea.Cmd) {
+	if v.selected > 0 {
+		v.selected--
+	}
+	return ViewResult{}, nil
+}
+
+func (v *CaptureListView) moveDown() (ViewResult, tea.Cmd) {
+	if v.selected < len(v.captures)-1 {
+		v.selected++
+	}
+	return ViewResult{}, nil
+}
+
+func (v *CaptureListView) openDetails() (ViewResult, tea.Cmd) {
+	capture := v.captures[v.selected]
+	detailsView := NewCaptureDetailsView(v.store, v.ctx, v.handle, capture.ID)
+	return ViewResult{NextView: detailsView}, nil
+}
+
+func (v *CaptureListView) createNew() (ViewResult, tea.Cmd) {
+	createView := NewCaptureCreateView(v.store, v.ctx, v.handle)
+	return ViewResult{NextView: createView}, nil
+}
+
+func (v *CaptureListView) goBack() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *CaptureListView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	if v.loading {
 		return ViewResult{}, nil
 	}
-
 	if len(v.captures) == 0 {
 		captures, err := v.store.ListCaptures(v.ctx, v.handle)
 		if err == nil {
@@ -70,41 +113,11 @@ func (v *CaptureListView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 			}
 		}
 	}
-
-	if key.IsDown(msg) {
-		if v.selected < len(v.captures)-1 {
-			v.selected++
-		}
-	} else if km, ok := msg.(tea.KeyMsg); ok && len(km.Runes) == 1 {
-		if string(km.Runes[0]) == "j" && v.selected < len(v.captures)-1 {
-			v.selected++
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
 	}
-
-	if key.IsUp(msg) {
-		if v.selected > 0 {
-			v.selected--
-		}
-	} else if km, ok := msg.(tea.KeyMsg); ok && len(km.Runes) == 1 {
-		if string(km.Runes[0]) == "k" && v.selected > 0 {
-			v.selected--
-		}
-	}
-
-	if key.IsEnter(msg) && v.selected >= 0 && v.selected < len(v.captures) {
-		capture := v.captures[v.selected]
-		detailsView := NewCaptureDetailsView(v.store, v.ctx, v.handle, capture.ID)
-		return ViewResult{NextView: detailsView}, nil
-	}
-
-	if km, ok := msg.(tea.KeyMsg); ok && len(km.Runes) == 1 {
-		key := string(km.Runes[0])
-		if key == "n" || key == "c" {
-			createView := NewCaptureCreateView(v.store, v.ctx, v.handle)
-			return ViewResult{NextView: createView}, nil
-		}
-	}
-
 	return ViewResult{}, nil
 }
 
@@ -133,7 +146,7 @@ func (v *CaptureListView) View() string {
 
 	if len(v.captures) == 0 {
 		content += subStyle.Render("No captures yet")
-		content += "\n\n" + dimStyle.Render("[n/c] Create capture  [Esc] Back")
+		content += "\n\n" + dimStyle.Render(GenerateHelp(v.KeyBindings()))
 		return ModalFrame(v.size).Render(content)
 	}
 
@@ -185,7 +198,7 @@ func (v *CaptureListView) View() string {
 		content += line + "\n"
 	}
 
-	content += "\n" + dimStyle.Render("[↑↓/j/k] Navigate  [Enter] Details  [n/c] New  [Esc] Back")
+	content += "\n" + dimStyle.Render(GenerateHelp(v.KeyBindings()))
 
 	return ModalFrame(v.size).Render(content)
 }

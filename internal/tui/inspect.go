@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -21,10 +22,10 @@ func ShowInspectModal(ctx context.Context, s workspace.Store, handle string) err
 func buildWorkspaceDetailContent(ws *workspace.Workspace) string {
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText)
+		Foreground(components.ColorText)
 
 	purposeStyle := lipgloss.NewStyle().
-		Foreground(colorSuccess)
+		Foreground(components.ColorSuccess)
 
 	var repoLines []string
 	for _, repo := range ws.Repositories {

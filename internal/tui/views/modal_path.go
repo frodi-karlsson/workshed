@@ -52,16 +52,23 @@ func (v *modal_PathView) IsLoading() bool {
 
 func (v *modal_PathView) Cancel() {}
 
+func (v *modal_PathView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
+		{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+		{Key: "q", Help: "[q] Dismiss", Action: v.dismiss},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Dismiss", Action: v.dismiss},
+	}
+}
+
+func (v *modal_PathView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *modal_PathView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc, tea.KeyEnter:
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyRunes:
-			if msg.String() == "q" {
-				return ViewResult{Action: StackPop{}}, nil
-			}
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
 	}
 	return ViewResult{}, nil

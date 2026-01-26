@@ -22,15 +22,3 @@ func WithEnvVar(t *testing.T, key, value string, fn func()) {
 	}
 	fn()
 }
-
-func SetEnvVar(t *testing.T, key, value string) {
-	if err := os.Setenv(key, value); err != nil {
-		t.Fatalf("Failed to set %s: %v", key, err)
-	}
-}
-
-func UnsetEnvVar(t *testing.T, key string) {
-	if err := os.Unsetenv(key); err != nil {
-		t.Fatalf("Failed to unset %s: %v", key, err)
-	}
-}

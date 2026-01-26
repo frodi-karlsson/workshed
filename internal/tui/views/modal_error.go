@@ -2,7 +2,6 @@ package views
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/measure"
 )
 
@@ -29,9 +28,22 @@ func (v *modal_ErrorView) IsLoading() bool {
 
 func (v *modal_ErrorView) Cancel() {}
 
+func (v *modal_ErrorView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
+		{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+	}
+}
+
+func (v *modal_ErrorView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *modal_ErrorView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) || key.IsEnter(msg) {
-		return ViewResult{Action: StackPop{}}, nil
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
+		}
 	}
 	return ViewResult{}, nil
 }

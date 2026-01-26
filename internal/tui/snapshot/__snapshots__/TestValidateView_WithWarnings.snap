@@ -87,10 +87,11 @@ TestValidateView_WithWarnings
       "Data": {
         "Type": "ValidateView",
         "Handle": "test-ws",
-        "Valid": false,
-        "SectionCnt": 0,
-        "ErrorCnt": 0,
-        "WarnCnt": 0
+        "Valid": true,
+        "SectionCnt": 4,
+        "ErrorCnt": 1,
+        "WarnCnt": 2,
+        "ErrMsg": ""
       }
     }
   ]

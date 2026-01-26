@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 func ErrorView(err error) string {
@@ -13,16 +14,16 @@ func ErrorView(err error) string {
 	wrappedMsg := wrapText(errorMsg, maxWidth)
 
 	return modalFrame().
-		BorderForeground(colorError).
+		BorderForeground(components.ColorError).
 		Width(maxWidth).
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
-				lipgloss.NewStyle().Bold(true).Foreground(colorError).Render("Error"),
+				lipgloss.NewStyle().Bold(true).Foreground(components.ColorError).Render("Error"),
 				"\n",
-				lipgloss.NewStyle().Foreground(colorText).Render(wrappedMsg),
+				lipgloss.NewStyle().Foreground(components.ColorText).Render(wrappedMsg),
 				"\n",
-				lipgloss.NewStyle().Foreground(colorVeryMuted).MarginTop(1).Render("[Enter] Dismiss  [q] Quit"),
+				lipgloss.NewStyle().Foreground(components.ColorVeryMuted).MarginTop(1).Render("[Enter] Dismiss  [q] Quit"),
 			),
 		)
 }

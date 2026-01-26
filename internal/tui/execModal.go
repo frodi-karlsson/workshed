@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -123,7 +124,7 @@ func (m execModel) View() string {
 
 	frameStyle := modalFrame()
 	if m.done {
-		frameStyle = frameStyle.BorderForeground(colorSuccess)
+		frameStyle = frameStyle.BorderForeground(components.ColorSuccess)
 	}
 
 	focusIndicator := ""
@@ -138,19 +139,19 @@ func (m execModel) View() string {
 			lipgloss.Left,
 			lipgloss.NewStyle().
 				Bold(true).
-				Foreground(colorText).
+				Foreground(components.ColorText).
 				Render("Command to run in \""+m.workspace.Handle+"\": "+focusIndicator),
 			"\n",
 			inputView,
 			"\n\n",
 			lipgloss.NewStyle().
-				Foreground(colorText).
+				Foreground(components.ColorText).
 				Render("Repositories (space to toggle):"),
 			"\n",
 			repoView,
 			"\n",
 			lipgloss.NewStyle().
-				Foreground(colorVeryMuted).
+				Foreground(components.ColorVeryMuted).
 				MarginTop(1).
 				Render("[Tab] Switch  [Space] Toggle  [Enter] Run  [Esc] Cancel"),
 		),

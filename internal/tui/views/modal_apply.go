@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -51,42 +50,62 @@ func (v *modal_ApplyView) Cancel() {
 	v.loading = false
 }
 
-func (v *modal_ApplyView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	if key.IsCancel(msg) {
-		return ViewResult{Action: StackPop{}}, nil
-	}
-
-	if v.loading {
-		return ViewResult{}, nil
-	}
-
+func (v *modal_ApplyView) KeyBindings() []KeyBinding {
 	if v.applySuccess {
-		if key.IsEnter(msg) || key.IsCancel(msg) {
-			return ViewResult{Action: StackPop{}}, nil
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Dismiss", Action: v.dismiss},
+			{Key: "esc", Help: "[Esc] Dismiss", Action: v.dismiss},
 		}
-		return ViewResult{}, nil
 	}
-
-	if key.IsEnter(msg) {
-		if v.confirm {
-			v.loading = true
-			go func() {
-				err := v.store.ApplyCapture(v.ctx, v.handle, v.capture.ID)
-				v.loading = false
-				if err == nil {
-					v.applySuccess = true
-				}
-			}()
-		} else {
-			v.confirm = true
+	if v.confirm {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Confirm", Action: v.confirmApply},
+			{Key: "backspace", Help: "[Backspace] Go back", Action: v.goBack},
+			{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
 		}
-		return ViewResult{}, nil
 	}
-
-	if km, ok := msg.(tea.KeyMsg); ok && km.Type == tea.KeyBackspace {
-		v.confirm = false
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Proceed", Action: v.proceed},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
 	}
+}
 
+func (v *modal_ApplyView) proceed() (ViewResult, tea.Cmd) {
+	v.confirm = true
+	return ViewResult{}, nil
+}
+
+func (v *modal_ApplyView) confirmApply() (ViewResult, tea.Cmd) {
+	v.loading = true
+	go func() {
+		err := v.store.ApplyCapture(v.ctx, v.handle, v.capture.ID)
+		v.loading = false
+		if err == nil {
+			v.applySuccess = true
+		}
+	}()
+	return ViewResult{}, nil
+}
+
+func (v *modal_ApplyView) goBack() (ViewResult, tea.Cmd) {
+	v.confirm = false
+	return ViewResult{}, nil
+}
+
+func (v *modal_ApplyView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *modal_ApplyView) dismiss() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
+func (v *modal_ApplyView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
+		}
+	}
 	return ViewResult{}, nil
 }
 

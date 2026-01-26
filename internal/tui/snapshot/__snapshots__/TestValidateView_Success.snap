@@ -87,10 +87,11 @@ TestValidateView_Success
       "Data": {
         "Type": "ValidateView",
         "Handle": "test-ws",
-        "Valid": false,
-        "SectionCnt": 0,
+        "Valid": true,
+        "SectionCnt": 4,
         "ErrorCnt": 0,
-        "WarnCnt": 0
+        "WarnCnt": 0,
+        "ErrMsg": ""
       }
     }
   ]

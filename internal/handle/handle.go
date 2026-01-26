@@ -8,24 +8,6 @@ import (
 
 type GeneratorOption func(*Generator)
 
-func WithAdjectives(adjs []string) GeneratorOption {
-	return func(g *Generator) {
-		g.adjectives = adjs
-	}
-}
-
-func WithNouns(ns []string) GeneratorOption {
-	return func(g *Generator) {
-		g.nouns = ns
-	}
-}
-
-func WithVerbs(vs []string) GeneratorOption {
-	return func(g *Generator) {
-		g.verbs = vs
-	}
-}
-
 // Generator creates random handles in the format adjective-noun-verb
 type Generator struct {
 	adjectives []string

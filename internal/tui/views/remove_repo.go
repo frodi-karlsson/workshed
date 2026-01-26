@@ -103,53 +103,56 @@ func (v *RemoveRepoView) refreshWorkspace() error {
 	return nil
 }
 
+func (v *RemoveRepoView) KeyBindings() []KeyBinding {
+	if v.err != nil {
+		return []KeyBinding{
+			{Key: "enter", Help: "[Enter] Retry", Action: v.retry},
+			{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
+		}
+	}
+	return []KeyBinding{
+		{Key: "up", Help: "[↑] Navigate", Action: nil},
+		{Key: "down", Help: "[↓] Navigate", Action: nil},
+		{Key: "enter", Help: "[Enter] Select", Action: v.selectToRemove},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.goBack},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Cancel", Action: v.goBack},
+	}
+}
+
+func (v *RemoveRepoView) retry() (ViewResult, tea.Cmd) {
+	v.err = nil
+	_ = v.refreshWorkspace()
+	return ViewResult{}, nil
+}
+
+func (v *RemoveRepoView) selectToRemove() (ViewResult, tea.Cmd) {
+	selected := v.list.SelectedItem()
+	if selected != nil {
+		if ri, ok := selected.(RepoItem); ok {
+			return ViewResult{
+				NextView: NewRemoveRepoConfirmView(v.store, v.ctx, v.handle, ri.repo.Name),
+			}, nil
+		}
+	}
+	return ViewResult{}, nil
+}
+
+func (v *RemoveRepoView) goBack() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *RemoveRepoView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	if v.stale {
 		return ViewResult{Action: StackPop{}}, nil
 	}
-
-	if v.err != nil {
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			if msg.Type == tea.KeyEnter {
-				v.err = nil
-				_ = v.refreshWorkspace()
-				return ViewResult{}, nil
-			}
-			if msg.Type == tea.KeyEsc {
-				return ViewResult{Action: StackPop{}}, nil
-			}
-		}
-		return ViewResult{}, nil
-	}
-
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		v.list.SetSize(40, 15)
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyEnter:
-			selected := v.list.SelectedItem()
-			if selected != nil {
-				if ri, ok := selected.(RepoItem); ok {
-					return v.confirmRemove(ri.repo), nil
-				}
-			}
-			return ViewResult{}, nil
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
 	}
-
 	var cmd tea.Cmd
 	v.list, cmd = v.list.Update(msg)
 	return ViewResult{}, cmd
-}
-
-func (v *RemoveRepoView) confirmRemove(repo *workspace.Repository) ViewResult {
-	return ViewResult{
-		NextView: NewRemoveRepoConfirmView(v.store, v.ctx, v.handle, repo.Name),
-	}
 }
 
 func (v *RemoveRepoView) View() string {
@@ -179,7 +182,7 @@ func (v *RemoveRepoView) View() string {
 			lipgloss.NewStyle().
 				Foreground(components.ColorVeryMuted).
 				MarginTop(1).
-				Render("[↑↓/j/k] Navigate  [Enter] Select to remove  [Esc] Cancel"),
+				Render(GenerateHelp(v.KeyBindings())),
 	)
 }
 
@@ -235,19 +238,30 @@ func (v *RemoveRepoConfirmView) IsLoading() bool {
 
 func (v *RemoveRepoConfirmView) Cancel() {}
 
+func (v *RemoveRepoConfirmView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Confirm", Action: v.confirm},
+		{Key: "esc", Help: "[Esc] Cancel", Action: v.cancel},
+	}
+}
+
+func (v *RemoveRepoConfirmView) confirm() (ViewResult, tea.Cmd) {
+	err := v.store.RemoveRepository(v.ctx, v.handle, v.repoName)
+	if err != nil {
+		v.err = err
+		return ViewResult{}, nil
+	}
+	return ViewResult{Action: StackPopCount{Count: 2}}, nil
+}
+
+func (v *RemoveRepoConfirmView) cancel() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *RemoveRepoConfirmView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEsc:
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyEnter:
-			err := v.store.RemoveRepository(v.ctx, v.handle, v.repoName)
-			if err != nil {
-				v.err = err
-				return ViewResult{}, nil
-			}
-			return ViewResult{Action: StackPopCount{Count: 2}}, nil
+	if km, ok := msg.(tea.KeyMsg); ok {
+		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
+			return result, nil
 		}
 	}
 	return ViewResult{}, nil

@@ -95,6 +95,26 @@ func (v *ContextMenuView) IsLoading() bool {
 
 func (v *ContextMenuView) Cancel() {}
 
+func (v *ContextMenuView) KeyBindings() []KeyBinding {
+	return []KeyBinding{
+		{Key: "enter", Help: "[Enter] Select", Action: v.selectCurrent},
+		{Key: "esc", Help: "[Esc] Back", Action: v.goBack},
+		{Key: "ctrl+c", Help: "[Ctrl+C] Back", Action: v.goBack},
+	}
+}
+
+func (v *ContextMenuView) selectCurrent() (ViewResult, tea.Cmd) {
+	selected := v.menu.SelectedItem()
+	if selected != nil {
+		return v.handleMenuAction(selected.Key), nil
+	}
+	return ViewResult{}, nil
+}
+
+func (v *ContextMenuView) goBack() (ViewResult, tea.Cmd) {
+	return ViewResult{Action: StackPop{}}, nil
+}
+
 func (v *ContextMenuView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	if v.stale {
 		return ViewResult{Action: StackPop{}}, nil
@@ -102,25 +122,25 @@ func (v *ContextMenuView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyEnter:
+		if msg.Type == tea.KeyRunes && len(msg.Runes) == 1 {
+			key := string(msg.Runes[0])
+			selected := v.menu.SelectByKey(key)
+			if selected != nil {
+				return v.handleMenuAction(key), nil
+			}
+		}
+		if msg.Type == tea.KeyEnter {
 			selected := v.menu.SelectedItem()
 			if selected != nil {
 				return v.handleMenuAction(selected.Key), nil
 			}
 			return ViewResult{}, nil
-		case tea.KeyRunes:
-			if len(msg.Runes) == 1 {
-				key := string(msg.Runes[0])
-				selected := v.menu.SelectByKey(key)
-				if selected != nil {
-					return v.handleMenuAction(key), nil
-				}
-			}
 		}
 		v.menu.Update(msg)
+
+		if result, _, handled := HandleKey(v.KeyBindings(), msg); handled {
+			return result, nil
+		}
 	}
 
 	return ViewResult{}, nil

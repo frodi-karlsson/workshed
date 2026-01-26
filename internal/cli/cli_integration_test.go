@@ -411,7 +411,25 @@ func TestRemove(t *testing.T) {
 		}
 	})
 
-	t.Run("should remove workspace with confirmation 'y'", func(t *testing.T) {
+	t.Run("should error if stdin is not a terminal", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.SetStdin("y\n")
+		env.ResetBuffers()
+		env.Runner().Remove([]string{})
+
+		if !env.ExitCalled() {
+			t.Error("Remove should exit when stdin is not a terminal")
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "non-terminal") {
+			t.Errorf("Remove output should mention non-terminal, got: %s", output)
+		}
+	})
+
+	t.Run("should remove workspace with --force flag", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
@@ -433,91 +451,8 @@ func TestRemove(t *testing.T) {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
 
-		env.SetStdin("y\n")
 		env.ResetBuffers()
-		env.Runner().Remove([]string{ws.Handle})
-
-		if env.ExitCalled() {
-			t.Fatalf("Remove exited unexpectedly: %s", env.ErrorOutput())
-		}
-
-		output := env.Output()
-		if !strings.Contains(output, "removed") {
-			t.Errorf("Remove output should mention workspace removed, got: %s", output)
-		}
-
-		_, err = store.Get(ctx, ws.Handle)
-		if err == nil {
-			t.Error("Workspace should have been removed")
-		}
-	})
-
-	t.Run("should not remove workspace with confirmation 'n'", func(t *testing.T) {
-		env := NewCLITestEnvironment(t)
-		defer env.Cleanup()
-
-		store, err := workspace.NewFSStore(env.TempDir)
-		if err != nil {
-			t.Fatalf("Failed to create store: %v", err)
-		}
-
-		ctx := context.Background()
-		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
-
-		ws, err := store.Create(ctx, workspace.CreateOptions{
-			Purpose: "Test workspace to keep",
-			Repositories: []workspace.RepositoryOption{
-				{URL: repoURL, Ref: "main"},
-			},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create workspace: %v", err)
-		}
-
-		env.SetStdin("n\n")
-		env.ResetBuffers()
-		env.Runner().Remove([]string{ws.Handle})
-
-		if env.ExitCalled() {
-			t.Fatalf("Remove exited unexpectedly: %s", env.ErrorOutput())
-		}
-
-		output := env.Output()
-		if !strings.Contains(output, "cancelled") {
-			t.Errorf("Remove output should mention operation cancelled, got: %s", output)
-		}
-
-		_, err = store.Get(ctx, ws.Handle)
-		if err != nil {
-			t.Error("Workspace should not have been removed")
-		}
-	})
-
-	t.Run("should not remove workspace with confirmation 'yes' (lowercase)", func(t *testing.T) {
-		env := NewCLITestEnvironment(t)
-		defer env.Cleanup()
-
-		store, err := workspace.NewFSStore(env.TempDir)
-		if err != nil {
-			t.Fatalf("Failed to create store: %v", err)
-		}
-
-		ctx := context.Background()
-		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
-
-		ws, err := store.Create(ctx, workspace.CreateOptions{
-			Purpose: "Test workspace with yes confirmation",
-			Repositories: []workspace.RepositoryOption{
-				{URL: repoURL, Ref: "main"},
-			},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create workspace: %v", err)
-		}
-
-		env.SetStdin("yes\n")
-		env.ResetBuffers()
-		env.Runner().Remove([]string{ws.Handle})
+		env.Runner().Remove([]string{"--force", ws.Handle})
 
 		if env.ExitCalled() {
 			t.Fatalf("Remove exited unexpectedly: %s", env.ErrorOutput())
@@ -526,42 +461,6 @@ func TestRemove(t *testing.T) {
 		_, err = store.Get(ctx, ws.Handle)
 		if err == nil {
 			t.Error("Workspace should have been removed")
-		}
-	})
-
-	t.Run("should handle empty stdin gracefully", func(t *testing.T) {
-		env := NewCLITestEnvironment(t)
-		defer env.Cleanup()
-
-		store, err := workspace.NewFSStore(env.TempDir)
-		if err != nil {
-			t.Fatalf("Failed to create store: %v", err)
-		}
-
-		ctx := context.Background()
-		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
-
-		ws, err := store.Create(ctx, workspace.CreateOptions{
-			Purpose: "Test workspace no stdin",
-			Repositories: []workspace.RepositoryOption{
-				{URL: repoURL, Ref: "main"},
-			},
-		})
-		if err != nil {
-			t.Fatalf("Failed to create workspace: %v", err)
-		}
-
-		env.SetStdin("")
-		env.ResetBuffers()
-		env.Runner().Remove([]string{ws.Handle})
-
-		if !env.ExitCalled() {
-			t.Error("Remove should exit when stdin read fails")
-		}
-
-		output := env.Output()
-		if !strings.Contains(output, "input") && !strings.Contains(output, "read") {
-			t.Errorf("Remove output should mention input read error, got: %s", output)
 		}
 	})
 }
