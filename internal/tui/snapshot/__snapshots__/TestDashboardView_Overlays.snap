@@ -45,6 +45,8 @@ TestDashboardView_Overlays/wizard
         "Type": "WizardView",
         "Step": 0,
         "Purpose": "",
+        "Template": "",
+        "TemplateVarCount": 0,
         "RepoCount": 0,
         "FinishMode": false,
         "Loading": false,

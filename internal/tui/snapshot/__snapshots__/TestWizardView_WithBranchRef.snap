@@ -20,6 +20,8 @@ TestWizardView_WithBranchRef
         "Type": "WizardView",
         "Step": 1,
         "Purpose": "Feature development",
+        "Template": "",
+        "TemplateVarCount": 0,
         "RepoCount": 1,
         "FinishMode": false,
         "Loading": false,

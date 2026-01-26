@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,6 +56,12 @@ func (s *FSStore) Root() string {
 func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, error) {
 	if opts.Purpose == "" {
 		return nil, errors.New("purpose is required")
+	}
+
+	if opts.Template != "" {
+		if err := validateTemplatePath(opts.Template); err != nil {
+			return nil, fmt.Errorf("invalid template: %w", err)
+		}
 	}
 
 	repos := opts.Repositories
@@ -132,6 +139,15 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 			return nil, fmt.Errorf("writing metadata: %w; %v", err, cleanupErr)
 		}
 		return nil, fmt.Errorf("writing metadata: %w", err)
+	}
+
+	if opts.Template != "" {
+		if err := s.applyTemplate(ctx, opts.Template, opts.TemplateVars, tmpDir); err != nil {
+			if cleanupErr != nil {
+				return nil, fmt.Errorf("applying template: %w; %v", err, cleanupErr)
+			}
+			return nil, fmt.Errorf("applying template: %w", err)
+		}
 	}
 
 	if err := s.cloneRepositories(ctx, clonedRepos, tmpDir); err != nil {
@@ -244,6 +260,121 @@ func (s *FSStore) UpdatePurpose(ctx context.Context, handle string, purpose stri
 
 	if err := s.writeMetadataToDir(ws, ws.Path); err != nil {
 		return fmt.Errorf("updating purpose: %w", err)
+	}
+
+	return nil
+}
+
+// AddRepository adds a single repository to an existing workspace.
+func (s *FSStore) AddRepository(ctx context.Context, handle string, repo RepositoryOption) error {
+	return s.AddRepositories(ctx, handle, []RepositoryOption{repo})
+}
+
+// AddRepositories adds multiple repositories to an existing workspace.
+func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []RepositoryOption) error {
+	if len(repos) == 0 {
+		return errors.New("no repositories specified")
+	}
+
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return err
+	}
+
+	if err := validateRepositories(repos); err != nil {
+		return fmt.Errorf("invalid repository: %w", err)
+	}
+
+	seenURLs := make(map[string]bool)
+	seenNames := make(map[string]bool)
+	for _, r := range ws.Repositories {
+		seenURLs[r.URL] = true
+		seenNames[r.Name] = true
+	}
+
+	for _, opt := range repos {
+		if seenURLs[opt.URL] {
+			return fmt.Errorf("repository already exists: %s", opt.URL)
+		}
+		name := extractRepoName(opt.URL)
+		if seenNames[name] {
+			return fmt.Errorf("repository name already exists: %s", name)
+		}
+	}
+
+	clonedRepos := make([]Repository, len(repos))
+	for i, opt := range repos {
+		url := opt.URL
+		if isLocalPath(url) {
+			absPath, err := filepath.Abs(url)
+			if err != nil {
+				return fmt.Errorf("resolving local path %s: %w", url, err)
+			}
+			url = absPath
+		}
+
+		clonedRepos[i] = Repository{
+			URL:  url,
+			Ref:  opt.Ref,
+			Name: extractRepoName(opt.URL),
+		}
+	}
+
+	success := false
+	defer func() {
+		if !success {
+			for _, repo := range clonedRepos {
+				repoDir := filepath.Join(ws.Path, repo.Name)
+				_ = os.RemoveAll(repoDir)
+			}
+		}
+	}()
+
+	for _, repo := range clonedRepos {
+		if err := s.cloneRepo(ctx, repo, ws.Path); err != nil {
+			return fmt.Errorf("failed to clone %s: %w", repo.Name, err)
+		}
+	}
+
+	ws.Repositories = append(ws.Repositories, clonedRepos...)
+
+	if err := s.writeMetadataToDir(ws, ws.Path); err != nil {
+		return fmt.Errorf("updating metadata: %w", err)
+	}
+
+	success = true
+	return nil
+}
+
+// RemoveRepository removes a repository from an existing workspace.
+func (s *FSStore) RemoveRepository(ctx context.Context, handle string, repoName string) error {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return err
+	}
+
+	repo := ws.GetRepositoryByName(repoName)
+	if repo == nil {
+		return fmt.Errorf("repository not found: %s", repoName)
+	}
+
+	repoDir := filepath.Join(ws.Path, repo.Name)
+	if _, err := os.Stat(repoDir); err == nil {
+		if err := os.RemoveAll(repoDir); err != nil {
+			return fmt.Errorf("removing repository directory: %w", err)
+		}
+	}
+
+	newRepos := make([]Repository, 0, len(ws.Repositories)-1)
+	for _, r := range ws.Repositories {
+		if r.Name != repoName {
+			newRepos = append(newRepos, r)
+		}
+	}
+	ws.Repositories = newRepos
+
+	if err := s.writeMetadataToDir(ws, ws.Path); err != nil {
+		return fmt.Errorf("updating metadata: %w", err)
 	}
 
 	return nil
@@ -484,6 +615,26 @@ func validateRepoURL(url string) error {
 	return fmt.Errorf("unsupported URL (expected https://, git@, ssh://, git://, or a local path)")
 }
 
+func validateTemplatePath(path string) error {
+	if path == "" {
+		return nil
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("directory does not exist: %s", path)
+		}
+		return fmt.Errorf("accessing template: %w", err)
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("not a directory: %s", path)
+	}
+
+	return nil
+}
+
 func validateRepositories(repos []RepositoryOption) error {
 	seenURLs := make(map[string]bool)
 	seenNames := make(map[string]bool)
@@ -599,4 +750,67 @@ func extractRepoName(url string) string {
 	}
 
 	return ""
+}
+
+func (s *FSStore) applyTemplate(ctx context.Context, templatePath string, vars map[string]string, wsDir string) error {
+	absTemplatePath, err := filepath.Abs(templatePath)
+	if err != nil {
+		return fmt.Errorf("resolving template path: %w", err)
+	}
+
+	return filepath.Walk(absTemplatePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(absTemplatePath, path)
+		if err != nil {
+			return fmt.Errorf("calculating relative path: %w", err)
+		}
+		if relPath == "." {
+			return nil
+		}
+
+		substitutedPath := substituteVars(relPath, vars)
+
+		dstPath := filepath.Join(wsDir, substitutedPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+
+		return copyFile(path, dstPath, info.Mode())
+	})
+}
+
+func substituteVars(path string, vars map[string]string) string {
+	result := path
+	for key, value := range vars {
+		result = strings.ReplaceAll(result, "{{"+key+"}}", value)
+	}
+	return result
+}
+
+func copyFile(src, dst string, mode os.FileMode) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("opening source file: %w", err)
+	}
+	defer func() { _ = srcFile.Close() }()
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return fmt.Errorf("creating destination directory: %w", err)
+	}
+
+	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return fmt.Errorf("opening destination file: %w", err)
+	}
+	defer func() { _ = dstFile.Close() }()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("copying file: %w", err)
+	}
+
+	return nil
 }

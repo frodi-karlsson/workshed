@@ -43,6 +43,9 @@ type Store interface {
     UpdatePurpose(ctx context.Context, handle string, purpose string) error
     FindWorkspace(ctx context.Context, dir string) (*Workspace, error)
     Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error)
+    AddRepository(ctx context.Context, handle string, repo RepositoryOption) error
+    AddRepositories(ctx context.Context, handle string, repos []RepositoryOption) error
+    RemoveRepository(ctx context.Context, handle string, repoName string) error
 }
 ```
 
@@ -76,26 +79,52 @@ internal/workspace/
 
 Workspace creation is atomic:
 
-1. Validate inputs (purpose, repositories)
+1. Validate inputs (purpose, repositories, template)
 2. Generate unique handle
 3. Create temporary directory
 4. Write metadata to temp directory
-5. Clone repositories into temp directory
-6. Rename temp directory to final location
+5. Copy template directory (if provided)
+6. Clone repositories into temp directory
+7. Rename temp directory to final location
 
 On failure at any step:
 - Cleanup is automatic via `defer`
 - No artifacts remain in workspace root
 - Verified by integration tests
 
+### Template Support
+
+Workspaces can include a template directory that is copied into the workspace:
+
+- **Template directory**: Contents are copied to workspace root
+- **Variable substitution**: Use `{{key}}` in file/directory names, substitute with `--map key=value`
+- **Merge behavior**: Repository clones take precedence over template files (repos overwrite conflicts)
+- **Validation**: Template path must exist and be a directory (if provided)
+
 ### Repository Management
 
-Repositories are cloned during workspace creation:
+Repositories are typically cloned during workspace creation:
 
-- Local paths: Copied via git clone (not symlinked)
+- Local paths: Cloned via git clone (not symlinked)
 - Remote URLs: Cloned with specified ref (default: main)
 - Repository name: Derived from URL (last path component, stripped .git)
 - Validation: URL format, local path existence, git repository check
+
+#### Adding Repositories to Existing Workspaces
+
+`AddRepository()` and `AddRepositories()` add repositories to existing workspaces:
+
+1. Validate repository URL and uniqueness (no duplicate URLs or names)
+2. Clone repository into workspace directory
+3. Append to workspace metadata
+
+#### Removing Repositories
+
+`RemoveRepository()` removes a repository from a workspace:
+
+1. Remove repository directory from filesystem
+2. Remove repository from workspace metadata
+3. Handles orphaned directories gracefully (succeeds even if directory is already gone)
 
 ### Cleanup on Remove
 

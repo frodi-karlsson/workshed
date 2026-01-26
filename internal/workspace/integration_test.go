@@ -618,3 +618,573 @@ func TestMockGitIntegration(t *testing.T) {
 		}
 	})
 }
+
+func TestIntegrationAddRepository(t *testing.T) {
+	t.Run("should add single repository to workspace", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := CreateLocalGitRepo(t, "existing-repo", map[string]string{"file.txt": "content"})
+		repoURL2 := CreateLocalGitRepo(t, "new-repo", map[string]string{"new.txt": "new content"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL2, Ref: "main"})
+		if err != nil {
+			t.Fatalf("AddRepository failed: %v", err)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Get failed: %v", err)
+		}
+		if len(retrieved.Repositories) != 2 {
+			t.Errorf("Expected 2 repositories, got: %d", len(retrieved.Repositories))
+		}
+		if !strings.Contains(retrieved.Repositories[1].URL, "new-repo") {
+			t.Errorf("Expected new-repo URL, got: %s", retrieved.Repositories[1].URL)
+		}
+	})
+
+	t.Run("should add multiple repositories", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := CreateLocalGitRepo(t, "existing-repo", map[string]string{"file.txt": "content"})
+		repoURL2 := CreateLocalGitRepo(t, "new-repo-1", map[string]string{"file.txt": "content"})
+		repoURL3 := CreateLocalGitRepo(t, "new-repo-2", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.AddRepositories(ctx, ws.Handle, []RepositoryOption{
+			{URL: repoURL2, Ref: "main"},
+			{URL: repoURL3, Ref: "main"},
+		})
+		if err != nil {
+			t.Fatalf("AddRepositories failed: %v", err)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Get failed: %v", err)
+		}
+		if len(retrieved.Repositories) != 3 {
+			t.Errorf("Expected 3 repositories, got: %d", len(retrieved.Repositories))
+		}
+	})
+
+	t.Run("should reject duplicate URL", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL, Ref: "develop"})
+		if err == nil {
+			t.Error("Expected error for duplicate URL")
+		}
+		if !strings.Contains(err.Error(), "already exists") {
+			t.Errorf("Error should mention 'already exists', got: %v", err)
+		}
+	})
+
+	t.Run("should reject duplicate repository name", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+		repoURL2 := CreateLocalGitRepo(t, "another-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		_ = ws
+		_ = repoURL2
+
+		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL1, Ref: "develop"})
+		if err == nil {
+			t.Error("Expected error for same URL (different ref)")
+		}
+	})
+
+	t.Run("should fail for non-existent workspace", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		err = store.AddRepository(ctx, "non-existent", RepositoryOption{URL: repoURL})
+		if err == nil {
+			t.Error("Expected error for non-existent workspace")
+		}
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("Error should mention 'not found', got: %v", err)
+		}
+	})
+
+	t.Run("should fail with empty repository list", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.AddRepositories(ctx, ws.Handle, []RepositoryOption{})
+		if err == nil {
+			t.Error("Expected error for empty repository list")
+		}
+	})
+}
+
+func TestIntegrationRemoveRepository(t *testing.T) {
+	t.Run("should remove repository from workspace", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := CreateLocalGitRepo(t, "repo-to-keep", map[string]string{"keep.txt": "keep"})
+		repoURL2 := CreateLocalGitRepo(t, "repo-to-remove", map[string]string{"remove.txt": "remove"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+				{URL: repoURL2, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.RemoveRepository(ctx, ws.Handle, "repo-to-remove")
+		if err != nil {
+			t.Fatalf("RemoveRepository failed: %v", err)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Get failed: %v", err)
+		}
+		if len(retrieved.Repositories) != 1 {
+			t.Errorf("Expected 1 repository, got: %d", len(retrieved.Repositories))
+		}
+		if retrieved.Repositories[0].Name != "repo-to-keep" {
+			t.Errorf("Expected repo-to-keep, got: %s", retrieved.Repositories[0].Name)
+		}
+	})
+
+	t.Run("should remove last repository", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := CreateLocalGitRepo(t, "only-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Single repo workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.RemoveRepository(ctx, ws.Handle, "only-repo")
+		if err != nil {
+			t.Fatalf("RemoveRepository failed: %v", err)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Get failed: %v", err)
+		}
+		if len(retrieved.Repositories) != 0 {
+			t.Errorf("Expected 0 repositories, got: %d", len(retrieved.Repositories))
+		}
+	})
+
+	t.Run("should fail for non-existent repository", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		err = store.RemoveRepository(ctx, ws.Handle, "non-existent-repo")
+		if err == nil {
+			t.Error("Expected error for non-existent repository")
+		}
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("Error should mention 'not found', got: %v", err)
+		}
+	})
+
+	t.Run("should fail for non-existent workspace", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+
+		err = store.RemoveRepository(ctx, "non-existent", "some-repo")
+		if err == nil {
+			t.Error("Expected error for non-existent workspace")
+		}
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("Error should mention 'not found', got: %v", err)
+		}
+	})
+
+	t.Run("should handle already-deleted repo directory", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		os.RemoveAll(filepath.Join(ws.Path, "test-repo"))
+
+		err = store.RemoveRepository(ctx, ws.Handle, "test-repo")
+		if err != nil {
+			t.Fatalf("RemoveRepository should succeed even if directory is already gone: %v", err)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Get failed: %v", err)
+		}
+		if len(retrieved.Repositories) != 0 {
+			t.Errorf("Expected 0 repositories, got: %d", len(retrieved.Repositories))
+		}
+	})
+}
+
+func TestIntegrationTemplate(t *testing.T) {
+	t.Run("should copy template directory into workspace", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		templateDir := filepath.Join(root, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		templateFile := filepath.Join(templateDir, "config.json")
+		if err := os.WriteFile(templateFile, []byte(`{"key": "value"}`), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		subdir := filepath.Join(templateDir, "subdir")
+		if err := os.MkdirAll(subdir, 0755); err != nil {
+			t.Fatalf("Failed to create template subdirectory: %v", err)
+		}
+
+		subdirFile := filepath.Join(subdir, "nested.txt")
+		if err := os.WriteFile(subdirFile, []byte("nested content"), 0644); err != nil {
+			t.Fatalf("Failed to write nested file: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:      "Template test",
+			Template:     templateDir,
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		if !FileExists(filepath.Join(ws.Path, "config.json")) {
+			t.Error("Expected config.json from template")
+		}
+		if !FileExists(filepath.Join(ws.Path, "subdir", "nested.txt")) {
+			t.Error("Expected nested.txt from template")
+		}
+	})
+
+	t.Run("should apply variable substitution in template", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		templateDir := filepath.Join(root, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		templateFile := filepath.Join(templateDir, "{{env}}.json")
+		if err := os.WriteFile(templateFile, []byte(`{"env": "{{env}}"}`), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:  "Template var test",
+			Template: templateDir,
+			TemplateVars: map[string]string{
+				"env": "production",
+			},
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		if !FileExists(filepath.Join(ws.Path, "production.json")) {
+			t.Error("Expected production.json with variable substitution")
+		}
+	})
+
+	t.Run("should skip template when path is empty", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:      "No template test",
+			Template:     "",
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		if ws == nil {
+			t.Fatal("Expected workspace to be created")
+		}
+	})
+
+	t.Run("should error for non-existent template", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		_, err = store.Create(ctx, CreateOptions{
+			Purpose:      "Invalid template test",
+			Template:     "/non/existent/path",
+			Repositories: []RepositoryOption{},
+		})
+		if err == nil {
+			t.Error("Expected error for non-existent template")
+		}
+		if !strings.Contains(err.Error(), "does not exist") {
+			t.Errorf("Error should mention 'does not exist', got: %v", err)
+		}
+	})
+
+	t.Run("should error when template is a file, not directory", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		templateFile := filepath.Join(root, "template.txt")
+		if err := os.WriteFile(templateFile, []byte("content"), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		ctx := context.Background()
+		_, err = store.Create(ctx, CreateOptions{
+			Purpose:      "File instead of dir test",
+			Template:     templateFile,
+			Repositories: []RepositoryOption{},
+		})
+		if err == nil {
+			t.Error("Expected error when template is a file")
+		}
+		if !strings.Contains(err.Error(), "not a directory") {
+			t.Errorf("Error should mention 'not a directory', got: %v", err)
+		}
+	})
+
+	t.Run("should allow repo to overwrite template file", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		templateDir := filepath.Join(root, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		templateFile := filepath.Join(templateDir, "config.json")
+		if err := os.WriteFile(templateFile, []byte(`{"source": "template"}`), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		repoURL := CreateLocalGitRepo(t, "repo-with-config", map[string]string{"config.json": `{"source": "repo"}`})
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:  "Repo overwrites template test",
+			Template: templateDir,
+			Repositories: []RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		configPath := filepath.Join(ws.Path, "repo-with-config", "config.json")
+		content, err := os.ReadFile(configPath)
+		if err != nil {
+			t.Fatalf("Failed to read config.json: %v", err)
+		}
+		if !strings.Contains(string(content), "repo") {
+			t.Error("Expected repo content to overwrite template content")
+		}
+	})
+
+	t.Run("should handle multiple template variables", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		templateDir := filepath.Join(root, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		templateFile := filepath.Join(templateDir, "{{env}}-{{region}}-config.json")
+		if err := os.WriteFile(templateFile, []byte(`{"env": "{{env}}", "region": "{{region}}"}`), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:  "Multiple vars test",
+			Template: templateDir,
+			TemplateVars: map[string]string{
+				"env":    "staging",
+				"region": "us-west",
+			},
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		expectedFile := "staging-us-west-config.json"
+		if !FileExists(filepath.Join(ws.Path, expectedFile)) {
+			t.Errorf("Expected %s with variable substitution", expectedFile)
+		}
+	})
+}

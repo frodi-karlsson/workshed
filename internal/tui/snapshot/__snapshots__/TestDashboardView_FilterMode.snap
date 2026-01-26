@@ -45,7 +45,7 @@ TestDashboardView_FilterMode/filter_and_cancel
       "Type": "*views.DashboardView",
       "Data": {
         "Type": "DashboardView",
-        "FilterMode": true,
+        "FilterMode": false,
         "FilterQuery": "",
         "ItemCount": 1,
         "SelectedIndex": 0,

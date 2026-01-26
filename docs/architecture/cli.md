@@ -17,7 +17,7 @@ Create logger -> Parse flags -> Validate inputs -> Execute -> Handle errors
 ```
 
 Commands are functions in `internal/cli/`:
-- `Create`, `List`, `Inspect`, `Path`, `Exec`, `Remove`, `Update`
+- `Create`, `List`, `Inspect`, `Path`, `Exec`, `Remove`, `Update`, `Repo`
 
 ### Dependencies
 
@@ -84,6 +84,31 @@ Validation occurs at multiple levels:
 - Business logic validation
 - Repository URL validation
 
+### Repository Management Commands
+
+The `repo` command manages repositories within existing workspaces:
+
+```
+workshed repo add <handle> --repo url[@ref]...   # Add repositories
+workshed repo remove <handle> --repo <name>      # Remove repository
+```
+
+The `Repo` function dispatches to subcommands:
+
+```go
+func (r *Runner) Repo(args []string) {
+    subcommand := args[0]
+    switch subcommand {
+    case "add":
+        r.RepoAdd(args[1:])
+    case "remove":
+        r.RepoRemove(args[1:])
+    }
+}
+```
+
+Both subcommands follow the standard pattern but add validation for repository uniqueness (no duplicate URLs or names) and clone/remove operations.
+
 ## Error Handling and Logging
 
 ### Structured Logger
@@ -118,7 +143,7 @@ Errors include context. Exit codes indicate success/failure.
 The CLI provides both automation-friendly and interactive interfaces:
 
 - **CLI flags**: For scripts and automation
-- **TUI wizard**: For guided interactive use (when purpose is omitted)
+- **TUI dashboard**: For interactive use - run `workshed` to open the dashboard, then press 'c' to create a workspace
 
 ### Fallback Mechanism
 
@@ -192,8 +217,22 @@ Be specific and actionable:
 
 ```
 Error: missing required flag --purpose
-Usage: workshed create --purpose <purpose> [--repo url@ref]...
+Usage: workshed create --purpose <purpose> [--repo url@ref]... [--template <dir>] [--map key=value]...
 ```
+
+### Template Support
+
+The `create` command supports template directories with variable substitution:
+
+```
+workshed create --purpose "Task name" --template /path/to/template --map key=value
+```
+
+- `--template` copies a directory into the workspace
+- `--map` provides variables for substitution (`{{key}}` in filenames and content is replaced with value)
+- Multiple `--map` flags can be provided for multiple variables
+
+The workspace store handles template copying in `internal/workspace/store.go` via `Create` method.
 
 ## Aspirations
 

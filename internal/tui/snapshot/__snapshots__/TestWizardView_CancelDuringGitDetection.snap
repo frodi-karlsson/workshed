@@ -20,6 +20,8 @@ TestWizardView_CancelDuringGitDetection
         "Type": "WizardView",
         "Step": 1,
         "Purpose": "My project",
+        "Template": "",
+        "TemplateVarCount": 0,
         "RepoCount": 0,
         "FinishMode": false,
         "Loading": false,

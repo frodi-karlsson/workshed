@@ -20,6 +20,8 @@ TestWizardView_MultipleRepos
         "Type": "WizardView",
         "Step": 1,
         "Purpose": "API migration",
+        "Template": "",
+        "TemplateVarCount": 0,
         "RepoCount": 2,
         "FinishMode": false,
         "Loading": false,

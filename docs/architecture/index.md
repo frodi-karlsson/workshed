@@ -55,12 +55,13 @@ The CLI never imports TUI packages. When interactivity is needed, it falls back 
 
 ### CLI to TUI
 
-The CLI can invoke the TUI as a separate program when interactivity helps:
+The CLI can invoke the TUI for interactive workspace selection:
 
 ```
-CLI ──> tui.RunCreateWizard(ctx, store) ──> New bubble tea program
 CLI ──> tui.TrySelectWorkspace(ctx, store, err, l) ──> User selection
 ```
+
+For workspace creation, run `workshed` to open the dashboard, then press 'c' to use the embedded wizard.
 
 The TUI runs in its own process with its own event loop. Results are passed back through return values.
 
@@ -140,6 +141,9 @@ type store interface {
     UpdatePurpose(ctx context.Context, handle string, purpose string) error
     Remove(ctx context.Context, handle string) error
     Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error)
+    AddRepository(ctx context.Context, handle string, repo RepositoryOption) error
+    AddRepositories(ctx context.Context, handle string, repos []RepositoryOption) error
+    RemoveRepository(ctx context.Context, handle string, repoName string) error
 }
 ```
 

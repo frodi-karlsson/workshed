@@ -38,11 +38,18 @@ If `git worktree` is about checking out another branch, Workshed is about groupi
 ## Quick Start
 
 ```bash
-# Create a workspace (guided or with --purpose)
-workshed create --purpose "Debug payment timeout"
+# Create a workspace with purpose and repositories
+workshed create --purpose "Debug payment timeout" --repo github.com/org/service@main --repo ./local-lib
+
+# Create from template (copies template dir with variable substitution)
+workshed create --purpose "New feature" --template ~/templates/node --map env=prod --map version=1.0
 
 # Run commands in all repositories
 workshed exec -- make test
+
+# Add/remove repositories
+workshed repo add my-workspace --repo https://github.com/org/new-repo@main
+workshed repo remove my-workspace --repo new-repo
 
 # List and manage workspaces
 workshed list
@@ -87,6 +94,8 @@ Most commands work from within a workspace without specifying a handle — Works
 | `workshed inspect` | Show workspace details |
 | `workshed path` | Print workspace path |
 | `workshed exec -- <cmd>` | Run command in repositories |
+| `workshed repo add` | Add repository to workspace |
+| `workshed repo remove` | Remove repository from workspace |
 | `workshed update` | Update workspace purpose |
 | `workshed remove` | Delete a workspace |
 | `workshed --version` | Show version |
@@ -114,7 +123,9 @@ Default behavior when `WORKSHED_LOG_FORMAT` is unset or `human`. Set to `json` t
 
 - **Workspace selector** — Interactive list when auto-discovery fails (arrow keys/`j`/`k` to navigate, `Enter` to select)
 - **Purpose autocomplete** — Suggestions from existing purposes as you type
+- **Path completion** — Tab completes file/directory paths; ↑/↓ navigate suggestions; Esc dismisses
 - **Dashboard** — Full interactive workspace management
+- **Template support** — Configure template directory and variable substitution (`{{key}}` → value)
 
 ### Non-Interactive Fallback
 

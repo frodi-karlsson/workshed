@@ -36,6 +36,8 @@ func NewContextMenuView(s store.Store, ctx context.Context, handle string) Conte
 		MenuItem{key: "i", label: "Inspect", desc: "Show workspace details", selected: false},
 		MenuItem{key: "p", label: "Path", desc: "Copy path to clipboard", selected: false},
 		MenuItem{key: "e", label: "Exec", desc: "Run command in repositories", selected: false},
+		MenuItem{key: "a", label: "Add Repo", desc: "Add repository to workspace", selected: false},
+		MenuItem{key: "d", label: "Remove Repo", desc: "Remove repository", selected: false},
 		MenuItem{key: "u", label: "Update", desc: "Change workspace purpose", selected: false},
 		MenuItem{key: "r", label: "Remove", desc: "Delete workspace (confirm)", selected: false},
 	}
@@ -123,6 +125,12 @@ func (v ContextMenuView) handleMenuAction(key string) ViewResult {
 	case "e":
 		execView := NewExecView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: execView}
+	case "a":
+		addRepoView := NewAddRepoView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: &addRepoView}
+	case "d":
+		removeRepoView := NewRemoveRepoView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: removeRepoView}
 	case "u":
 		updateView := NewUpdateView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: updateView}

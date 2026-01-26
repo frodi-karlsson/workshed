@@ -65,6 +65,13 @@ type CreateOptions struct {
 	// Purpose describes the intended use of the workspace.
 	Purpose string
 
+	// Template is an optional directory whose contents will be copied into the workspace.
+	Template string
+
+	// TemplateVars provides variable substitutions for template file/directory names.
+	// Keys are matched against {{key}} patterns and replaced with their values.
+	TemplateVars map[string]string
+
 	// Repositories specifies the repositories to include in the workspace.
 	Repositories []RepositoryOption
 }
@@ -102,4 +109,13 @@ type Store interface {
 
 	// Exec runs a command in all repositories belonging to a workspace.
 	Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error)
+
+	// AddRepository adds a repository to an existing workspace.
+	AddRepository(ctx context.Context, handle string, repo RepositoryOption) error
+
+	// AddRepositories adds multiple repositories to an existing workspace.
+	AddRepositories(ctx context.Context, handle string, repos []RepositoryOption) error
+
+	// RemoveRepository removes a repository from an existing workspace.
+	RemoveRepository(ctx context.Context, handle string, repoName string) error
 }

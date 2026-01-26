@@ -55,12 +55,6 @@ func (m StackModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			top.Cancel()
 			return m, nil
 		}
-		if len(m.stack) == 1 {
-			return m, tea.Quit
-		}
-		m.stack = m.stack[:len(m.stack)-1]
-		m.stack[len(m.stack)-1].OnResume()
-		return m, nil
 	}
 
 	top := m.stack[len(m.stack)-1]

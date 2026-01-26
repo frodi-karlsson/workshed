@@ -175,6 +175,18 @@ func (s *mockStore) Exec(ctx context.Context, handle string, opts workspace.Exec
 	return nil, nil
 }
 
+func (s *mockStore) AddRepository(ctx context.Context, handle string, repo workspace.RepositoryOption) error {
+	return nil
+}
+
+func (s *mockStore) AddRepositories(ctx context.Context, handle string, repos []workspace.RepositoryOption) error {
+	return nil
+}
+
+func (s *mockStore) RemoveRepository(ctx context.Context, handle string, repoName string) error {
+	return nil
+}
+
 func (s *mockStore) GetGit() git.Git {
 	return s.mockGit
 }

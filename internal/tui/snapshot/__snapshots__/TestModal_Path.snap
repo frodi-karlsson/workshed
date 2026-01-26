@@ -36,6 +36,16 @@ TestModal_Path/view
             "Desc": "Run command in repositories"
           },
           {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
+          },
+          {
             "Key": "u",
             "Label": "Update",
             "Desc": "Change workspace purpose"
@@ -98,6 +108,16 @@ TestModal_Path/dismiss_esc
             "Key": "e",
             "Label": "Exec",
             "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
           },
           {
             "Key": "u",

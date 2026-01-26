@@ -59,11 +59,19 @@ The entry point. Shows workspaces in a list with filtering and navigation.
 
 ### WizardView
 
-Multi-step creation flow. Handles user input, git detection, and repository cloning.
+Multi-step creation flow embedded in the dashboard:
+
+1. Purpose input
+2. Repository inputs (press 't' for template configuration)
+3. Create workspace
+
+Press `[t]` in the repository step to open template configuration in a separate view.
+
+Handles user input, git detection, template copying with variable substitution, and repository cloning.
 
 ### ContextMenuView
 
-Actions menu for a selected workspace: inspect, path, exec, update, remove.
+Actions menu for a selected workspace: inspect, path, exec, add repo, remove repo, update, remove.
 
 ### Modal Views
 
@@ -94,8 +102,20 @@ Similar behaviors use similar patterns. Lists navigate the same way. Modals dism
 - Navigation: arrows or `j`/`k`
 - `Enter` - Open context menu
 
+### Wizard
+- `Enter` - Next / Add item
+- `Tab` - Complete path / Add item
+- `→` / `←` - Navigate between finish button and repo input
+- `t` - Open template configuration (in repo step)
+- `Esc` - Back / Cancel
+
+### Path Completion
+- `Tab` - Complete with selected suggestion
+- `↑` / `↓` - Navigate through suggestions
+- `Esc` - Dismiss suggestions
+
 ### Context Menu
-- `i/p/e/u/r` - Actions
+- `i/p/e/a/d/u/r` - Actions
 - `Esc` - Dismiss
 
 ### Modals

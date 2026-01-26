@@ -794,3 +794,722 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 }
+
+func TestRepoAdd(t *testing.T) {
+	t.Run("should add repository to existing workspace", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := workspace.CreateLocalGitRepo(t, "existing-repo", map[string]string{"file.txt": "content"})
+		repoURL2 := workspace.CreateLocalGitRepo(t, "new-repo", map[string]string{"new.txt": "new content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().RepoAdd([]string{ws.Handle, "--repo", repoURL2})
+
+		if env.ExitCalled() {
+			t.Fatalf("RepoAdd exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "repository added") {
+			t.Errorf("RepoAdd output should contain 'repository added', got: %s", output)
+		}
+		if !strings.Contains(output, "new-repo") {
+			t.Errorf("RepoAdd output should contain repo name, got: %s", output)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if len(retrieved.Repositories) != 2 {
+			t.Errorf("Expected 2 repositories, got: %d", len(retrieved.Repositories))
+		}
+		found := false
+		for _, repo := range retrieved.Repositories {
+			if repo.Name == "new-repo" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Added repository not found in workspace")
+		}
+	})
+
+	t.Run("should add multiple repositories at once", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := workspace.CreateLocalGitRepo(t, "repo1", map[string]string{"file.txt": "content"})
+		repoURL2 := workspace.CreateLocalGitRepo(t, "repo2", map[string]string{"file.txt": "content"})
+		repoURL3 := workspace.CreateLocalGitRepo(t, "repo3", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Multi-add test",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().RepoAdd([]string{ws.Handle, "--repo", repoURL2, "--repo", repoURL3})
+
+		if env.ExitCalled() {
+			t.Fatalf("RepoAdd exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "repositories added") {
+			t.Errorf("RepoAdd output should contain 'repositories added', got: %s", output)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if len(retrieved.Repositories) != 3 {
+			t.Errorf("Expected 3 repositories, got: %d", len(retrieved.Repositories))
+		}
+	})
+
+	t.Run("should fail with missing workspace handle", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		env.ResetBuffers()
+		env.Runner().RepoAdd([]string{"--repo", repoURL})
+
+		if !env.ExitCalled() {
+			t.Error("RepoAdd should exit with error when workspace handle is missing")
+		}
+	})
+
+	t.Run("should fail with missing --repo flag", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().RepoAdd([]string{ws.Handle})
+
+		if !env.ExitCalled() {
+			t.Error("RepoAdd should exit with error when --repo is missing")
+		}
+	})
+
+	t.Run("should fail with duplicate repository", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().RepoAdd([]string{ws.Handle, "--repo", repoURL})
+
+		if !env.ExitCalled() {
+			t.Error("RepoAdd should exit with error for duplicate repository")
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "failed to add repository") {
+			t.Errorf("RepoAdd output should mention failure, got: %s", output)
+		}
+	})
+
+	t.Run("should fail for non-existent workspace", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		env.ResetBuffers()
+		env.Runner().RepoAdd([]string{"non-existent-workspace", "--repo", repoURL})
+
+		if !env.ExitCalled() {
+			t.Error("RepoAdd should exit with error for non-existent workspace")
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "failed to add repository") {
+			t.Errorf("RepoAdd output should mention failure, got: %s", output)
+		}
+	})
+}
+
+func TestRepoRemove(t *testing.T) {
+	t.Run("should remove repository from workspace with --force", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := workspace.CreateLocalGitRepo(t, "repo-to-keep", map[string]string{"keep.txt": "keep"})
+		repoURL2 := workspace.CreateLocalGitRepo(t, "repo-to-remove", map[string]string{"remove.txt": "remove"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+				{URL: repoURL2, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "repo-to-remove", "--force"})
+
+		if env.ExitCalled() {
+			t.Fatalf("RepoRemove exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "repository removed") {
+			t.Errorf("RepoRemove output should contain 'repository removed', got: %s", output)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if len(retrieved.Repositories) != 1 {
+			t.Errorf("Expected 1 repository, got: %d", len(retrieved.Repositories))
+		}
+		found := false
+		for _, repo := range retrieved.Repositories {
+			if repo.Name == "repo-to-remove" {
+				t.Error("Removed repository still exists in workspace")
+			}
+			if repo.Name == "repo-to-keep" {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("Kept repository not found in workspace")
+		}
+	})
+
+	t.Run("should require --force and confirm with y", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "repo-to-remove", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.SetStdin("y\n")
+		env.ResetBuffers()
+		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "repo-to-remove"})
+
+		if env.ExitCalled() {
+			t.Fatalf("RepoRemove exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if len(retrieved.Repositories) != 0 {
+			t.Errorf("Expected 0 repositories, got: %d", len(retrieved.Repositories))
+		}
+	})
+
+	t.Run("should cancel when user declines confirmation", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "protected-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.SetStdin("n\n")
+		env.ResetBuffers()
+		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "protected-repo"})
+
+		if env.ExitCalled() {
+			t.Fatalf("RepoRemove exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if len(retrieved.Repositories) != 1 {
+			t.Errorf("Repository should not have been removed, got: %d", len(retrieved.Repositories))
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "cancelled") {
+			t.Errorf("RepoRemove output should mention 'cancelled', got: %s", output)
+		}
+	})
+
+	t.Run("should fail with missing workspace handle", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		env.Runner().RepoRemove([]string{"--repo", "some-repo", "--force"})
+
+		if !env.ExitCalled() {
+			t.Error("RepoRemove should exit with error when workspace handle is missing")
+		}
+	})
+
+	t.Run("should fail with missing --repo flag", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().RepoRemove([]string{ws.Handle, "--force"})
+
+		if !env.ExitCalled() {
+			t.Error("RepoRemove should exit with error when --repo is missing")
+		}
+	})
+
+	t.Run("should fail for non-existent repository", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "non-existent-repo", "--force"})
+
+		if !env.ExitCalled() {
+			t.Error("RepoRemove should exit with error for non-existent repository")
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "repository not found") {
+			t.Errorf("RepoRemove output should mention 'repository not found', got: %s", output)
+		}
+	})
+
+	t.Run("should fail for non-existent workspace", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		env.Runner().RepoRemove([]string{"non-existent-workspace", "--repo", "some-repo", "--force"})
+
+		if !env.ExitCalled() {
+			t.Error("RepoRemove should exit with error for non-existent workspace")
+		}
+	})
+
+	t.Run("should remove last repository", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "only-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Single repo workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().RepoRemove([]string{ws.Handle, "--repo", "only-repo", "--force"})
+
+		if env.ExitCalled() {
+			t.Fatalf("RepoRemove exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if len(retrieved.Repositories) != 0 {
+			t.Errorf("Expected 0 repositories, got: %d", len(retrieved.Repositories))
+		}
+	})
+}
+
+func TestCreateWithTemplate(t *testing.T) {
+	t.Run("should create workspace with template", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		templateDir := filepath.Join(env.TempDir, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		templateFile := filepath.Join(templateDir, "config.json")
+		if err := os.WriteFile(templateFile, []byte(`{"key": "value"}`), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().Create([]string{"--purpose", "Template test", "--template", templateDir})
+		if env.ExitCalled() {
+			t.Fatalf("Create exited: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should contain 'workspace created', got: %s", output)
+		}
+
+		handle := ExtractHandleFromLog(t, output)
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Get(ctx, handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+
+		configPath := filepath.Join(ws.Path, "config.json")
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			t.Error("Expected config.json from template to exist")
+		}
+	})
+
+	t.Run("should create workspace with template and variables", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		templateDir := filepath.Join(env.TempDir, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		templateFile := filepath.Join(templateDir, "{{env}}.json")
+		if err := os.WriteFile(templateFile, []byte(`{"env": "{{env}}"}`), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().Create([]string{
+			"--purpose", "Template var test",
+			"--template", templateDir,
+			"--map", "env=production",
+		})
+		if env.ExitCalled() {
+			t.Fatalf("Create exited: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should contain 'workspace created', got: %s", output)
+		}
+
+		handle := ExtractHandleFromLog(t, output)
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Get(ctx, handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+
+		expectedFile := filepath.Join(ws.Path, "production.json")
+		if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+			t.Error("Expected production.json from variable substitution")
+		}
+	})
+
+	t.Run("should support multiple --map flags", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		templateDir := filepath.Join(env.TempDir, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		templateFile := filepath.Join(templateDir, "{{env}}-{{region}}.txt")
+		if err := os.WriteFile(templateFile, []byte("content"), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().Create([]string{
+			"--purpose", "Multi-var test",
+			"--template", templateDir,
+			"--map", "env=staging",
+			"--map", "region=us-west",
+		})
+		if env.ExitCalled() {
+			t.Fatalf("Create exited: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should contain 'workspace created', got: %s", output)
+		}
+
+		handle := ExtractHandleFromLog(t, output)
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Get(ctx, handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+
+		expectedFile := filepath.Join(ws.Path, "staging-us-west.txt")
+		if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+			t.Error("Expected staging-us-west.txt from variable substitution")
+		}
+	})
+
+	t.Run("should fail for non-existent template", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		env.Runner().Create([]string{
+			"--purpose", "Invalid template test",
+			"--template", "/nonexistent/path",
+		})
+
+		if !env.ExitCalled() {
+			t.Error("Create should have exited with error")
+		}
+
+		errOutput := env.Output()
+		if !strings.Contains(errOutput, "workspace creation failed") {
+			t.Errorf("Error output should mention 'workspace creation failed', got: %s", errOutput)
+		}
+	})
+
+	t.Run("should fail for invalid map format", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		templateDir := filepath.Join(env.TempDir, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().Create([]string{
+			"--purpose", "Invalid map test",
+			"--template", templateDir,
+			"--map", "novalue",
+		})
+
+		if !env.ExitCalled() {
+			t.Error("Create should have exited with error")
+		}
+
+		errOutput := env.Output()
+		if !strings.Contains(errOutput, "invalid template variable") {
+			t.Errorf("Error output should mention 'invalid template variable', got: %s", errOutput)
+		}
+	})
+
+	t.Run("should create workspace with template and repos", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		templateDir := filepath.Join(env.TempDir, "template")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("Failed to create template directory: %v", err)
+		}
+
+		templateFile := filepath.Join(templateDir, "README.md")
+		if err := os.WriteFile(templateFile, []byte("# Template README"), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		env.ResetBuffers()
+		env.Runner().Create([]string{
+			"--purpose", "Template and repo test",
+			"--template", templateDir,
+			"--repo", repoURL,
+		})
+		if env.ExitCalled() {
+			t.Fatalf("Create exited: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should contain 'workspace created', got: %s", output)
+		}
+
+		handle := ExtractHandleFromLog(t, output)
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Get(ctx, handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+
+		if len(ws.Repositories) != 1 {
+			t.Errorf("Expected 1 repository, got: %d", len(ws.Repositories))
+		}
+
+		readmePath := filepath.Join(ws.Path, "README.md")
+		if _, err := os.Stat(readmePath); os.IsNotExist(err) {
+			t.Error("Expected README.md from template to exist")
+		}
+
+		repoPath := filepath.Join(ws.Path, "test-repo")
+		if _, err := os.Stat(repoPath); os.IsNotExist(err) {
+			t.Error("Expected test-repo to exist")
+		}
+	})
+}

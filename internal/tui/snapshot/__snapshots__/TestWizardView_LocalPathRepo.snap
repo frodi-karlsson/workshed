@@ -20,6 +20,8 @@ TestWizardView_LocalPathRepo
         "Type": "WizardView",
         "Step": 1,
         "Purpose": "Local repo project",
+        "Template": "",
+        "TemplateVarCount": 0,
         "RepoCount": 1,
         "FinishMode": false,
         "Loading": false,

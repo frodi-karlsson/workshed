@@ -143,17 +143,19 @@ func (v *DashboardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 		return ViewResult{}, nil
 	}
 
+	if key.IsCancel(msg) {
+		if v.filterMode {
+			v.filterMode = false
+			v.textInput.Blur()
+			v.textInput.SetValue("")
+			_ = v.refreshWorkspaces()
+			return ViewResult{}, nil
+		}
+		return ViewResult{Action: StackPop{}}, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if key.IsCancel(msg) {
-			if v.filterMode {
-				v.filterMode = false
-				v.textInput.Blur()
-				_ = v.refreshWorkspaces()
-				return ViewResult{}, nil
-			}
-			return ViewResult{Action: StackDismissAll{}}, nil
-		}
 
 		switch msg.String() {
 		case "c":

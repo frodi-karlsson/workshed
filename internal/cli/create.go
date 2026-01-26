@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/frodi/workshed/internal/logger"
-	"github.com/frodi/workshed/internal/tui"
 	"github.com/frodi/workshed/internal/workspace"
 	flag "github.com/spf13/pflag"
 )
@@ -22,9 +21,12 @@ func (r *Runner) Create(args []string) {
 	fs.StringSliceVarP(&repoFlags, "repo", "r", nil, "Repository URL with optional ref (format: url@ref). Can be specified multiple times.")
 	var reposAlias []string
 	fs.StringSliceVarP(&reposAlias, "repos", "", nil, "Alias for --repo (can be specified multiple times)")
+	template := fs.String("template", "", "Template directory to copy into workspace")
+	var templateVars []string
+	fs.StringSliceVar(&templateVars, "map", nil, "Template variable substitution (format: key=value). Can be specified multiple times.")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed create --purpose <purpose> [--repo url@ref]...\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed create --purpose <purpose> [--repo url@ref]... [--template <dir>] [--map key=value]...\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 	}
@@ -34,47 +36,49 @@ func (r *Runner) Create(args []string) {
 		r.ExitFunc(1)
 	}
 
+	if *purpose == "" {
+		l.Error("missing required flag", "flag", "--purpose")
+		fs.Usage()
+		r.ExitFunc(1)
+	}
+
 	s := r.getStore()
 	ctx := context.Background()
 
-	opts := workspace.CreateOptions{
-		Repositories: []workspace.RepositoryOption{},
+	templateVarsMap := make(map[string]string)
+	for _, kv := range templateVars {
+		parts := strings.SplitN(kv, "=", 2)
+		if len(parts) != 2 {
+			l.Error("invalid template variable format", "expected", "key=value", "got", kv)
+			r.ExitFunc(1)
+			return
+		}
+		templateVarsMap[parts[0]] = parts[1]
 	}
 
-	if *purpose == "" {
-		if tui.IsHumanMode() {
-			result, err := tui.RunCreateWizard(ctx, s)
-			if err != nil {
-				l.Help("wizard cancelled")
-				r.ExitFunc(0)
-				return
-			}
-			opts.Purpose = result.Purpose
-			opts.Repositories = result.Repositories
-		} else {
-			l.Error("missing required flag", "flag", "--purpose")
-			fs.Usage()
-			r.ExitFunc(1)
-		}
-	} else {
-		opts.Purpose = *purpose
+	repos := repoFlags
+	if len(reposAlias) > 0 {
+		repos = reposAlias
+	}
 
-		repos := repoFlags
-		if len(reposAlias) > 0 {
-			repos = reposAlias
+	repoOpts := make([]workspace.RepositoryOption, 0)
+	for _, repo := range repos {
+		repo = strings.TrimSpace(repo)
+		if repo == "" {
+			continue
 		}
+		url, ref := parseRepoFlag(repo)
+		repoOpts = append(repoOpts, workspace.RepositoryOption{
+			URL: url,
+			Ref: ref,
+		})
+	}
 
-		for _, repo := range repos {
-			repo = strings.TrimSpace(repo)
-			if repo == "" {
-				continue
-			}
-			url, ref := parseRepoFlag(repo)
-			opts.Repositories = append(opts.Repositories, workspace.RepositoryOption{
-				URL: url,
-				Ref: ref,
-			})
-		}
+	opts := workspace.CreateOptions{
+		Purpose:      *purpose,
+		Template:     *template,
+		TemplateVars: templateVarsMap,
+		Repositories: repoOpts,
 	}
 
 	createCtx, cancel := context.WithTimeout(ctx, defaultCloneTimeout)

@@ -36,6 +36,16 @@ TestDashboardView_ContextMenuActions/path
             "Desc": "Run command in repositories"
           },
           {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
+          },
+          {
             "Key": "u",
             "Label": "Update",
             "Desc": "Change workspace purpose"
@@ -98,6 +108,16 @@ TestDashboardView_ContextMenuActions/exec
             "Key": "e",
             "Label": "Exec",
             "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
           },
           {
             "Key": "u",
@@ -165,6 +185,16 @@ TestDashboardView_ContextMenuActions/update_purpose
             "Desc": "Run command in repositories"
           },
           {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
+          },
+          {
             "Key": "u",
             "Label": "Update",
             "Desc": "Change workspace purpose"
@@ -226,6 +256,16 @@ TestDashboardView_ContextMenuActions/remove_confirm
             "Key": "e",
             "Label": "Exec",
             "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
           },
           {
             "Key": "u",

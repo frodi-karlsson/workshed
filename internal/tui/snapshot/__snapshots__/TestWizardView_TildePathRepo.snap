@@ -20,6 +20,8 @@ TestWizardView_TildePathRepo
         "Type": "WizardView",
         "Step": 1,
         "Purpose": "Home repo project",
+        "Template": "",
+        "TemplateVarCount": 0,
         "RepoCount": 1,
         "FinishMode": false,
         "Loading": false,

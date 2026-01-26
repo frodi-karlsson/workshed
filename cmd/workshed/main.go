@@ -41,6 +41,8 @@ func main() {
 		r.Remove(os.Args[2:])
 	case "update":
 		r.Update(os.Args[2:])
+	case "repo":
+		r.Repo(os.Args[2:])
 	case "dashboard":
 		r.RunMainDashboard()
 	case "version", "-v", "--version":

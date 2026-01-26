@@ -36,6 +36,16 @@ TestModal_Inspect/workspace
             "Desc": "Run command in repositories"
           },
           {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
+          },
+          {
             "Key": "u",
             "Label": "Update",
             "Desc": "Change workspace purpose"
@@ -100,6 +110,16 @@ TestModal_Inspect/single_repo
             "Key": "e",
             "Label": "Exec",
             "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
           },
           {
             "Key": "u",
@@ -168,6 +188,16 @@ TestModal_Inspect/no_repos
             "Desc": "Run command in repositories"
           },
           {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
+          },
+          {
             "Key": "u",
             "Label": "Update",
             "Desc": "Change workspace purpose"
@@ -232,6 +262,16 @@ TestModal_Inspect/dismiss_esc
             "Key": "e",
             "Label": "Exec",
             "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
           },
           {
             "Key": "u",

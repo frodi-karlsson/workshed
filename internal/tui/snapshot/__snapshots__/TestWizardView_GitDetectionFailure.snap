@@ -20,6 +20,8 @@ TestWizardView_GitDetectionFailure
         "Type": "WizardView",
         "Step": 1,
         "Purpose": "Test project",
+        "Template": "",
+        "TemplateVarCount": 0,
         "RepoCount": 0,
         "FinishMode": false,
         "Loading": true,

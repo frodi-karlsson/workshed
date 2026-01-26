@@ -3,6 +3,7 @@ package views
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -17,10 +18,7 @@ import (
 
 var ErrNoRepositories = errors.New("at least one repository is required")
 
-// GitProvider is an optional interface for stores that provide a Git client.
-// Implementations allow the wizard to use the store's git client for operations.
 type GitProvider interface {
-	// GetGit returns the Git client to use for repository operations.
 	GetGit() git.Git
 }
 
@@ -35,16 +33,19 @@ type workspaceCreateResultMsg struct {
 }
 
 type WizardView struct {
-	store       store.Store
-	ctx         context.Context
-	git         git.Git
-	step        int
-	purpose     string
-	input       textinput.Model
-	repos       []workspace.RepositoryOption
-	done        bool
-	loadingType string
-	finishMode  bool
+	store        store.Store
+	ctx          context.Context
+	git          git.Git
+	step         int
+	purpose      string
+	template     string
+	templateVars map[string]string
+	input        textinput.Model
+	repoInput    components.PathCompleter
+	repos        []workspace.RepositoryOption
+	done         bool
+	loadingType  string
+	finishMode   bool
 }
 
 func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView {
@@ -52,6 +53,10 @@ func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView 
 	ti.Placeholder = "What is this workspace for?"
 	ti.Prompt = "> "
 	ti.Focus()
+
+	repoInput := components.NewPathCompleter()
+	repoInput.SetPlaceholder("github.com/user/repo, user/repo@branch, or ./path")
+	repoInput.SetPrompt("> ")
 
 	var gitClient git.Git
 	if len(g) > 0 && g[0] != nil {
@@ -65,12 +70,14 @@ func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView 
 	}
 
 	return WizardView{
-		store:      s,
-		ctx:        ctx,
-		git:        gitClient,
-		step:       0,
-		input:      ti,
-		finishMode: false,
+		store:        s,
+		ctx:          ctx,
+		git:          gitClient,
+		step:         0,
+		input:        ti,
+		repoInput:    repoInput,
+		templateVars: make(map[string]string),
+		finishMode:   false,
 	}
 }
 
@@ -128,10 +135,12 @@ func (v *WizardView) detectCurrentRepoCmd() tea.Cmd {
 	}
 }
 
-func createWorkspaceCmd(ctx context.Context, s store.Store, purpose string, repos []workspace.RepositoryOption) tea.Cmd {
+func createWorkspaceCmd(ctx context.Context, s store.Store, purpose string, template string, templateVars map[string]string, repos []workspace.RepositoryOption) tea.Cmd {
 	return func() tea.Msg {
 		ws, err := s.Create(ctx, workspace.CreateOptions{
 			Purpose:      purpose,
+			Template:     template,
+			TemplateVars: templateVars,
 			Repositories: repos,
 		})
 		if err != nil {
@@ -143,6 +152,7 @@ func createWorkspaceCmd(ctx context.Context, s store.Store, purpose string, repo
 
 func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case currentRepoResultMsg:
 		if v.loadingType != "git" {
@@ -180,12 +190,16 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 				return ViewResult{}, nil
 			}
 			return ViewResult{Action: StackPop{}}, nil
-		case tea.KeyTab:
-			if v.step == 1 && len(v.repos) > 0 {
-				v.finishMode = !v.finishMode
-				if !v.finishMode {
-					v.input.Focus()
-				}
+		case tea.KeyRight:
+			if v.step == 1 && len(v.repos) > 0 && !v.finishMode {
+				v.finishMode = true
+				v.input.Blur()
+				return ViewResult{}, textinput.Blink
+			}
+		case tea.KeyLeft:
+			if v.step == 1 && v.finishMode {
+				v.finishMode = false
+				v.input.Focus()
 				return ViewResult{}, textinput.Blink
 			}
 		case tea.KeyEnter:
@@ -199,11 +213,7 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 				}
 				v.purpose = purpose
 				v.step = 1
-				ti := textinput.New()
-				ti.Placeholder = "github.com/user/repo, user/repo@branch, or ./path"
-				ti.Prompt = "> "
-				ti.Focus()
-				v.input = ti
+				v.repoInput.Focus()
 				return ViewResult{}, textinput.Blink
 			} else {
 				if v.finishMode {
@@ -215,10 +225,10 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 						return ViewResult{}, v.detectCurrentRepoCmd()
 					}
 					v.loadingType = "create"
-					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.repos)
+					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.template, v.templateVars, v.repos)
 				}
 
-				repoInput := strings.TrimSpace(v.input.Value())
+				repoInput := strings.TrimSpace(v.repoInput.Value())
 				if repoInput == "" {
 					if v.loadingType != "" {
 						return ViewResult{}, nil
@@ -228,24 +238,30 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 						return ViewResult{}, v.detectCurrentRepoCmd()
 					}
 					v.loadingType = "create"
-					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.repos)
+					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.template, v.templateVars, v.repos)
 				}
 
 				url, ref := parseRepoFlag(repoInput)
 				v.repos = append(v.repos, workspace.RepositoryOption{URL: url, Ref: ref})
-				v.input = textinput.New()
-				v.input.Placeholder = "github.com/user/repo, user/repo@branch, or ./path"
-				v.input.Prompt = "> "
-				v.input.Focus()
+				v.repoInput.SetValue("")
 				return ViewResult{}, textinput.Blink
+			}
+		case tea.KeyRunes:
+			if v.finishMode && msg.String() == "t" {
+				templateView := NewTemplateConfigView(v.ctx, v.store, v.template, v.templateVars)
+				return ViewResult{NextView: &templateView}, nil
 			}
 		}
 	}
 
-	updatedInput, inputCmd := v.input.Update(msg)
-	v.input = updatedInput
-
-	cmd = inputCmd
+	if v.step == 0 {
+		updatedInput, inputCmd := v.input.Update(msg)
+		v.input = updatedInput
+		cmd = inputCmd
+	} else {
+		_, inputCmd := v.repoInput.Update(msg)
+		cmd = inputCmd
+	}
 
 	return ViewResult{}, cmd
 }
@@ -295,20 +311,32 @@ func (v *WizardView) View() string {
 
 	var helpText string
 	if v.finishMode {
-		helpText = "[Enter] Create workspace  [Tab] Add more  [Esc] Cancel"
+		helpText = "[Enter] Create workspace  [←] Add more  [t] Template  [Esc] Cancel"
 	} else if len(v.repos) > 0 {
-		helpText = "[Enter] Add repo  [Tab] Finish  [Esc] Cancel"
+		helpText = "[Enter] Add repo  [→] Finish  [Tab] Complete path  [Esc] Cancel"
 	} else {
-		helpText = "[Enter] Add repo  [Esc] Cancel"
+		helpText = "[Enter] Add repo  [Tab] Complete path  [Esc] Cancel"
 	}
+
+	var templateInfo string
+	if v.template != "" {
+		templateInfo = "Template: " + v.template + "\n"
+		if len(v.templateVars) > 0 {
+			templateInfo += "Variables: " + fmt.Sprintf("%d configured", len(v.templateVars)) + "\n"
+		}
+		templateInfo += "\n"
+	}
+
+	repoInputView := v.repoInput.View()
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		headerStyle.Render("Add Repositories"), "\n", "\n",
-		"Purpose: "+v.purpose, "\n", "\n",
+		"Purpose: "+v.purpose, "\n",
+		templateInfo,
 		"Repositories:", "\n",
 		reposContent, "\n",
-		v.input.View(), "\n",
+		repoInputView, "\n",
 		lipgloss.NewStyle().Foreground(components.ColorMuted).Render("  e.g. github.com/user/repo, github.com/user/repo@branch, ./repo, ~/repo"), "\n",
 		lipgloss.NewStyle().Foreground(components.ColorMuted).Render("  (default branch used if @branch omitted; current repo used if empty)"), "\n", "\n",
 		lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render(helpText),
@@ -318,27 +346,27 @@ func (v *WizardView) View() string {
 }
 
 type WizardViewSnapshot struct {
-	Type       string
-	Step       int
-	Purpose    string
-	RepoCount  int
-	FinishMode bool
-	Loading    bool
-	Done       bool
+	Type             string
+	Step             int
+	Purpose          string
+	Template         string
+	TemplateVarCount int
+	RepoCount        int
+	FinishMode       bool
+	Loading          bool
+	Done             bool
 }
 
 func (v *WizardView) Snapshot() interface{} {
-	repos := make([]string, len(v.repos))
-	for i, r := range v.repos {
-		repos[i] = r.URL
-	}
 	return WizardViewSnapshot{
-		Type:       "WizardView",
-		Step:       v.step,
-		Purpose:    v.purpose,
-		RepoCount:  len(v.repos),
-		FinishMode: v.finishMode,
-		Loading:    v.loadingType != "",
-		Done:       v.done,
+		Type:             "WizardView",
+		Step:             v.step,
+		Purpose:          v.purpose,
+		Template:         v.template,
+		TemplateVarCount: len(v.templateVars),
+		RepoCount:        len(v.repos),
+		FinishMode:       v.finishMode,
+		Loading:          v.loadingType != "",
+		Done:             v.done,
 	}
 }

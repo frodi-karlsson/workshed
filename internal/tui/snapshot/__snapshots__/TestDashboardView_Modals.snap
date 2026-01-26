@@ -36,6 +36,16 @@ TestDashboardView_Modals/remove_dismiss
             "Desc": "Run command in repositories"
           },
           {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
+          },
+          {
             "Key": "u",
             "Label": "Update",
             "Desc": "Change workspace purpose"
@@ -89,6 +99,16 @@ TestDashboardView_Modals/update_purpose_success
             "Key": "e",
             "Label": "Exec",
             "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
           },
           {
             "Key": "u",
