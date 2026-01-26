@@ -1,0 +1,43 @@
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - id: workshed
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/workshed
+    binary: workshed
+archives:
+  - format: tar.gz
+    name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+release:
+  github:
+    owner: workshed-community
+    name: workshed
+  draft: true
+  prerelease: auto
+brews:
+  - name: workshed
+    tap:
+      owner: workshed-community
+      name: homebrew-tap
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@carlosbecker.com
+    homepage: "https://github.com/workshed-community/workshed"
+    description: "A tool for managing local development environments"
+    license: "MIT"
