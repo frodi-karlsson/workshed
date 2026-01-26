@@ -88,5 +88,5 @@ jobs:
         uses: dawidd6/action-homebrew-bump-formula@v3
         with:
           token: ${{ secrets.COMMITTER_TOKEN }}
-          tap: "workshed-community/homebrew-tap"
+          tap: "frodi-karlsson/homebrew-tap"
           formula: "workshed"

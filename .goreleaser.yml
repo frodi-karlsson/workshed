@@ -30,7 +30,7 @@ release:
 brews:
   - name: workshed
     repository:
-      owner: workshed-community
+      owner: frodi-karlsson
       name: homebrew-tap
     commit_author:
       name: goreleaserbot
