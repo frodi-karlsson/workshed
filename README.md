@@ -64,6 +64,15 @@ workshed
 
 ---
 
+## Installation
+
+```bash
+brew tap frodi-karlsson/homebrew-tap
+brew install workshed
+```
+
+---
+
 ## Key Concepts
 
 ### Purpose
