@@ -25,19 +25,16 @@ changelog:
       - '^docs:'
       - '^test:'
 release:
-  github:
-    owner: workshed-community
-    name: workshed
   draft: true
   prerelease: auto
 brews:
   - name: workshed
-    tap:
+    repository:
       owner: workshed-community
       name: homebrew-tap
     commit_author:
       name: goreleaserbot
       email: goreleaser@carlosbecker.com
-    homepage: "https://github.com/workshed-community/workshed"
+    homepage: "https://github.com/frodi-karlsson/workshed"
     description: "A tool for managing local development environments"
     license: "MIT"
