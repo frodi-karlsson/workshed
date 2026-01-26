@@ -1,4 +1,4 @@
-.PHONY: build test test-race test-integration test-e2e test-all check help install clean lint lint-fix install-hooks
+.PHONY: build test test-race test-integration test-e2e test-e2e-update test-all check help install clean lint lint-fix install-hooks
 
 build:
 	@mkdir -p bin
@@ -15,6 +15,9 @@ test-integration:
 
 test-e2e:
 	go test -v -timeout=5s ./internal/tui/...
+
+test-e2e-update:
+	UPDATE_SNAPS=true go test -v -timeout=5s ./internal/tui/...
 
 test-all:
 	@echo "Running unit tests..."
@@ -49,6 +52,7 @@ help:
 	@echo "  test-race      Run unit tests with race detector"
 	@echo "  test-integration   Run integration tests"
 	@echo "  test-e2e       Run e2e TUI tests with timeout"
+	@echo "  test-e2e-update    Update e2e TUI test snapshots"
 	@echo "  test-all       Run unit, integration, and e2e tests"
 	@echo "  check          Run lint, unit, integration, and e2e tests"
 	@echo "  install        Install workshed to \$$GOPATH/bin"

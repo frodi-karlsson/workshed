@@ -66,8 +66,7 @@ TestModal_Path/view
       "Data": {
         "Type": "PathView",
         "Handle": "test-ws",
-        "Path": "/Users/testuser/projects/test-workspace",
-        "Copied": true
+        "Path": "/Users/testuser/projects/test-workspace"
       }
     }
   ]

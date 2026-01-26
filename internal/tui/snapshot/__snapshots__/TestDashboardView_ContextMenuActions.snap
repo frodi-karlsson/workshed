@@ -66,8 +66,7 @@ TestDashboardView_ContextMenuActions/path
       "Data": {
         "Type": "PathView",
         "Handle": "test-ws",
-        "Path": "/test/path/to/workspace",
-        "Copied": true
+        "Path": "/test/path/to/workspace"
       }
     }
   ]

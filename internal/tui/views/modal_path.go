@@ -109,7 +109,6 @@ type PathViewSnapshot struct {
 	Type   string
 	Handle string
 	Path   string
-	Copied bool
 }
 
 func (v *modal_PathView) Snapshot() interface{} {
@@ -117,6 +116,5 @@ func (v *modal_PathView) Snapshot() interface{} {
 		Type:   "PathView",
 		Handle: v.handle,
 		Path:   v.workspace.Path,
-		Copied: v.copied,
 	}
 }
