@@ -9,6 +9,7 @@ TestDashboardView_InitialStates/empty_list
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 0,
         "SelectedIndex": 0,
         "HasError": false
@@ -28,6 +29,7 @@ TestDashboardView_InitialStates/with_workspaces
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 2,
         "SelectedIndex": 0,
         "HasError": false

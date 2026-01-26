@@ -9,6 +9,7 @@ TestModal_UpdatePurpose/view
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false
@@ -82,6 +83,7 @@ TestModal_UpdatePurpose/dismiss_esc
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false

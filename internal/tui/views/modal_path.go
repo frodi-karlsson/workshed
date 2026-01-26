@@ -13,12 +13,13 @@ import (
 )
 
 type modal_PathView struct {
-	store     store.Store
-	ctx       context.Context
-	handle    string
-	workspace *workspace.Workspace
-	copied    bool
-	size      measure.Window
+	store        store.Store
+	ctx          context.Context
+	handle       string
+	workspace    *workspace.Workspace
+	copied       bool
+	clipboardErr error
+	size         measure.Window
 }
 
 func NewPathView(s store.Store, ctx context.Context, handle string) *modal_PathView {
@@ -33,8 +34,9 @@ func NewPathView(s store.Store, ctx context.Context, handle string) *modal_PathV
 
 func (v *modal_PathView) Init() tea.Cmd {
 	if v.workspace != nil {
-		_ = clipboard.WriteAll(v.workspace.Path)
-		v.copied = true
+		err := clipboard.WriteAll(v.workspace.Path)
+		v.clipboardErr = err
+		v.copied = err == nil
 	}
 	return nil
 }
@@ -73,21 +75,33 @@ func (v *modal_PathView) View() string {
 
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorText)
 
-	statusMsg := "Copied to clipboard!"
-	if !v.copied {
-		statusMsg = "Unable to copy to clipboard"
+	var statusLines []string
+	if v.copied {
+		statusLines = append(statusLines,
+			lipgloss.NewStyle().Foreground(components.ColorSuccess).Render("Copied to clipboard!"),
+		)
+	} else {
+		statusLines = append(statusLines,
+			lipgloss.NewStyle().Foreground(components.ColorError).Render("Unable to copy to clipboard"),
+		)
+		if v.clipboardErr != nil {
+			statusLines = append(statusLines,
+				lipgloss.NewStyle().Foreground(components.ColorMuted).Render("Error: "+v.clipboardErr.Error()),
+			)
+		}
 	}
 
-	statusStyle := lipgloss.NewStyle().Foreground(components.ColorSuccess).Render(statusMsg)
+	content := []string{
+		headerStyle.Render("Path:"), "\n",
+		v.workspace.Path, "\n", "\n",
+	}
+	content = append(content, statusLines...)
+	content = append(content, "\n", "\n",
+		lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Esc/q/Enter] Dismiss"),
+	)
 
 	return ModalFrame(v.size).Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			headerStyle.Render("Path:"), "\n",
-			v.workspace.Path, "\n", "\n",
-			statusStyle, "\n", "\n",
-			lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Esc/q/Enter] Dismiss"),
-		),
+		lipgloss.JoinVertical(lipgloss.Left, content...),
 	)
 }
 

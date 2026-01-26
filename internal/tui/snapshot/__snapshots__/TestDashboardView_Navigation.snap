@@ -9,6 +9,7 @@ first_selected
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 3,
         "SelectedIndex": 0,
         "HasError": false
@@ -28,6 +29,7 @@ second_selected
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 3,
         "SelectedIndex": 1,
         "HasError": false
@@ -47,6 +49,7 @@ third_selected
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 3,
         "SelectedIndex": 2,
         "HasError": false

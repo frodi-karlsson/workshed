@@ -34,6 +34,7 @@ TestDashboardView_Overlays/wizard
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 0,
         "SelectedIndex": 0,
         "HasError": false
@@ -67,6 +68,7 @@ TestDashboardView_Overlays/keyboard_navigation
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 2,
         "SelectedIndex": 0,
         "HasError": false

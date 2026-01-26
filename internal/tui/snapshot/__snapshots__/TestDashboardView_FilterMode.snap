@@ -9,6 +9,7 @@ TestDashboardView_FilterMode/enter_filter
         "Type": "DashboardView",
         "FilterMode": true,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 2,
         "SelectedIndex": 0,
         "HasError": false
@@ -26,11 +27,57 @@ TestDashboardView_FilterMode/filter_and_apply
       "Type": "*views.DashboardView",
       "Data": {
         "Type": "DashboardView",
-        "FilterMode": false,
+        "FilterMode": true,
         "FilterQuery": "API",
-        "ItemCount": 2,
+        "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "ws-1",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "Show workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Change workspace purpose"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Delete workspace (confirm)"
+          }
+        ],
+        "SelectedKey": "i",
+        "Stale": false
       }
     }
   ]
@@ -47,7 +94,234 @@ TestDashboardView_FilterMode/filter_and_cancel
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/filter_typing_c - 1]
+TestDashboardView_FilterMode/filter_typing_c
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "c",
+        "SortOrder": "Created ↓",
+        "ItemCount": 2,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/filter_navigation - 1]
+TestDashboardView_FilterMode/filter_navigation
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "↓",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/filter_enter_opens_menu - 1]
+TestDashboardView_FilterMode/filter_enter_opens_menu
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "Show workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command in repositories"
+          },
+          {
+            "Key": "a",
+            "Label": "Add Repo",
+            "Desc": "Add repository to workspace"
+          },
+          {
+            "Key": "d",
+            "Label": "Remove Repo",
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Change workspace purpose"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Delete workspace (confirm)"
+          }
+        ],
+        "SelectedKey": "i",
+        "Stale": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/sort_created_desc - 1]
+TestDashboardView_FilterMode/sort_created_desc
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 3,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/sort_created_asc - 1]
+TestDashboardView_FilterMode/sort_created_asc
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "",
+        "SortOrder": "Created ↑",
+        "ItemCount": 3,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/sort_purpose_asc - 1]
+TestDashboardView_FilterMode/sort_purpose_asc
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "",
+        "SortOrder": "Purpose ↑",
+        "ItemCount": 3,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/sort_purpose_desc - 1]
+TestDashboardView_FilterMode/sort_purpose_desc
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "",
+        "SortOrder": "Purpose ↓",
+        "ItemCount": 3,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/sort_handle_asc - 1]
+TestDashboardView_FilterMode/sort_handle_asc
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "",
+        "SortOrder": "Handle ↑",
+        "ItemCount": 3,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_FilterMode/sort_handle_desc - 1]
+TestDashboardView_FilterMode/sort_handle_desc
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": true,
+        "FilterQuery": "",
+        "SortOrder": "Handle ↓",
+        "ItemCount": 3,
         "SelectedIndex": 0,
         "HasError": false
       }

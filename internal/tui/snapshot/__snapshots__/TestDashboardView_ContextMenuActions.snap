@@ -9,6 +9,7 @@ TestDashboardView_ContextMenuActions/path
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false
@@ -66,7 +67,7 @@ TestDashboardView_ContextMenuActions/path
         "Type": "PathView",
         "Handle": "test-ws",
         "Path": "/test/path/to/workspace",
-        "Copied": false
+        "Copied": true
       }
     }
   ]
@@ -83,6 +84,7 @@ TestDashboardView_ContextMenuActions/exec
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false
@@ -158,6 +160,7 @@ TestDashboardView_ContextMenuActions/update_purpose
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false
@@ -231,6 +234,7 @@ TestDashboardView_ContextMenuActions/remove_confirm
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false

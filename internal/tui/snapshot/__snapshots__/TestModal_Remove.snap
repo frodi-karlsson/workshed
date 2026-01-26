@@ -9,6 +9,7 @@ TestModal_Remove
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false

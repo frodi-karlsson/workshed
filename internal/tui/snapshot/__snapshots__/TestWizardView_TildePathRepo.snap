@@ -9,6 +9,7 @@ TestWizardView_TildePathRepo
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 0,
         "SelectedIndex": 0,
         "HasError": false

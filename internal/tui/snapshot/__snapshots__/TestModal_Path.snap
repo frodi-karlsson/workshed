@@ -9,6 +9,7 @@ TestModal_Path/view
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false
@@ -66,7 +67,7 @@ TestModal_Path/view
         "Type": "PathView",
         "Handle": "test-ws",
         "Path": "/Users/testuser/projects/test-workspace",
-        "Copied": false
+        "Copied": true
       }
     }
   ]
@@ -83,6 +84,7 @@ TestModal_Path/dismiss_esc
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false

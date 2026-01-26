@@ -3,6 +3,7 @@ package views
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -16,12 +17,47 @@ import (
 	"github.com/frodi/workshed/internal/workspace"
 )
 
+type SortOrder int
+
+const (
+	SortCreatedDesc SortOrder = iota
+	SortCreatedAsc
+	SortPurposeAsc
+	SortPurposeDesc
+	SortHandleAsc
+	SortHandleDesc
+)
+
+func (s SortOrder) String() string {
+	switch s {
+	case SortCreatedDesc:
+		return "Created ↓"
+	case SortCreatedAsc:
+		return "Created ↑"
+	case SortPurposeAsc:
+		return "Purpose ↑"
+	case SortPurposeDesc:
+		return "Purpose ↓"
+	case SortHandleAsc:
+		return "Handle ↑"
+	case SortHandleDesc:
+		return "Handle ↓"
+	default:
+		return "Created ↓"
+	}
+}
+
+func (s SortOrder) Next() SortOrder {
+	return (s + 1) % 6
+}
+
 type DashboardView struct {
 	store         store.Store
 	ctx           context.Context
 	list          list.Model
 	textInput     textinput.Model
 	filterMode    bool
+	sortOrder     SortOrder
 	err           error
 	size          measure.Window
 	invocationCtx workspace.InvocationContext
@@ -123,6 +159,40 @@ func (v *DashboardView) refreshWorkspaces() error {
 		}
 	}
 
+	sort.Slice(items, func(i, j int) bool {
+		wi := items[i].(WorkspaceItem)
+		wj := items[j].(WorkspaceItem)
+
+		switch v.sortOrder {
+		case SortCreatedDesc:
+			return wi.workspace.CreatedAt.After(wj.workspace.CreatedAt)
+		case SortCreatedAsc:
+			return wi.workspace.CreatedAt.Before(wj.workspace.CreatedAt)
+		case SortPurposeAsc:
+			if wi.workspace.Purpose == wj.workspace.Purpose {
+				return wi.workspace.CreatedAt.After(wj.workspace.CreatedAt)
+			}
+			return strings.ToLower(wi.workspace.Purpose) < strings.ToLower(wj.workspace.Purpose)
+		case SortPurposeDesc:
+			if wi.workspace.Purpose == wj.workspace.Purpose {
+				return wi.workspace.CreatedAt.After(wj.workspace.CreatedAt)
+			}
+			return strings.ToLower(wi.workspace.Purpose) > strings.ToLower(wj.workspace.Purpose)
+		case SortHandleAsc:
+			if wi.workspace.Handle == wj.workspace.Handle {
+				return wi.workspace.CreatedAt.After(wj.workspace.CreatedAt)
+			}
+			return strings.ToLower(wi.workspace.Handle) < strings.ToLower(wj.workspace.Handle)
+		case SortHandleDesc:
+			if wi.workspace.Handle == wj.workspace.Handle {
+				return wi.workspace.CreatedAt.After(wj.workspace.CreatedAt)
+			}
+			return strings.ToLower(wi.workspace.Handle) > strings.ToLower(wj.workspace.Handle)
+		default:
+			return wi.workspace.CreatedAt.After(wj.workspace.CreatedAt)
+		}
+	})
+
 	v.list.SetItems(items)
 	v.err = nil
 	return nil
@@ -168,32 +238,44 @@ func (v *DashboardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 
+		if v.filterMode {
+			if key.IsEnter(msg) {
+				selected := v.list.SelectedItem()
+				if selected != nil {
+					if wi, ok := selected.(WorkspaceItem); ok {
+						contextMenuView := NewContextMenuView(v.store, v.ctx, wi.workspace.Handle, v.invocationCtx)
+						return ViewResult{NextView: &contextMenuView}, nil
+					}
+				}
+				return ViewResult{}, nil
+			}
+
+			if key.IsUp(msg) || key.IsDown(msg) {
+				var cmd tea.Cmd
+				v.list, cmd = v.list.Update(msg)
+				return ViewResult{}, cmd
+			}
+
+			if msg.String() == "s" {
+				v.sortOrder = v.sortOrder.Next()
+				_ = v.refreshWorkspaces()
+				return ViewResult{}, nil
+			}
+
+			updatedInput, cmd := v.textInput.Update(msg)
+			v.textInput = updatedInput
+			_ = v.refreshWorkspaces()
+			return ViewResult{}, cmd
+		}
+
 		switch msg.String() {
 		case "c":
 			wizardView := NewWizardView(v.ctx, v.store)
 			return ViewResult{NextView: &wizardView}, nil
 		case "l":
-			if !v.filterMode {
-				v.filterMode = true
-				v.textInput.Focus()
-				return ViewResult{}, textinput.Blink
-			}
-		case "?":
-			helpView := NewHelpView()
-			return ViewResult{NextView: &helpView}, nil
-		}
-
-		if v.filterMode {
-			if key.IsEnter(msg) {
-				v.filterMode = false
-				v.textInput.Blur()
-				_ = v.refreshWorkspaces()
-				return ViewResult{}, nil
-			}
-			updatedInput, cmd := v.textInput.Update(msg)
-			v.textInput = updatedInput
-			_ = v.refreshWorkspaces()
-			return ViewResult{}, cmd
+			v.filterMode = true
+			v.textInput.Focus()
+			return ViewResult{}, textinput.Blink
 		}
 
 		if key.IsEnter(msg) {
@@ -228,14 +310,14 @@ func (v *DashboardView) View() string {
 
 	workspaceCount := len(v.list.Items())
 	if workspaceCount == 0 {
-		content = append(content, "\nNo workspaces found. Press 'c' to create one.")
+		content = append(content, "\nNo workspaces found. You can create one with:\n\n    workshed create\n")
 	} else {
 		content = append(content, v.list.View())
 	}
 
-	helpText := "[c] Create  [Enter] Menu  [l] Filter  [?] Help  [q/Esc] Quit"
+	helpText := "[c] Create  [Enter] Menu  [l] Filter  [q/Esc] Quit"
 	if v.filterMode {
-		helpText = "[Enter] Apply  [Esc] Cancel"
+		helpText = "[Enter] Menu  [↑/↓] Navigate  [s] Sort  [Esc] Cancel"
 	}
 
 	helpHint := lipgloss.NewStyle().
@@ -245,6 +327,13 @@ func (v *DashboardView) View() string {
 
 	content = append(content, helpHint)
 
+	if v.filterMode {
+		sortInfo := lipgloss.NewStyle().
+			Foreground(components.ColorVeryMuted).
+			Render(fmt.Sprintf("Sort: %s", v.sortOrder.String()))
+		content = append(content, sortInfo)
+	}
+
 	frameStyle := ModalFrame(v.size)
 	return frameStyle.Render(lipgloss.JoinVertical(lipgloss.Left, content...))
 }
@@ -253,6 +342,7 @@ type DashboardViewSnapshot struct {
 	Type          string
 	FilterMode    bool
 	FilterQuery   string
+	SortOrder     string
 	ItemCount     int
 	SelectedIndex int
 	HasError      bool
@@ -263,6 +353,7 @@ func (v *DashboardView) Snapshot() interface{} {
 		Type:          "DashboardView",
 		FilterMode:    v.filterMode,
 		FilterQuery:   v.textInput.Value(),
+		SortOrder:     v.sortOrder.String(),
 		ItemCount:     len(v.list.Items()),
 		SelectedIndex: v.list.Index(),
 		HasError:      v.err != nil,

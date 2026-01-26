@@ -8,6 +8,7 @@ context_menu_open
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false
@@ -73,6 +74,7 @@ inspect_view
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false
@@ -149,6 +151,7 @@ inspect_dismissed
         "Type": "DashboardView",
         "FilterMode": false,
         "FilterQuery": "",
+        "SortOrder": "Created ↓",
         "ItemCount": 1,
         "SelectedIndex": 0,
         "HasError": false

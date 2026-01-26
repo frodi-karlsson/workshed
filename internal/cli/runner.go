@@ -127,9 +127,6 @@ func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, l *lo
 	ws, err := s.FindWorkspace(ctx, ".")
 	if err != nil {
 		l.Error("failed to find workspace", "error", err)
-		if h, ok := tui.TrySelectWorkspace(ctx, s, err, l); ok {
-			return h
-		}
 		r.ExitFunc(1)
 		return ""
 	}

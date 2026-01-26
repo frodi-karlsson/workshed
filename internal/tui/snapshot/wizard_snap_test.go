@@ -99,6 +99,20 @@ func TestWizardView_CreateSuccess(t *testing.T) {
 	snapshot.Match(t, t.Name(), output)
 }
 
+func TestWizardView_CreateSuccessWithCopy(t *testing.T) {
+	scenario := snapshot.NewScenario(t, nil, nil)
+
+	scenario.Key("c", "Open create wizard")
+	scenario.Type("Copy test project", "Enter purpose")
+	scenario.Enter("Confirm purpose")
+	scenario.Type("git@github.com/org/test-repo", "Enter repo URL")
+	scenario.Enter("Add repo")
+	scenario.Enter("Trigger create workspace")
+	scenario.Key("c", "Copy path to clipboard")
+	output := scenario.Record()
+	snapshot.Match(t, t.Name(), output)
+}
+
 func TestWizardView_MultipleRepos(t *testing.T) {
 	scenario := snapshot.NewScenario(t, nil, nil)
 

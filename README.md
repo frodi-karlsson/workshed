@@ -46,6 +46,12 @@ If `git worktree` is about checking out another branch, Workshed is about groupi
 
 ## Quick Start
 
+You can call `workshed` from the terminal to open the interactive dashboard:
+
+<img src="media/example_1.gif" width="600"/>
+
+Or, run commands directly:
+
 ```bash
 # Create a workspace with purpose and repositories
 workshed create --purpose "Debug payment timeout" --repo github.com/org/service@main --repo ./local-lib
@@ -66,9 +72,6 @@ workshed inspect
 workshed path
 workshed update --purpose "New focus"
 workshed remove
-
-# Or use the interactive dashboard
-workshed
 ```
 
 ---

@@ -114,9 +114,7 @@ func (v *modal_ExecView) View() string {
 	return ModalFrame(v.size).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			headerStyle.Render("Run command in:"), "\n",
-			v.workspace.Handle+" ("+v.workspace.Purpose+")", "\n", "\n",
-			lipgloss.NewStyle().Foreground(components.ColorMuted).Render("Repositories: "),
+			headerStyle.Render("Command:"), "\n",
 		) + "\n" + v.input.View() + "\n" +
 			lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter] Run  [Esc] Cancel"),
 	)

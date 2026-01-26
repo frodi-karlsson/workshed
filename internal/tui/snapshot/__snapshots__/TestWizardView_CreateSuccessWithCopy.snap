@@ -1,5 +1,6 @@
-[TestWizardView_CustomRepoInput - 1]
-TestWizardView_CustomRepoInput
+
+[TestWizardView_CreateSuccessWithCopy - 1]
+TestWizardView_CreateSuccessWithCopy
 {
   "Views": [
     {
@@ -19,7 +20,7 @@ TestWizardView_CustomRepoInput
       "Data": {
         "Type": "WizardView",
         "Step": 1,
-        "Purpose": "My project",
+        "Purpose": "Copy test project",
         "Template": "",
         "TemplateVarCount": 0,
         "RepoCount": 1,

@@ -3,12 +3,10 @@ package tui
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/workspace"
 )
@@ -151,24 +149,4 @@ func (s *Selector) Run(ctx context.Context) (string, error) {
 	}
 
 	return "", fmt.Errorf("selection cancelled")
-}
-
-func IsHumanMode() bool {
-	envFormat := os.Getenv("WORKSHED_LOG_FORMAT")
-	return envFormat == "" || envFormat == "human"
-}
-
-func TrySelectWorkspace(ctx context.Context, s store.Store, findErr error, l *logger.Logger) (string, bool) {
-	if !IsHumanMode() {
-		return "", false
-	}
-
-	selector := NewSelector(s)
-	handle, err := selector.Run(ctx)
-	if err != nil {
-		l.Help("workspace selection cancelled")
-		return "", false
-	}
-
-	return handle, true
 }

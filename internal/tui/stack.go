@@ -90,11 +90,13 @@ func (m StackModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if result.NextView != nil {
 		m.stack = append(m.stack, result.NextView)
-		m.stack[len(m.stack)-1].OnPush()
+		newView := m.stack[len(m.stack)-1]
+		newView.OnPush()
 		if m.windowSize.Width > 0 {
-			m.stack[len(m.stack)-1].SetSize(m.windowSize)
+			newView.SetSize(m.windowSize)
 		}
-		return m, cmd
+		initCmd := newView.Init()
+		return m, tea.Batch(cmd, initCmd)
 	}
 
 	return m, cmd

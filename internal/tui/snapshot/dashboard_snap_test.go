@@ -64,13 +64,6 @@ func TestDashboardView_Navigation(t *testing.T) {
 }
 
 func TestDashboardView_Overlays(t *testing.T) {
-	t.Run("help", func(t *testing.T) {
-		scenario := snapshot.NewScenario(t, nil, nil)
-		scenario.Key("?", "Open help")
-		output := scenario.Record()
-		snapshot.Match(t, t.Name(), output)
-	})
-
 	t.Run("wizard", func(t *testing.T) {
 		scenario := snapshot.NewScenario(t, nil, nil)
 		scenario.Key("c", "Open wizard")
@@ -107,16 +100,41 @@ func TestDashboardView_FilterMode(t *testing.T) {
 		snapshot.Match(t, t.Name(), output)
 	})
 
-	t.Run("filter_and_apply", func(t *testing.T) {
+	t.Run("filter_typing_c", func(t *testing.T) {
 		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
 			snapshot.WithWorkspaces([]*workspace.Workspace{
-				{Handle: "ws-1", Purpose: "API project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
-				{Handle: "ws-2", Purpose: "Web project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "cache-ws", Purpose: "Cache project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "api-ws", Purpose: "API project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
 		scenario.Key("l", "Enter filter mode")
-		scenario.Type("API", "Type filter")
-		scenario.Enter("Apply filter")
+		scenario.Type("c", "Type 'c' in filter")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("filter_navigation", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "ws-1", Purpose: "First", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "ws-2", Purpose: "Second", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "ws-3", Purpose: "Third", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Key("l", "Enter filter mode")
+		scenario.Key("↓", "Navigate down in filter")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("filter_enter_opens_menu", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Key("l", "Enter filter mode")
+		scenario.Enter("Press enter to open context menu")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
 	})
@@ -129,6 +147,101 @@ func TestDashboardView_FilterMode(t *testing.T) {
 		})
 		scenario.Key("l", "Enter filter mode")
 		scenario.Key("esc", "Cancel filter")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("sort_created_desc", func(t *testing.T) {
+		now := time.Now()
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "old-ws", Purpose: "Old workspace", CreatedAt: now.Add(-2 * time.Hour), Repositories: []workspace.Repository{}},
+				{Handle: "new-ws", Purpose: "New workspace", CreatedAt: now, Repositories: []workspace.Repository{}},
+				{Handle: "mid-ws", Purpose: "Middle workspace", CreatedAt: now.Add(-1 * time.Hour), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Key("l", "Enter filter mode")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("sort_created_asc", func(t *testing.T) {
+		now := time.Now()
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "old-ws", Purpose: "Old workspace", CreatedAt: now.Add(-2 * time.Hour), Repositories: []workspace.Repository{}},
+				{Handle: "new-ws", Purpose: "New workspace", CreatedAt: now, Repositories: []workspace.Repository{}},
+				{Handle: "mid-ws", Purpose: "Middle workspace", CreatedAt: now.Add(-1 * time.Hour), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Key("l", "Enter filter mode")
+		scenario.Key("s", "Cycle to created asc")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("sort_purpose_asc", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "ws-1", Purpose: "Zebra project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "ws-2", Purpose: "Alpha project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "ws-3", Purpose: "Beta project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Key("l", "Enter filter mode")
+		scenario.Key("s", "Cycle to created asc")
+		scenario.Key("s", "Cycle to purpose asc")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("sort_purpose_desc", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "ws-1", Purpose: "Alpha project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "ws-2", Purpose: "Zebra project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "ws-3", Purpose: "Beta project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Key("l", "Enter filter mode")
+		scenario.Key("s", "Cycle to created asc")
+		scenario.Key("s", "Cycle to purpose asc")
+		scenario.Key("s", "Cycle to purpose desc")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("sort_handle_asc", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "zebra-ws", Purpose: "Project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "alpha-ws", Purpose: "Project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "beta-ws", Purpose: "Project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Key("l", "Enter filter mode")
+		scenario.Key("s", "Cycle to created asc")
+		scenario.Key("s", "Cycle to purpose asc")
+		scenario.Key("s", "Cycle to purpose desc")
+		scenario.Key("s", "Cycle to handle asc")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("sort_handle_desc", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "alpha-ws", Purpose: "Project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "zebra-ws", Purpose: "Project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "beta-ws", Purpose: "Project", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Key("l", "Enter filter mode")
+		scenario.Key("s", "Cycle to created asc")
+		scenario.Key("s", "Cycle to purpose asc")
+		scenario.Key("s", "Cycle to purpose desc")
+		scenario.Key("s", "Cycle to handle asc")
+		scenario.Key("s", "Cycle to handle desc")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
 	})

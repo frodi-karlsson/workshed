@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -33,20 +34,23 @@ type workspaceCreateResultMsg struct {
 }
 
 type WizardView struct {
-	store        store.Store
-	ctx          context.Context
-	git          git.Git
-	step         int
-	purpose      string
-	template     string
-	templateVars map[string]string
-	input        textinput.Model
-	repoInput    components.PathCompleter
-	repos        []workspace.RepositoryOption
-	done         bool
-	loadingType  string
-	finishMode   bool
-	size         measure.Window
+	store            store.Store
+	ctx              context.Context
+	git              git.Git
+	step             int
+	purpose          string
+	template         string
+	templateVars     map[string]string
+	input            textinput.Model
+	repoInput        components.PathCompleter
+	repos            []workspace.RepositoryOption
+	done             bool
+	loadingType      string
+	finishMode       bool
+	size             measure.Window
+	createdWorkspace *workspace.Workspace
+	pathCopied       bool
+	copyAttempted    bool
 }
 
 func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView {
@@ -180,6 +184,7 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 			return ViewResult{NextView: errView}, nil
 		}
 
+		v.createdWorkspace = msg.ws
 		v.done = true
 		return ViewResult{}, nil
 
@@ -248,6 +253,14 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 				return ViewResult{}, textinput.Blink
 			}
 		case tea.KeyRunes:
+			if v.done && msg.String() == "c" {
+				if v.createdWorkspace != nil {
+					v.copyAttempted = true
+					err := clipboard.WriteAll(v.createdWorkspace.Path)
+					v.pathCopied = err == nil
+				}
+				return ViewResult{}, nil
+			}
 			if v.finishMode && msg.String() == "t" {
 				templateView := NewTemplateConfigView(v.ctx, v.store, v.template, v.templateVars)
 				return ViewResult{NextView: &templateView}, nil
@@ -273,12 +286,35 @@ func (v *WizardView) View() string {
 		Foreground(components.ColorText)
 
 	if v.done {
+		if v.createdWorkspace == nil {
+			return ModalFrame(v.size).Render(
+				lipgloss.JoinVertical(
+					lipgloss.Left,
+					headerStyle.Render("Workspace created!"), "\n",
+					lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter] Dismiss"),
+				),
+			)
+		}
+
+		var content []string
+		content = append(content, headerStyle.Render("Workspace created!"), "\n")
+		content = append(content, lipgloss.NewStyle().Foreground(components.ColorMuted).Render("Handle:"), " ", v.createdWorkspace.Handle, "\n")
+		content = append(content, lipgloss.NewStyle().Foreground(components.ColorMuted).Render("Path:"), " ", v.createdWorkspace.Path, "\n")
+
+		if v.copyAttempted {
+			content = append(content, "\n")
+			if v.pathCopied {
+				content = append(content, lipgloss.NewStyle().Foreground(components.ColorSuccess).Render("Path copied to clipboard!"), "\n")
+			} else {
+				content = append(content, lipgloss.NewStyle().Foreground(components.ColorError).Render("Unable to copy to clipboard"), "\n")
+			}
+		}
+
+		content = append(content, "\n")
+		content = append(content, lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[c] Copy path  [Enter] Dismiss"))
+
 		return ModalFrame(v.size).Render(
-			lipgloss.JoinVertical(
-				lipgloss.Left,
-				headerStyle.Render("Workspace created!"), "\n",
-				lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter] Dismiss"),
-			),
+			lipgloss.JoinVertical(lipgloss.Left, content...),
 		)
 	}
 
