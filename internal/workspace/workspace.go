@@ -74,12 +74,19 @@ type CreateOptions struct {
 
 	// Repositories specifies the repositories to include in the workspace.
 	Repositories []RepositoryOption
+
+	InvocationCWD string
 }
 
 // ListOptions specifies filtering criteria for listing workspaces.
 type ListOptions struct {
 	// PurposeFilter returns only workspaces whose purpose contains this string.
 	PurposeFilter string
+}
+
+// InvocationContext defines an interface for accessing the original invocation current working directory.
+type InvocationContext interface {
+	GetInvocationCWD() string
 }
 
 // Store defines the interface for persisting and retrieving workspaces.
@@ -111,10 +118,10 @@ type Store interface {
 	Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error)
 
 	// AddRepository adds a repository to an existing workspace.
-	AddRepository(ctx context.Context, handle string, repo RepositoryOption) error
+	AddRepository(ctx context.Context, handle string, repo RepositoryOption, invocationCWD string) error
 
 	// AddRepositories adds multiple repositories to an existing workspace.
-	AddRepositories(ctx context.Context, handle string, repos []RepositoryOption) error
+	AddRepositories(ctx context.Context, handle string, repos []RepositoryOption, invocationCWD string) error
 
 	// RemoveRepository removes a repository from an existing workspace.
 	RemoveRepository(ctx context.Context, handle string, repoName string) error

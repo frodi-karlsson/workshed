@@ -9,6 +9,7 @@ import (
 	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
+	"github.com/frodi/workshed/internal/workspace"
 )
 
 type MenuItem struct {
@@ -23,15 +24,16 @@ func (m MenuItem) Description() string { return m.desc }
 func (m MenuItem) FilterValue() string { return m.key + " " + m.label }
 
 type ContextMenuView struct {
-	store  store.Store
-	ctx    context.Context
-	handle string
-	list   list.Model
-	stale  bool
-	size   measure.Window
+	store         store.Store
+	ctx           context.Context
+	handle        string
+	list          list.Model
+	stale         bool
+	size          measure.Window
+	invocationCtx workspace.InvocationContext
 }
 
-func NewContextMenuView(s store.Store, ctx context.Context, handle string) ContextMenuView {
+func NewContextMenuView(s store.Store, ctx context.Context, handle string, invocationCtx workspace.InvocationContext) ContextMenuView {
 	items := []list.Item{
 		MenuItem{key: "i", label: "Inspect", desc: "Show workspace details", selected: false},
 		MenuItem{key: "p", label: "Path", desc: "Copy path to clipboard", selected: false},
@@ -53,10 +55,11 @@ func NewContextMenuView(s store.Store, ctx context.Context, handle string) Conte
 	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
 
 	return ContextMenuView{
-		store:  s,
-		ctx:    ctx,
-		handle: handle,
-		list:   l,
+		store:         s,
+		ctx:           ctx,
+		handle:        handle,
+		list:          l,
+		invocationCtx: invocationCtx,
 	}
 }
 
@@ -129,7 +132,7 @@ func (v ContextMenuView) handleMenuAction(key string) ViewResult {
 		execView := NewExecView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: execView}
 	case "a":
-		addRepoView := NewAddRepoView(v.store, v.ctx, v.handle)
+		addRepoView := NewAddRepoView(v.store, v.ctx, v.handle, v.invocationCtx)
 		return ViewResult{NextView: &addRepoView}
 	case "d":
 		removeRepoView := NewRemoveRepoView(v.store, v.ctx, v.handle)

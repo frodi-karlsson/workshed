@@ -641,7 +641,7 @@ func TestIntegrationAddRepository(t *testing.T) {
 			t.Fatalf("Create failed: %v", err)
 		}
 
-		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL2, Ref: "main"})
+		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL2, Ref: "main"}, root)
 		if err != nil {
 			t.Fatalf("AddRepository failed: %v", err)
 		}
@@ -683,7 +683,7 @@ func TestIntegrationAddRepository(t *testing.T) {
 		err = store.AddRepositories(ctx, ws.Handle, []RepositoryOption{
 			{URL: repoURL2, Ref: "main"},
 			{URL: repoURL3, Ref: "main"},
-		})
+		}, root)
 		if err != nil {
 			t.Fatalf("AddRepositories failed: %v", err)
 		}
@@ -717,7 +717,7 @@ func TestIntegrationAddRepository(t *testing.T) {
 			t.Fatalf("Create failed: %v", err)
 		}
 
-		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL, Ref: "develop"})
+		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL, Ref: "develop"}, root)
 		if err == nil {
 			t.Error("Expected error for duplicate URL")
 		}
@@ -750,7 +750,7 @@ func TestIntegrationAddRepository(t *testing.T) {
 		_ = ws
 		_ = repoURL2
 
-		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL1, Ref: "develop"})
+		err = store.AddRepository(ctx, ws.Handle, RepositoryOption{URL: repoURL1, Ref: "develop"}, root)
 		if err == nil {
 			t.Error("Expected error for same URL (different ref)")
 		}
@@ -766,7 +766,7 @@ func TestIntegrationAddRepository(t *testing.T) {
 		ctx := context.Background()
 		repoURL := CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
 
-		err = store.AddRepository(ctx, "non-existent", RepositoryOption{URL: repoURL})
+		err = store.AddRepository(ctx, "non-existent", RepositoryOption{URL: repoURL}, root)
 		if err == nil {
 			t.Error("Expected error for non-existent workspace")
 		}
@@ -795,7 +795,7 @@ func TestIntegrationAddRepository(t *testing.T) {
 			t.Fatalf("Create failed: %v", err)
 		}
 
-		err = store.AddRepositories(ctx, ws.Handle, []RepositoryOption{})
+		err = store.AddRepositories(ctx, ws.Handle, []RepositoryOption{}, root)
 		if err == nil {
 			t.Error("Expected error for empty repository list")
 		}

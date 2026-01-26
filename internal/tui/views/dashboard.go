@@ -17,13 +17,14 @@ import (
 )
 
 type DashboardView struct {
-	store      store.Store
-	ctx        context.Context
-	list       list.Model
-	textInput  textinput.Model
-	filterMode bool
-	err        error
-	size       measure.Window
+	store         store.Store
+	ctx           context.Context
+	list          list.Model
+	textInput     textinput.Model
+	filterMode    bool
+	err           error
+	size          measure.Window
+	invocationCtx workspace.InvocationContext
 }
 
 type WorkspaceItem struct {
@@ -50,7 +51,8 @@ func (w WorkspaceItem) FilterValue() string {
 	return fmt.Sprintf("%s %s", w.workspace.Handle, w.workspace.Purpose)
 }
 
-func NewDashboardView(ctx context.Context, s store.Store) DashboardView {
+// NewDashboardView creates a new dashboard view.
+func NewDashboardView(ctx context.Context, s store.Store, invocationCtx workspace.InvocationContext) DashboardView {
 	ti := textinput.New()
 	ti.Placeholder = "Filter workspaces..."
 	ti.CharLimit = 100
@@ -72,11 +74,12 @@ func NewDashboardView(ctx context.Context, s store.Store) DashboardView {
 		Padding(0, 1)
 
 	v := DashboardView{
-		store:      s,
-		ctx:        ctx,
-		list:       l,
-		textInput:  ti,
-		filterMode: false,
+		store:         s,
+		ctx:           ctx,
+		list:          l,
+		textInput:     ti,
+		filterMode:    false,
+		invocationCtx: invocationCtx,
 	}
 	_ = v.refreshWorkspaces()
 	return v
@@ -197,7 +200,7 @@ func (v *DashboardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 			selected := v.list.SelectedItem()
 			if selected != nil {
 				if wi, ok := selected.(WorkspaceItem); ok {
-					contextMenuView := NewContextMenuView(v.store, v.ctx, wi.workspace.Handle)
+					contextMenuView := NewContextMenuView(v.store, v.ctx, wi.workspace.Handle, v.invocationCtx)
 					return ViewResult{NextView: &contextMenuView}, nil
 				}
 			}

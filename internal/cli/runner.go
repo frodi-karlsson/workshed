@@ -13,20 +13,26 @@ import (
 )
 
 type Runner struct {
-	Stderr   io.Writer
-	Stdout   io.Writer
-	Stdin    io.Reader
-	ExitFunc func(int)
-	Store    store.Store
-	Logger   *logger.Logger
+	Stderr        io.Writer
+	Stdout        io.Writer
+	Stdin         io.Reader
+	ExitFunc      func(int)
+	Store         store.Store
+	Logger        *logger.Logger
+	InvocationCWD string
 }
 
-func NewRunner() *Runner {
+func (r *Runner) GetInvocationCWD() string {
+	return r.InvocationCWD
+}
+
+func NewRunner(invocationCWD string) *Runner {
 	return &Runner{
-		Stderr:   os.Stderr,
-		Stdout:   os.Stdout,
-		Stdin:    os.Stdin,
-		ExitFunc: os.Exit,
+		Stderr:        os.Stderr,
+		Stdout:        os.Stdout,
+		Stdin:         os.Stdin,
+		ExitFunc:      os.Exit,
+		InvocationCWD: invocationCWD,
 	}
 }
 
@@ -66,7 +72,7 @@ func (r *Runner) getStore() store.Store {
 }
 
 func (r *Runner) Usage() {
-	msg := `workshed v0.2.8 - Intent-scoped local workspaces
+	msg := `workshed v0.2.9 - Intent-scoped local workspaces
 
 Usage:
   workshed <command> [flags]
@@ -135,7 +141,7 @@ func (r *Runner) RunMainDashboard() {
 	s := r.getStore()
 	ctx := context.Background()
 
-	if err := tui.RunDashboard(ctx, s); err != nil {
+	if err := tui.RunDashboard(ctx, s, r); err != nil {
 		l.Error("dashboard error", "error", err)
 		r.ExitFunc(1)
 	}

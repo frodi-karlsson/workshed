@@ -95,7 +95,7 @@ func TestExtractRepoName(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.url, func(t *testing.T) {
-			name := extractRepoName(tc.url)
+			name := extractRepoName(tc.url, "")
 			if name != tc.expected {
 				t.Errorf("Expected %q, got %q", tc.expected, name)
 			}
@@ -114,7 +114,7 @@ func TestValidateRepoURL(t *testing.T) {
 
 	for _, url := range validURLs {
 		t.Run(url, func(t *testing.T) {
-			err := validateRepoURL(url)
+			err := validateRepoURL(url, "")
 			if err != nil {
 				t.Errorf("Expected valid URL, got error: %v", err)
 			}
@@ -129,7 +129,7 @@ func TestValidateRepoURL(t *testing.T) {
 
 	for _, url := range invalidURLs {
 		t.Run(url, func(t *testing.T) {
-			err := validateRepoURL(url)
+			err := validateRepoURL(url, "")
 			if err == nil {
 				t.Error("Expected error for invalid URL")
 			}
@@ -180,14 +180,14 @@ func TestValidateLocalRepository(t *testing.T) {
 			t.Fatalf("git init failed: %v\n%s", err, out)
 		}
 
-		err := validateLocalRepository(repoDir)
+		err := validateLocalRepository(repoDir, "")
 		if err != nil {
 			t.Errorf("Expected valid repository, got error: %v", err)
 		}
 	})
 
 	t.Run("should reject non-existent path", func(t *testing.T) {
-		err := validateLocalRepository("/nonexistent/path/to/repo")
+		err := validateLocalRepository("/nonexistent/path/to/repo", "")
 		if err == nil {
 			t.Error("Expected error for non-existent path")
 		}
@@ -202,7 +202,7 @@ func TestValidateLocalRepository(t *testing.T) {
 			t.Fatalf("Failed to create temp file: %v", err)
 		}
 
-		err := validateLocalRepository(tmpFile)
+		err := validateLocalRepository(tmpFile, "")
 		if err == nil {
 			t.Error("Expected error for non-directory path")
 		}
@@ -214,7 +214,7 @@ func TestValidateLocalRepository(t *testing.T) {
 	t.Run("should reject directory without .git", func(t *testing.T) {
 		dir := t.TempDir()
 
-		err := validateLocalRepository(dir)
+		err := validateLocalRepository(dir, "")
 		if err == nil {
 			t.Error("Expected error for non-git directory")
 		}
@@ -224,7 +224,7 @@ func TestValidateLocalRepository(t *testing.T) {
 	})
 
 	t.Run("should reject empty path", func(t *testing.T) {
-		err := validateLocalRepository("")
+		err := validateLocalRepository("", "")
 		if err == nil {
 			t.Error("Expected error for empty path")
 		}
@@ -249,7 +249,7 @@ func TestExtractRepoNameLocalPaths(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.path, func(t *testing.T) {
-			name := extractRepoName(tc.path)
+			name := extractRepoName(tc.path, "")
 			if name != tc.expected {
 				t.Errorf("Expected %q, got %q", tc.expected, name)
 			}

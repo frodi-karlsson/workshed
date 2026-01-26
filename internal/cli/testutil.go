@@ -38,10 +38,11 @@ func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
 	}
 
 	env.runner = &Runner{
-		Stderr:   env.ErrBuf,
-		Stdout:   env.OutBuf,
-		Stdin:    env.stdin,
-		ExitFunc: func(code int) { env.exitCalled = true },
+		Stderr:        env.ErrBuf,
+		Stdout:        env.OutBuf,
+		Stdin:         env.stdin,
+		ExitFunc:      func(code int) { env.exitCalled = true },
+		InvocationCWD: env.TempDir,
 	}
 
 	store, err := workspace.NewFSStore(env.TempDir)

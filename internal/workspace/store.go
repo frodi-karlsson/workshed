@@ -78,7 +78,7 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 	}
 
 	if len(repos) > 0 {
-		if err := validateRepositories(repos); err != nil {
+		if err := validateRepositories(repos, opts.InvocationCWD); err != nil {
 			return nil, fmt.Errorf("invalid repositories: %w", err)
 		}
 	}
@@ -95,11 +95,14 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 	clonedRepos := make([]Repository, len(repos))
 	for i, opt := range repos {
 		url := opt.URL
-		// Convert relative local paths to absolute for metadata storage
 		if isLocalPath(url) {
-			absPath, err := filepath.Abs(url)
+			expandedPath, err := expandPath(url, opts.InvocationCWD)
 			if err != nil {
-				return nil, fmt.Errorf("resolving local path %s: %w", url, err)
+				return nil, fmt.Errorf("expanding local path %s: %w", url, err)
+			}
+			absPath, err := filepath.Abs(expandedPath)
+			if err != nil {
+				return nil, fmt.Errorf("resolving absolute local path %s: %w", url, err)
 			}
 			url = absPath
 		}
@@ -107,7 +110,7 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		clonedRepos[i] = Repository{
 			URL:  url,
 			Ref:  opt.Ref,
-			Name: extractRepoName(opt.URL),
+			Name: extractRepoName(opt.URL, opts.InvocationCWD),
 		}
 	}
 
@@ -150,7 +153,7 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		}
 	}
 
-	if err := s.cloneRepositories(ctx, clonedRepos, tmpDir); err != nil {
+	if err := s.cloneRepositories(ctx, clonedRepos, tmpDir, opts.InvocationCWD); err != nil {
 		if cleanupErr != nil {
 			return nil, fmt.Errorf("cloning repositories: %w; %v", err, cleanupErr)
 		}
@@ -266,12 +269,12 @@ func (s *FSStore) UpdatePurpose(ctx context.Context, handle string, purpose stri
 }
 
 // AddRepository adds a single repository to an existing workspace.
-func (s *FSStore) AddRepository(ctx context.Context, handle string, repo RepositoryOption) error {
-	return s.AddRepositories(ctx, handle, []RepositoryOption{repo})
+func (s *FSStore) AddRepository(ctx context.Context, handle string, repo RepositoryOption, invocationCWD string) error {
+	return s.AddRepositories(ctx, handle, []RepositoryOption{repo}, invocationCWD)
 }
 
 // AddRepositories adds multiple repositories to an existing workspace.
-func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []RepositoryOption) error {
+func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []RepositoryOption, invocationCWD string) error {
 	if len(repos) == 0 {
 		return errors.New("no repositories specified")
 	}
@@ -281,7 +284,7 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 		return err
 	}
 
-	if err := validateRepositories(repos); err != nil {
+	if err := validateRepositories(repos, invocationCWD); err != nil {
 		return fmt.Errorf("invalid repository: %w", err)
 	}
 
@@ -296,7 +299,7 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 		if seenURLs[opt.URL] {
 			return fmt.Errorf("repository already exists: %s", opt.URL)
 		}
-		name := extractRepoName(opt.URL)
+		name := extractRepoName(opt.URL, invocationCWD)
 		if seenNames[name] {
 			return fmt.Errorf("repository name already exists: %s", name)
 		}
@@ -306,9 +309,13 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 	for i, opt := range repos {
 		url := opt.URL
 		if isLocalPath(url) {
-			absPath, err := filepath.Abs(url)
+			expandedPath, err := expandPath(url, invocationCWD)
 			if err != nil {
-				return fmt.Errorf("resolving local path %s: %w", url, err)
+				return fmt.Errorf("expanding local path %s: %w", url, err)
+			}
+			absPath, err := filepath.Abs(expandedPath)
+			if err != nil {
+				return fmt.Errorf("resolving absolute local path %s: %w", url, err)
 			}
 			url = absPath
 		}
@@ -316,7 +323,7 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 		clonedRepos[i] = Repository{
 			URL:  url,
 			Ref:  opt.Ref,
-			Name: extractRepoName(opt.URL),
+			Name: extractRepoName(opt.URL, invocationCWD),
 		}
 	}
 
@@ -331,7 +338,7 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 	}()
 
 	for _, repo := range clonedRepos {
-		if err := s.cloneRepo(ctx, repo, ws.Path); err != nil {
+		if err := s.cloneRepo(ctx, repo, ws.Path, invocationCWD); err != nil {
 			return fmt.Errorf("failed to clone %s: %w", repo.Name, err)
 		}
 	}
@@ -554,19 +561,26 @@ func isLocalPath(path string) bool {
 		return true
 	}
 
-	if path == "." || path == ".." {
+	if path == "." || path == ".." || strings.HasPrefix(path, "~/") {
 		return true
 	}
 
 	return false
 }
 
-func validateLocalRepository(path string) error {
+func validateLocalRepository(path, invocationCWD string) error {
 	if path == "" {
 		return errors.New("path cannot be empty")
 	}
 
-	info, err := os.Stat(path)
+	expandedPath, err := expandPath(path, invocationCWD)
+	if err != nil {
+		return fmt.Errorf("expanding path: %w", err)
+	}
+
+	cleanedPath := filepath.Clean(expandedPath)
+
+	info, err := os.Stat(cleanedPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("path does not exist: %s", path)
@@ -578,7 +592,7 @@ func validateLocalRepository(path string) error {
 		return fmt.Errorf("path is not a directory: %s", path)
 	}
 
-	gitDir := filepath.Join(path, ".git")
+	gitDir := filepath.Join(cleanedPath, ".git")
 	if _, err := os.Stat(gitDir); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("not a git repository (missing .git directory): %s", path)
@@ -589,13 +603,13 @@ func validateLocalRepository(path string) error {
 	return nil
 }
 
-func validateRepoURL(url string) error {
+func validateRepoURL(url, invocationCWD string) error {
 	if url == "" {
 		return errors.New("repository URL cannot be empty")
 	}
 
 	if isLocalPath(url) {
-		return validateLocalRepository(url)
+		return validateLocalRepository(url, invocationCWD)
 	}
 
 	if strings.HasPrefix(url, "git@") {
@@ -635,12 +649,12 @@ func validateTemplatePath(path string) error {
 	return nil
 }
 
-func validateRepositories(repos []RepositoryOption) error {
+func validateRepositories(repos []RepositoryOption, invocationCWD string) error {
 	seenURLs := make(map[string]bool)
 	seenNames := make(map[string]bool)
 
 	for _, repo := range repos {
-		if err := validateRepoURL(repo.URL); err != nil {
+		if err := validateRepoURL(repo.URL, invocationCWD); err != nil {
 			return fmt.Errorf("invalid repository URL %s: %w", repo.URL, err)
 		}
 
@@ -649,7 +663,7 @@ func validateRepositories(repos []RepositoryOption) error {
 		}
 		seenURLs[repo.URL] = true
 
-		name := extractRepoName(repo.URL)
+		name := extractRepoName(repo.URL, invocationCWD)
 		if seenNames[name] {
 			return fmt.Errorf("duplicate repository name: %s", name)
 		}
@@ -674,15 +688,19 @@ func (s *FSStore) writeMetadataToDir(ws *Workspace, dir string) error {
 	return nil
 }
 
-func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir string) error {
+func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir, invocationCWD string) error {
 	url := repo.URL
 	ref := repo.Ref
 
 	// Convert relative local paths to absolute for git clone
 	if isLocalPath(url) {
-		absPath, err := filepath.Abs(url)
+		expandedPath, err := expandPath(url, invocationCWD)
 		if err != nil {
-			return fmt.Errorf("resolving local path: %w", err)
+			return fmt.Errorf("expanding local path: %w", err)
+		}
+		absPath, err := filepath.Abs(expandedPath)
+		if err != nil {
+			return fmt.Errorf("resolving absolute local path: %w", err)
 		}
 
 		// Auto-detect current branch for local repos when no ref specified
@@ -715,27 +733,28 @@ func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir string) 
 	return nil
 }
 
-func (s *FSStore) cloneRepositories(ctx context.Context, repos []Repository, wsDir string) error {
+func (s *FSStore) cloneRepositories(ctx context.Context, repos []Repository, wsDir, invocationCWD string) error {
 	for _, repo := range repos {
-		if err := s.cloneRepo(ctx, repo, wsDir); err != nil {
+		if err := s.cloneRepo(ctx, repo, wsDir, invocationCWD); err != nil {
 			return fmt.Errorf("failed to clone %s: %w", repo.Name, err)
 		}
 	}
 	return nil
 }
 
-func extractRepoName(url string) string {
+func extractRepoName(url, invocationCWD string) string {
 	url = strings.TrimSuffix(url, ".git")
 
 	if isLocalPath(url) {
-		// Resolve relative paths like "." or ".." to get actual directory name
-		if url == "." || url == ".." || strings.HasPrefix(url, "./") || strings.HasPrefix(url, "../") {
-			absPath, err := filepath.Abs(url)
-			if err == nil {
-				return filepath.Base(absPath)
-			}
+		expandedPath, err := expandPath(url, invocationCWD)
+		if err != nil {
+			return filepath.Base(url)
 		}
-		return filepath.Base(url)
+		absPath, err := filepath.Abs(expandedPath)
+		if err == nil {
+			return filepath.Base(absPath)
+		}
+		return filepath.Base(expandedPath)
 	}
 
 	if idx := strings.LastIndex(url, "/"); idx != -1 {
@@ -781,6 +800,21 @@ func (s *FSStore) applyTemplate(ctx context.Context, templatePath string, vars m
 
 		return copyFile(path, dstPath, info.Mode())
 	})
+}
+
+func expandPath(path, invocationCWD string) (string, error) {
+	if strings.HasPrefix(path, "~") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("getting user home directory: %w", err)
+		}
+		return filepath.Join(homeDir, path[1:]), nil
+	}
+
+	if !filepath.IsAbs(path) {
+		return filepath.Abs(filepath.Join(invocationCWD, path))
+	}
+	return path, nil
 }
 
 func substituteVars(path string, vars map[string]string) string {

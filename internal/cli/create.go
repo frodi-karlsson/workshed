@@ -87,10 +87,11 @@ func (r *Runner) Create(args []string) {
 	}
 
 	opts := workspace.CreateOptions{
-		Purpose:      *purpose,
-		Template:     *template,
-		TemplateVars: templateVarsMap,
-		Repositories: repoOpts,
+		Purpose:       *purpose,
+		Template:      *template,
+		TemplateVars:  templateVarsMap,
+		Repositories:  repoOpts,
+		InvocationCWD: r.InvocationCWD,
 	}
 
 	createCtx, cancel := context.WithTimeout(ctx, defaultCloneTimeout)

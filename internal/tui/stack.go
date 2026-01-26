@@ -12,13 +12,15 @@ import (
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/tui/views"
+	"github.com/frodi/workshed/internal/workspace"
 )
 
 type StackModel struct {
-	stack      []views.View
-	store      store.Store
-	ctx        context.Context
-	windowSize measure.Window
+	stack         []views.View
+	store         store.Store
+	ctx           context.Context
+	windowSize    measure.Window
+	invocationCtx workspace.InvocationContext
 }
 
 type StackSnapshot struct {
@@ -30,12 +32,13 @@ type ViewSnapshot struct {
 	Data interface{}
 }
 
-func NewStackModel(ctx context.Context, s store.Store) StackModel {
-	dashboard := views.NewDashboardView(ctx, s)
+func NewStackModel(ctx context.Context, s store.Store, invocationCtx workspace.InvocationContext) StackModel {
+	dashboard := views.NewDashboardView(ctx, s, invocationCtx)
 	return StackModel{
-		stack: []views.View{&dashboard},
-		store: s,
-		ctx:   ctx,
+		stack:         []views.View{&dashboard},
+		store:         s,
+		ctx:           ctx,
+		invocationCtx: invocationCtx,
 	}
 }
 
@@ -157,8 +160,8 @@ func (m *StackModel) handleStackAction(action views.StackAction) {
 	}
 }
 
-func RunStackModel(ctx context.Context, s store.Store) error {
-	m := NewStackModel(ctx, s)
+func RunStackModel(ctx context.Context, s store.Store, invocationCtx workspace.InvocationContext) error {
+	m := NewStackModel(ctx, s, invocationCtx)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 

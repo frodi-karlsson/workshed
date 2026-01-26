@@ -17,7 +17,13 @@ import (
 )
 
 func main() {
-	r := cli.NewRunner()
+	invocationCWD, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting current working directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	r := cli.NewRunner(invocationCWD)
 
 	if len(os.Args) < 2 {
 		r.RunMainDashboard()

@@ -32,7 +32,7 @@ func TestGetWorkshedRoot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testutil.WithEnvVar(t, "WORKSHED_ROOT", tt.envVar, func() {
-				r := NewRunner()
+				r := NewRunner("")
 				got := r.getWorkshedRoot()
 
 				if tt.envVar != "" && got != tt.want {

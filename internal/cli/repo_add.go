@@ -71,7 +71,7 @@ func (r *Runner) RepoAdd(args []string) {
 	addCtx, cancel := context.WithTimeout(ctx, defaultCloneTimeout*time.Duration(len(repoOpts)+1))
 	defer cancel()
 
-	if err := s.AddRepositories(addCtx, handle, repoOpts); err != nil {
+	if err := s.AddRepositories(addCtx, handle, repoOpts, r.InvocationCWD); err != nil {
 		l.Error("failed to add repository", "handle", handle, "error", err)
 		r.ExitFunc(1)
 		return

@@ -15,18 +15,19 @@ import (
 )
 
 type AddRepoView struct {
-	store     store.Store
-	ctx       context.Context
-	handle    string
-	input     textinput.Model
-	repos     []workspace.RepositoryOption
-	err       error
-	stale     bool
-	cancelled bool
-	size      measure.Window
+	store         store.Store
+	ctx           context.Context
+	handle        string
+	input         textinput.Model
+	repos         []workspace.RepositoryOption
+	err           error
+	stale         bool
+	cancelled     bool
+	size          measure.Window
+	invocationCtx workspace.InvocationContext
 }
 
-func NewAddRepoView(s store.Store, ctx context.Context, handle string) AddRepoView {
+func NewAddRepoView(s store.Store, ctx context.Context, handle string, invocationCtx workspace.InvocationContext) AddRepoView {
 	ti := textinput.New()
 	ti.Placeholder = "Repository URL (e.g., https://github.com/org/repo@branch)"
 	ti.CharLimit = 500
@@ -34,11 +35,12 @@ func NewAddRepoView(s store.Store, ctx context.Context, handle string) AddRepoVi
 	ti.Focus()
 
 	return AddRepoView{
-		store:  s,
-		ctx:    ctx,
-		handle: handle,
-		input:  ti,
-		repos:  []workspace.RepositoryOption{},
+		store:         s,
+		ctx:           ctx,
+		handle:        handle,
+		input:         ti,
+		repos:         []workspace.RepositoryOption{},
+		invocationCtx: invocationCtx,
 	}
 }
 
@@ -121,7 +123,7 @@ func (v *AddRepoView) confirmAndAdd() (ViewResult, tea.Cmd) {
 		return ViewResult{Action: StackPop{}}, nil
 	}
 
-	err := v.store.AddRepositories(v.ctx, v.handle, v.repos)
+	err := v.store.AddRepositories(v.ctx, v.handle, v.repos, v.invocationCtx.GetInvocationCWD())
 	if err != nil {
 		v.err = err
 		return ViewResult{}, nil

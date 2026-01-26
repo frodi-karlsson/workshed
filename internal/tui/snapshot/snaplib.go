@@ -158,12 +158,17 @@ func WithListError(err error) StoreOption {
 }
 
 type mockStore struct {
-	mockGit     git.Git
-	workspaces  []*workspace.Workspace
-	createErr   error
-	createDelay time.Duration
-	listDelay   time.Duration
-	listErr     error
+	mockGit       git.Git
+	workspaces    []*workspace.Workspace
+	createErr     error
+	createDelay   time.Duration
+	listDelay     time.Duration
+	listErr       error
+	invocationCWD string
+}
+
+func (s *mockStore) GetInvocationCWD() string {
+	return s.invocationCWD
 }
 
 func (s *mockStore) Create(ctx context.Context, opts workspace.CreateOptions) (*workspace.Workspace, error) {
@@ -229,11 +234,11 @@ func (s *mockStore) Exec(ctx context.Context, handle string, opts workspace.Exec
 	return nil, nil
 }
 
-func (s *mockStore) AddRepository(ctx context.Context, handle string, repo workspace.RepositoryOption) error {
+func (s *mockStore) AddRepository(ctx context.Context, handle string, repo workspace.RepositoryOption, invocationCWD string) error {
 	return nil
 }
 
-func (s *mockStore) AddRepositories(ctx context.Context, handle string, repos []workspace.RepositoryOption) error {
+func (s *mockStore) AddRepositories(ctx context.Context, handle string, repos []workspace.RepositoryOption, invocationCWD string) error {
 	return nil
 }
 
@@ -252,8 +257,9 @@ func NewScenario(t *testing.T, gitOpts []GitOption, storeOpts []StoreOption) *Sc
 	}
 
 	store := &mockStore{
-		mockGit:    mockGit,
-		workspaces: []*workspace.Workspace{},
+		mockGit:       mockGit,
+		workspaces:    []*workspace.Workspace{},
+		invocationCWD: t.TempDir(),
 	}
 	for _, opt := range storeOpts {
 		opt(store)
@@ -297,7 +303,7 @@ func (s *Scenario) Record() tui.StackSnapshot {
 	s.t.Helper()
 
 	s.ctx = context.Background()
-	stackModel := tui.NewStackModel(s.ctx, s.store)
+	stackModel := tui.NewStackModel(s.ctx, s.store, s.store)
 	s.harness = NewSyncTestHarness(s.t, stackModel, s.ctx)
 
 	// Initialize and set window size
