@@ -9,6 +9,15 @@ Another is creating a clean, disposable workspace for a specific task without cl
 
 ---
 
+## Installation
+
+```bash
+brew tap frodi-karlsson/homebrew-tap
+brew install workshed
+```
+
+---
+
 ## What Is This?
 
 Workshed helps organize work that touches multiple repositories. Instead of juggling multiple clones or remembering which repos belong to which task, you create a workspace with a clear purpose and put everything related to that task in one place.
@@ -60,15 +69,6 @@ workshed remove
 
 # Or use the interactive dashboard
 workshed
-```
-
----
-
-## Installation
-
-```bash
-brew tap frodi-karlsson/homebrew-tap
-brew install workshed
 ```
 
 ---
