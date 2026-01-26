@@ -14,7 +14,7 @@ import (
 const defaultCloneTimeout = 5 * time.Minute
 
 func (r *Runner) Create(args []string) {
-	l := logger.NewLogger(logger.INFO, "create")
+	l := r.getLogger()
 
 	fs := flag.NewFlagSet("create", flag.ExitOnError)
 	purpose := fs.String("purpose", "", "Purpose of the workspace (required)")

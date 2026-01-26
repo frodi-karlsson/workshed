@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 type modal_RemoveView struct {
@@ -62,14 +63,14 @@ func (v *modal_RemoveView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 }
 
 func (v *modal_RemoveView) View() string {
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(ColorError)
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorError)
 
 	if v.done && v.confirm {
 		return ModalFrame().Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerStyle.Render("Workspace removed!"), "\n",
-				lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Enter] Dismiss"),
+				lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter] Dismiss"),
 			),
 		)
 	}
@@ -79,8 +80,8 @@ func (v *modal_RemoveView) View() string {
 			lipgloss.Left,
 			headerStyle.Render("Remove Workspace?"), "\n",
 			"Handle: "+v.handle, "\n", "\n",
-			lipgloss.NewStyle().Foreground(ColorWarning).Render("[y] Yes  [n] No"), "\n",
-			lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Esc/q] Cancel"),
+			lipgloss.NewStyle().Foreground(components.ColorWarning).Render("[y] Yes  [n] No"), "\n",
+			lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Esc/q] Cancel"),
 		),
 	)
 }

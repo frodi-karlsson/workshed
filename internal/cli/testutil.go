@@ -18,6 +18,7 @@ type CLITestEnvironment struct {
 	ErrBuf     *bytes.Buffer
 	exitCalled bool
 	runner     *Runner
+	stdin      *bytes.Reader
 }
 
 func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
@@ -26,6 +27,7 @@ func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
 		TempDir: t.TempDir(),
 		OutBuf:  &bytes.Buffer{},
 		ErrBuf:  &bytes.Buffer{},
+		stdin:   bytes.NewReader([]byte{}),
 	}
 
 	if err := os.Setenv("WORKSHED_ROOT", env.TempDir); err != nil {
@@ -38,6 +40,7 @@ func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
 	env.runner = &Runner{
 		Stderr:   env.ErrBuf,
 		Stdout:   env.OutBuf,
+		Stdin:    env.stdin,
 		ExitFunc: func(code int) { env.exitCalled = true },
 	}
 
@@ -47,7 +50,7 @@ func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
 	}
 	env.runner.Store = store
 
-	logger.SetTestOutputWriter(env.OutBuf)
+	env.runner.Logger = logger.NewLogger(logger.INFO, "workshed", logger.WithTestOutput(env.OutBuf))
 
 	return env
 }
@@ -59,7 +62,7 @@ func (e *CLITestEnvironment) Cleanup() {
 	if err := os.Unsetenv("WORKSHED_LOG_FORMAT"); err != nil {
 		e.T.Errorf("Failed to unset WORKSHED_LOG_FORMAT: %v", err)
 	}
-	logger.ClearTestOutputWriter()
+	e.runner.Logger = nil
 }
 
 func (e *CLITestEnvironment) ResetBuffers() {
@@ -86,6 +89,13 @@ func (e *CLITestEnvironment) ErrorOutput() string {
 
 func (e *CLITestEnvironment) Runner() *Runner {
 	return e.runner
+}
+
+func (e *CLITestEnvironment) SetStdin(input string) {
+	e.stdin = bytes.NewReader([]byte(input))
+	if e.runner != nil {
+		e.runner.Stdin = e.stdin
+	}
 }
 
 func ExtractHandleFromLog(t *testing.T, output string) string {

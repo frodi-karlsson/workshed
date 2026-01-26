@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 type MenuItem struct {
@@ -44,9 +45,9 @@ func NewContextMenuView(s store.Store, ctx context.Context, handle string) Conte
 	l.SetShowTitle(true)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.Styles.NoItems = lipgloss.NewStyle().Foreground(ColorVeryMuted)
-	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(ColorMuted)
-	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+	l.Styles.NoItems = lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
+	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
+	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
 	l.Styles.Title = l.Styles.Title.Width(ContextMenuWidth)
 
 	return ContextMenuView{
@@ -138,7 +139,7 @@ func (v ContextMenuView) View() string {
 	return frameStyle.Render(
 		v.list.View() + "\n" +
 			lipgloss.NewStyle().
-				Foreground(ColorVeryMuted).
+				Foreground(components.ColorVeryMuted).
 				MarginTop(1).
 				Render("[↑↓/j/k] Navigate  [Enter] Select  [Esc/q/Ctrl+C] Cancel"),
 	)

@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 type modal_UpdateView struct {
@@ -58,14 +59,14 @@ func (v *modal_UpdateView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 }
 
 func (v *modal_UpdateView) View() string {
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(ColorText)
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorText)
 
 	return ModalFrame().Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerStyle.Render("Update Purpose"), "\n", "\n",
 			v.input.View(), "\n", "\n",
-			lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Enter] Save  [Esc] Cancel"),
+			lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter] Save  [Esc] Cancel"),
 		),
 	)
 }

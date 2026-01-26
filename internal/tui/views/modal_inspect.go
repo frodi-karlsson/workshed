@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -57,8 +58,8 @@ func (v *modal_InspectView) View() string {
 		return ModalFrame().Render("Loading...")
 	}
 
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(ColorText)
-	purposeStyle := lipgloss.NewStyle().Foreground(ColorSuccess)
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorText)
+	purposeStyle := lipgloss.NewStyle().Foreground(components.ColorSuccess)
 
 	var repoLines []string
 	for _, repo := range v.workspace.Repositories {
@@ -84,7 +85,7 @@ func (v *modal_InspectView) View() string {
 		lipgloss.JoinVertical(
 			lipgloss.Left,
 			content, "\n",
-			lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Esc/q/Enter] Dismiss"),
+			lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Esc/q/Enter] Dismiss"),
 		),
 	)
 }

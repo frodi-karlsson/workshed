@@ -3,6 +3,7 @@ package modalViews
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 type HelpModal struct {
@@ -43,7 +44,7 @@ func (m HelpModal) Update(msg tea.Msg) (HelpModal, bool) {
 func (m HelpModal) View() string {
 	helpText := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText).
+		Foreground(components.ColorText).
 		Render("Keyboard Shortcuts") + "\n\n" +
 		"[c] Create workspace\n" +
 		"[Enter] Open action menu for selected workspace\n" +
@@ -53,7 +54,7 @@ func (m HelpModal) View() string {
 		"[q/Esc] Quit"
 
 	helpStyle := lipgloss.NewStyle().
-		Foreground(colorVeryMuted)
+		Foreground(components.ColorVeryMuted)
 
 	return modalFrame().Render(
 		lipgloss.JoinVertical(

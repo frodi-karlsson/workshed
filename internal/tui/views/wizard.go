@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -43,7 +44,6 @@ type WizardView struct {
 	repos       []workspace.RepositoryOption
 	done        bool
 	loadingType string
-	spinner     spinner.Model
 	finishMode  bool
 }
 
@@ -52,10 +52,6 @@ func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView 
 	ti.Placeholder = "What is this workspace for?"
 	ti.Prompt = "> "
 	ti.Focus()
-
-	sp := spinner.New()
-	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700"))
 
 	var gitClient git.Git
 	if len(g) > 0 && g[0] != nil {
@@ -74,13 +70,17 @@ func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView 
 		git:        gitClient,
 		step:       0,
 		input:      ti,
-		spinner:    sp,
 		finishMode: false,
 	}
 }
 
 func (v *WizardView) Init() tea.Cmd {
-	return v.spinner.Tick
+	return tea.Tick(
+		time.Second,
+		func(time.Time) tea.Msg {
+			return nil
+		},
+	)
 }
 
 func (v *WizardView) OnPush()   {}
@@ -212,10 +212,10 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 					}
 					if len(v.repos) == 0 {
 						v.loadingType = "git"
-						return ViewResult{}, tea.Batch(v.detectCurrentRepoCmd(), v.spinner.Tick)
+						return ViewResult{}, v.detectCurrentRepoCmd()
 					}
 					v.loadingType = "create"
-					return ViewResult{}, tea.Batch(createWorkspaceCmd(v.ctx, v.store, v.purpose, v.repos), v.spinner.Tick)
+					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.repos)
 				}
 
 				repoInput := strings.TrimSpace(v.input.Value())
@@ -225,10 +225,10 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 					}
 					if len(v.repos) == 0 {
 						v.loadingType = "git"
-						return ViewResult{}, tea.Batch(v.detectCurrentRepoCmd(), v.spinner.Tick)
+						return ViewResult{}, v.detectCurrentRepoCmd()
 					}
 					v.loadingType = "create"
-					return ViewResult{}, tea.Batch(createWorkspaceCmd(v.ctx, v.store, v.purpose, v.repos), v.spinner.Tick)
+					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.repos)
 				}
 
 				url, ref := parseRepoFlag(repoInput)
@@ -245,13 +245,7 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 	updatedInput, inputCmd := v.input.Update(msg)
 	v.input = updatedInput
 
-	if v.loadingType != "" {
-		var spinnerCmd tea.Cmd
-		v.spinner, spinnerCmd = v.spinner.Update(msg)
-		cmd = tea.Batch(inputCmd, spinnerCmd)
-	} else {
-		cmd = inputCmd
-	}
+	cmd = inputCmd
 
 	return ViewResult{}, cmd
 }
@@ -259,14 +253,14 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 func (v *WizardView) View() string {
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(ColorText)
+		Foreground(components.ColorText)
 
 	if v.done {
 		return ModalFrame().Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerStyle.Render("Workspace created!"), "\n",
-				lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Enter] Dismiss"),
+				lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter] Dismiss"),
 			),
 		)
 	}
@@ -278,7 +272,7 @@ func (v *WizardView) View() string {
 				headerStyle.Render("Create Workspace"), "\n", "\n",
 				"Purpose:", "\n",
 				v.input.View(), "\n", "\n",
-				lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Enter] Next  [Esc] Cancel"),
+				lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter] Next  [Esc] Cancel"),
 			),
 		)
 	}
@@ -296,7 +290,7 @@ func (v *WizardView) View() string {
 	if len(repoLines) > 0 {
 		reposContent = lipgloss.JoinVertical(lipgloss.Left, repoLines...)
 	} else {
-		reposContent = lipgloss.NewStyle().Foreground(ColorMuted).Render("  No repositories added yet")
+		reposContent = lipgloss.NewStyle().Foreground(components.ColorMuted).Render("  No repositories added yet")
 	}
 
 	var helpText string
@@ -315,9 +309,9 @@ func (v *WizardView) View() string {
 		"Repositories:", "\n",
 		reposContent, "\n",
 		v.input.View(), "\n",
-		lipgloss.NewStyle().Foreground(ColorMuted).Render("  e.g. github.com/user/repo, github.com/user/repo@branch, ./repo, ~/repo"), "\n",
-		lipgloss.NewStyle().Foreground(ColorMuted).Render("  (default branch used if @branch omitted; current repo used if empty)"), "\n", "\n",
-		lipgloss.NewStyle().Foreground(ColorVeryMuted).Render(helpText),
+		lipgloss.NewStyle().Foreground(components.ColorMuted).Render("  e.g. github.com/user/repo, github.com/user/repo@branch, ./repo, ~/repo"), "\n",
+		lipgloss.NewStyle().Foreground(components.ColorMuted).Render("  (default branch used if @branch omitted; current repo used if empty)"), "\n", "\n",
+		lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render(helpText),
 	)
 
 	return ModalFrame().Render(content)

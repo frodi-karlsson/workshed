@@ -3,6 +3,7 @@ package modalViews
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -56,21 +57,21 @@ func (m ExecModal) Update(msg tea.Msg) (ExecModal, bool) {
 
 func (m ExecModal) View() string {
 	return modalFrame().
-		BorderForeground(colorSuccess).
+		BorderForeground(components.ColorSuccess).
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				lipgloss.NewStyle().
 					Bold(true).
-					Foreground(colorText).
+					Foreground(components.ColorText).
 					Render("Command to run in \""+m.workspace.Handle+"\""),
 				"\n",
 				lipgloss.NewStyle().
-					Foreground(colorVeryMuted).
+					Foreground(components.ColorVeryMuted).
 					Render("Exec modal placeholder"),
 				"\n",
 				lipgloss.NewStyle().
-					Foreground(colorVeryMuted).
+					Foreground(components.ColorVeryMuted).
 					MarginTop(1).
 					Render("[Tab] Switch  [Space] Toggle  [Enter] Run  [Esc] Cancel"),
 			),

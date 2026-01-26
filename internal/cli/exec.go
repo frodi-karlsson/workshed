@@ -11,7 +11,7 @@ import (
 )
 
 func (r *Runner) Exec(args []string) {
-	l := logger.NewLogger(logger.INFO, "exec")
+	l := r.getLogger()
 
 	fs := flag.NewFlagSet("exec", flag.ExitOnError)
 	target := fs.String("repo", "", "Target repository name (default: all repositories)")

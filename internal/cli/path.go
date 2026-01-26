@@ -8,7 +8,7 @@ import (
 )
 
 func (r *Runner) Path(args []string) {
-	l := logger.NewLogger(logger.INFO, "path")
+	l := r.getLogger()
 
 	fs := flag.NewFlagSet("path", flag.ExitOnError)
 

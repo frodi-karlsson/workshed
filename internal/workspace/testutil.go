@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/frodi/workshed/internal/git"
 )
 
 type WorkspaceTestEnvironment struct {
@@ -139,6 +141,25 @@ func CreateTestStore(t *testing.T) (*FSStore, string) {
 		t.Fatalf("NewFSStore failed: %v", err)
 	}
 	return store, root
+}
+
+func CreateMockedTestStore(t *testing.T) (*FSStore, string, *git.MockGit) {
+	root := t.TempDir()
+	mockGit := &git.MockGit{}
+	mockGit.SetCurrentBranchResult("main")
+	store, err := NewFSStore(root, mockGit)
+	if err != nil {
+		t.Fatalf("NewFSStore failed: %v", err)
+	}
+	return store, root, mockGit
+}
+
+func CreateFakeRepo(t *testing.T, root, name string) string {
+	repoDir := filepath.Join(root, name)
+	if err := os.MkdirAll(filepath.Join(repoDir, ".git"), 0755); err != nil {
+		t.Fatalf("Failed to create fake repo dir: %v", err)
+	}
+	return repoDir
 }
 
 func CreateLocalGitRepo(t *testing.T, name string, files map[string]string) string {

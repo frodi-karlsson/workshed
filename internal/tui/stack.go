@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/views"
 )
 
@@ -92,7 +93,7 @@ func (m StackModel) View() string {
 
 	if m.stack[len(m.stack)-1].IsLoading() {
 		spinner := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFD700")).
+			Foreground(components.ColorGold).
 			Render("◐ Loading...")
 		view = view + "\n" + spinner
 	}

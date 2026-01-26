@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/logger"
+	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -172,10 +173,10 @@ No workspaces exist yet. Type a purpose and press Enter to create your first wor
 )
 
 type PurposeInput struct {
-	store *workspace.FSStore
+	store store.Store
 }
 
-func NewPurposeInput(store *workspace.FSStore) *PurposeInput {
+func NewPurposeInput(store store.Store) *PurposeInput {
 	return &PurposeInput{store: store}
 }
 
@@ -221,12 +222,12 @@ func (p *PurposeInput) Run(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("input cancelled")
 }
 
-func TryInputPurpose(ctx context.Context, store *workspace.FSStore, l *logger.Logger) (string, bool) {
+func TryInputPurpose(ctx context.Context, s store.Store, l *logger.Logger) (string, bool) {
 	if !IsHumanMode() {
 		return "", false
 	}
 
-	input := NewPurposeInput(store)
+	input := NewPurposeInput(s)
 	purpose, err := input.Run(ctx)
 	if err != nil {
 		l.Help("purpose input cancelled")

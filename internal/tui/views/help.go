@@ -3,6 +3,7 @@ package views
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 type HelpView struct{}
@@ -29,7 +30,7 @@ func (v HelpView) View() string {
 	return ModalFrame().Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			lipgloss.NewStyle().Bold(true).Foreground(ColorText).Render("Help"),
+			lipgloss.NewStyle().Bold(true).Foreground(components.ColorText).Render("Help"),
 			"\n",
 			"[c] Create workspace",
 			"[Enter] Open menu for selected workspace",

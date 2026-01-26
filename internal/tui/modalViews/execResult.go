@@ -3,6 +3,7 @@ package modalViews
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -42,7 +43,7 @@ func (m ExecResultModal) View() string {
 		return modalFrame().Render("No results")
 	}
 
-	borderColor := colorSuccess
+	borderColor := components.ColorSuccess
 	allSuccess := true
 	for _, result := range m.results {
 		if result.ExitCode != 0 {
@@ -50,7 +51,7 @@ func (m ExecResultModal) View() string {
 		}
 	}
 	if !allSuccess {
-		borderColor = colorError
+		borderColor = components.ColorError
 	}
 
 	statusText := "Success"
@@ -68,13 +69,13 @@ func (m ExecResultModal) View() string {
 				lipgloss.Left,
 				lipgloss.NewStyle().
 					Bold(true).
-					Foreground(colorText).
+					Foreground(components.ColorText).
 					Render("Command Execution Results"),
 				"",
 				lipgloss.JoinHorizontal(lipgloss.Left, status, "  ", m.command),
 				"\n",
 				lipgloss.NewStyle().
-					Foreground(colorVeryMuted).
+					Foreground(components.ColorVeryMuted).
 					MarginTop(1).
 					Render("[Enter/Esc/q] Close"),
 			),

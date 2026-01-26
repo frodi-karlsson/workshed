@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -54,7 +55,7 @@ func (m InspectModal) View() string {
 			content,
 			"\n",
 			lipgloss.NewStyle().
-				Foreground(colorVeryMuted).
+				Foreground(components.ColorVeryMuted).
 				Render("[Esc/q/Enter] Dismiss"),
 		),
 	)
@@ -63,10 +64,10 @@ func (m InspectModal) View() string {
 func (m InspectModal) buildContent() string {
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(colorText)
+		Foreground(components.ColorText)
 
 	purposeStyle := lipgloss.NewStyle().
-		Foreground(colorSuccess)
+		Foreground(components.ColorSuccess)
 
 	var repoLines []string
 	for _, repo := range m.workspace.Repositories {

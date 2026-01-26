@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -64,14 +65,14 @@ func (v *modal_PathView) View() string {
 		return ModalFrame().Render("Loading...")
 	}
 
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(ColorText)
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorText)
 
 	statusMsg := "Copied to clipboard!"
 	if !v.copied {
 		statusMsg = "Unable to copy to clipboard"
 	}
 
-	statusStyle := lipgloss.NewStyle().Foreground(ColorSuccess).Render(statusMsg)
+	statusStyle := lipgloss.NewStyle().Foreground(components.ColorSuccess).Render(statusMsg)
 
 	return ModalFrame().Render(
 		lipgloss.JoinVertical(
@@ -79,7 +80,7 @@ func (v *modal_PathView) View() string {
 			headerStyle.Render("Path:"), "\n",
 			v.workspace.Path, "\n", "\n",
 			statusStyle, "\n", "\n",
-			lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Esc/q/Enter] Dismiss"),
+			lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Esc/q/Enter] Dismiss"),
 		),
 	)
 }

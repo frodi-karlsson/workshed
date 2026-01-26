@@ -3,6 +3,7 @@ package modalViews
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 type RemoveModal struct {
@@ -46,9 +47,9 @@ func (m RemoveModal) Update(msg tea.Msg) (RemoveModal, bool) {
 }
 
 func (m RemoveModal) View() string {
-	frameStyle := modalFrame().BorderForeground(colorError)
+	frameStyle := modalFrame().BorderForeground(components.ColorError)
 	if m.confirmState {
-		frameStyle = frameStyle.BorderForeground(colorSuccess)
+		frameStyle = frameStyle.BorderForeground(components.ColorSuccess)
 	}
 
 	return frameStyle.Render(
@@ -56,20 +57,20 @@ func (m RemoveModal) View() string {
 			lipgloss.Left,
 			lipgloss.NewStyle().
 				Bold(true).
-				Foreground(colorError).
+				Foreground(components.ColorError).
 				Render("Remove Workspace?"),
 			"\n",
 			lipgloss.NewStyle().
-				Foreground(colorText).
+				Foreground(components.ColorText).
 				Render(m.handle),
 			"\n\n",
 			lipgloss.NewStyle().
-				Foreground(colorMuted).
+				Foreground(components.ColorMuted).
 				Render("This will delete the workspace directory."),
 			"\n\n",
 			lipgloss.NewStyle().
 				Bold(true).
-				Foreground(colorText).
+				Foreground(components.ColorText).
 				Render("[y] Yes  [n] No"),
 		),
 	)

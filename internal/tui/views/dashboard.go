@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -58,13 +59,13 @@ func NewDashboardView(ctx context.Context, s store.Store) DashboardView {
 	l.SetShowTitle(true)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.Styles.NoItems = lipgloss.NewStyle().Foreground(ColorVeryMuted)
-	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(ColorMuted)
-	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+	l.Styles.NoItems = lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
+	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
+	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
 	l.Styles.Title = lipgloss.NewStyle().
 		Bold(true).
-		Foreground(ColorText).
-		Background(ColorBackground).
+		Foreground(components.ColorText).
+		Background(components.ColorBackground).
 		Padding(0, 1)
 
 	v := DashboardView{
@@ -207,7 +208,7 @@ func (v *DashboardView) View() string {
 
 	header := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(ColorText).
+		Foreground(components.ColorText).
 		Render("Workshed Dashboard")
 
 	content := []string{header}
@@ -225,7 +226,7 @@ func (v *DashboardView) View() string {
 	}
 
 	helpHint := lipgloss.NewStyle().
-		Foreground(ColorMuted).
+		Foreground(components.ColorMuted).
 		MarginTop(1).
 		Render(helpText)
 

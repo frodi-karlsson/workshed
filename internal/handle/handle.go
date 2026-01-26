@@ -6,6 +6,26 @@ import (
 	"math/big"
 )
 
+type GeneratorOption func(*Generator)
+
+func WithAdjectives(adjs []string) GeneratorOption {
+	return func(g *Generator) {
+		g.adjectives = adjs
+	}
+}
+
+func WithNouns(ns []string) GeneratorOption {
+	return func(g *Generator) {
+		g.nouns = ns
+	}
+}
+
+func WithVerbs(vs []string) GeneratorOption {
+	return func(g *Generator) {
+		g.verbs = vs
+	}
+}
+
 // Generator creates random handles in the format adjective-noun-verb
 type Generator struct {
 	adjectives []string
@@ -14,12 +34,16 @@ type Generator struct {
 }
 
 // NewGenerator creates a new handle generator with default word lists.
-func NewGenerator() *Generator {
-	return &Generator{
+func NewGenerator(opts ...GeneratorOption) *Generator {
+	g := &Generator{
 		adjectives: adjectives,
 		nouns:      nouns,
 		verbs:      verbs,
 	}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
 }
 
 // Generate creates a random handle in the format adjective-noun-verb.

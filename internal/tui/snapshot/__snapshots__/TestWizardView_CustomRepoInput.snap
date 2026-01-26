@@ -1,4 +1,3 @@
-
 [TestWizardView_CustomRepoInput - 1]
 TestWizardView_CustomRepoInput
 {
@@ -22,8 +21,8 @@ TestWizardView_CustomRepoInput
         "Purpose": "My project",
         "RepoCount": 1,
         "FinishMode": false,
-        "Loading": true,
-        "Done": false
+        "Loading": false,
+        "Done": true
       }
     }
   ]

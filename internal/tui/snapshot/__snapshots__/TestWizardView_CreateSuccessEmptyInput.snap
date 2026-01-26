@@ -20,9 +20,9 @@ TestWizardView_CreateSuccessEmptyInput
         "Type": "WizardView",
         "Step": 1,
         "Purpose": "My project",
-        "RepoCount": 0,
+        "RepoCount": 1,
         "FinishMode": false,
-        "Loading": true,
+        "Loading": false,
         "Done": false
       }
     }

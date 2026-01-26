@@ -1,149 +1,152 @@
 # TUI Architecture
 
-Design principles and architectural guidance for the workshed terminal user interface.
+Design principles for the workshed terminal user interface.
 
 ## Guiding Philosophy
 
-The TUI prioritizes clarity, consistency, and discoverability. Users should always understand where they are, what they can do, and how to do it. The interface should feel familiar across different views while accommodating domain-specific interactions.
+The TUI prioritizes clarity and discoverability. Users should always understand where they are and what they can do. The interface should feel consistent across different views.
 
 ## Core Framework
 
-Built on the **Charm ecosystem** (Bubbletea, Bubbles, Lipgloss) following the Elm architecture pattern:
+Built on **Bubbletea** following the Elm architecture:
 
-- **Model**: Holds all state explicitly
-- **Update**: Pure state transitions in response to messages
-- **View**: Renders state as a string
-- **Message**: User input or async events
+- **Model**: Explicit state in fields
+- **Update**: State transitions via messages
+- **View**: Render state to string
 
-This pattern ensures predictability and testability.
+Simple patterns produce predictable behavior.
 
-## Architectural Layers
+## View Stack Architecture
 
-### Views (State Machine)
+### StackModel
 
-The TUI operates as a state machine where `currentView` determines behavior:
+The TUI manages views as a stack:
 
-- **Dashboard**: Primary workspace list and navigation
-- **Modals**: Focused overlays for specific tasks (inspect, exec, update)
-- **Wizard**: Multi-step workflows (create workspace)
-- **Input modes**: Filter, context menus, help
+```
+StackModel
+├── stack []View    # Views pushed/popped during navigation
+└── store Store     # Shared data access
+```
 
-Each view has dedicated `update*` and `view*` methods, keeping concerns separated.
+The top view handles messages. It can:
+- Push a new view (`ViewResult.NextView`)
+- Perform stack action (`ViewResult.Action`: pop, dismiss, etc.)
 
-### Components
+### View Interface
 
-Components fall into three categories:
+All views implement a consistent interface:
 
-**Containers**: Large, stateful views that own their sub-components (dashboard, wizard)
-**Modals**: Self-contained overlays with limited lifetime
-**Primitives**: Reusable UI elements (UnifiedInput, styled components)
+```go
+type View interface {
+    Init() tea.Cmd           // Initial command
+    Update(msg) (ViewResult, tea.Cmd)
+    View() string
+    OnPush()                 // Called when pushed
+    OnResume()               // Called when returned to
+    IsLoading() bool         // Show spinner
+    Cancel()                 // Cancel ongoing work
+    Snapshot() interface{}   // Capture state
+}
+```
 
-### Styling
+This pattern keeps views decoupled and testable.
 
-Styles are centralized and semantic:
+## View Types
 
-- **Colors**: Named by meaning (success, error, muted) not appearance
-- **Frames**: Consistent modal borders, padding, and margins
-- **Help text**: Standardized formats for discoverability
+### DashboardView
 
-This ensures visual consistency and simplifies theme changes.
+The entry point. Shows workspaces in a list with filtering and navigation.
 
-## Design Principles
+### WizardView
+
+Multi-step creation flow. Handles user input, git detection, and repository cloning.
+
+### ContextMenuView
+
+Actions menu for a selected workspace: inspect, path, exec, update, remove.
+
+### Modal Views
+
+Focused overlays: Inspect, Path, Exec, Update, Remove, Error.
+
+Each modal is self-contained with its own state and rendering.
+
+## Key Characteristics
+
+### Composition Over Inheritance
+
+Views compose from simpler components. The stack manages navigation; individual views handle their domain logic.
 
 ### Explicit State
 
-All state lives in model fields. No globals, no hidden variables. This makes behavior predictable and testing straightforward.
-
-### Composition
-
-Complex views compose simpler ones. The wizard embeds step models; the dashboard embeds the wizard. Avoid deep inheritance hierarchies.
-
-### Message Passing
-
-Components communicate through messages, not direct method calls. This decouples components and enables testability.
+All state lives in fields. No globals, no hidden variables. This makes behavior traceable and testing straightforward.
 
 ### Consistent Patterns
 
-Similar behaviors use similar patterns. Modals share help text formats. Lists share navigation keys. Input modes switch with Tab. This reduces cognitive load for users and developers.
+Similar behaviors use similar patterns. Lists navigate the same way. Modals dismiss the same way. This reduces cognitive load for users and developers.
 
-## User Experience Guidelines
+## Key Bindings
 
-### Discoverability
+### Dashboard
+- `c` - Create workspace
+- `?` - Help
+- `l` - Filter
+- Navigation: arrows or `j`/`k`
+- `Enter` - Open context menu
 
-- Always show available actions
-- Standardize help text format: `[Key] Action`
-- Use consistent keyboard shortcuts across views
+### Context Menu
+- `i/p/e/u/r` - Actions
+- `Esc` - Dismiss
 
-### Feedback
+### Modals
+- `Enter` - Confirm
+- `Esc/Ctrl+C` - Cancel
 
-- Visual indication of focus and selection
-- Clear confirmation of actions
-- Error messages explain the problem and next steps
+## Testing
 
-### Mode Awareness
+The TUI uses snapshot testing to verify view states:
 
-When modes exist (typing vs. selecting), indicate the current mode and how to switch. Arrow keys should auto-switch when appropriate.
+- Framework: `go-snaps` with custom DSL in `internal/tui/snapshot/snaplib.go`
+- Tests in `internal/tui/snapshot/`
+- Each test records view state and compares against stored snapshot
 
-## Development Guidelines
+See [Testing Architecture](testing.md) for details.
 
-### Adding a New View
+## Development Principles
 
-1. Add a `viewState` constant
-2. Add `updateView()` and `viewView()` methods
-3. Wire in the main `Update()` and `View()` switches
-4. Follow existing modal patterns for consistency
-5. Add keyboard handling consistent with other modals
+### Adding a View
 
-### Adding a New Component
-
-1. Decide: container, modal, or primitive?
-2. Follow the Elm model pattern (Init, Update, View)
-3. Use centralized colors from `components/styled.go`
-4. Apply common list/input styles if applicable
-5. Add tests using the mock store pattern
-
-### Keyboard Handling
-
-- `Enter`: Confirm/Select
-- `Esc`: Cancel/Dismiss
-- `q`: Alternative quit (for user preference)
-- `↑/↓/j/k`: Navigation
-- `Tab`: Mode switch / Next field
-
-Deviations should have clear rationale.
+1. Implement the `View` interface
+2. Keep state explicit in fields
+3. Return `ViewResult` for navigation
+4. Add snapshot test
 
 ### Styling
 
-- Use semantic color names from `components/styled.go`
-- Apply `modalFrame()` for consistent overlays
-- Follow help text conventions
-- Keep styling minimal; let content shine
+- Use semantic colors
+- Apply consistent spacing
+- Follow help text format: `[Key] Action`
 
-## Testing Strategy
+### Keep It Simple
 
-- **Unit tests**: Model behavior in isolation with mock dependencies
-- **Integration tests**: Real filesystem operations
-- **E2E tests**: User interaction flows with `teatest`
-
-Each level catches different classes of bugs. Prior unit tests for complex logic, E2E for critical paths.
+If a view becomes complex, split it. If behavior isn't clear, simplify the design.
 
 ## Aspirations
 
-The TUI aims to:
+The TUI aims to feel:
+- **Responsive** - Quick to start, snappy navigation
+- **Discoverable** - Clear help, consistent shortcuts
+- **Reliable** - Errors show clearly, recovery is obvious
+- **Approachable** - Simple for new users, efficient for power users
 
-- Feel responsive and polished
-- Support efficient keyboard-only workflows
-- Handle errors gracefully with clear recovery paths
-- Scale to many workspaces without performance degradation
-- Remain approachable for new users whilepowerful for frequent users
-
-Implementation should move toward these goals incrementally.
+Implementation moves toward these goals incrementally.
 
 ## References
 
 | Topic | Location |
 |-------|----------|
-| Main model | `internal/tui/dashboard.go` |
-| Styling constants | `internal/tui/components/styled.go` |
-| Reusable components | `internal/tui/components/` |
-| Testing utilities | `internal/tui/testing.go` |
+| Stack model | `internal/tui/stack.go` |
+| View interface | `internal/tui/views/view.go` |
+| Views | `internal/tui/views/` |
+| Snapshot testing | `internal/tui/snapshot/` |
+| Testing guide | [Testing Architecture](testing.md) |

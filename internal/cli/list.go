@@ -11,7 +11,7 @@ import (
 )
 
 func (r *Runner) List(args []string) {
-	l := logger.NewLogger(logger.INFO, "list")
+	l := r.getLogger()
 
 	fs := flag.NewFlagSet("list", flag.ExitOnError)
 	purposeFilter := fs.String("purpose", "", "Filter by purpose (case-insensitive substring match)")

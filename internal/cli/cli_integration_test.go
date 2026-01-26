@@ -6,9 +6,11 @@ package cli
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -194,6 +196,28 @@ func TestCreate(t *testing.T) {
 			t.Errorf("Create output should contain 'worker' repo name, got: %s", output)
 		}
 	})
+
+	t.Run("should support --repos alias for --repo flag", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		repoURL := workspace.CreateLocalGitRepo(t, "alias-test", map[string]string{"file.txt": "content"})
+
+		env.ResetBuffers()
+		env.Runner().Create([]string{"--purpose", "Alias test", "--repos", repoURL})
+
+		if env.ExitCalled() {
+			t.Fatalf("Create with --repos alias exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace created") {
+			t.Errorf("Create output should mention workspace created, got: %s", output)
+		}
+		if !strings.Contains(output, "alias-test") {
+			t.Errorf("Create output should contain 'alias-test' repo name, got: %s", output)
+		}
+	})
 }
 
 func TestList(t *testing.T) {
@@ -275,6 +299,121 @@ func TestList(t *testing.T) {
 	})
 }
 
+func TestMockGitIntegration(t *testing.T) {
+	t.Run("should list workspaces created via mocked git operations", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		mockGit := &git.MockGit{}
+		mockGit.SetCurrentBranchResult("main")
+
+		store, err := workspace.NewFSStore(env.TempDir, mockGit)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+		env.Runner().Store = store
+
+		ctx := context.Background()
+
+		repoURL := filepath.Join(env.TempDir, "mock-repo")
+		if err := os.MkdirAll(filepath.Join(repoURL, ".git"), 0755); err != nil {
+			t.Fatalf("Failed to create mock repo dir: %v", err)
+		}
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Mocked git test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: ""},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create with mocked git failed: %v", err)
+		}
+
+		if ws == nil {
+			t.Fatal("Expected workspace to be created with mocked git")
+		}
+
+		calls := mockGit.GetCurrentBranchCalls()
+		if len(calls) == 0 {
+			t.Error("Expected CurrentBranch to be called for local repo without ref")
+		}
+
+		env.ResetBuffers()
+		env.Runner().List([]string{})
+
+		output := env.Output()
+		if !strings.Contains(output, "Mocked git test workspace") {
+			t.Errorf("List output should contain mocked workspace purpose, got: %s", output)
+		}
+	})
+
+	t.Run("should handle checkout errors gracefully", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		mockGit := &git.MockGit{}
+		mockGit.SetCheckoutErr(&git.GitError{Operation: "checkout", Hint: "ref not found", Details: "reference not found"})
+
+		store, err := workspace.NewFSStore(env.TempDir, mockGit)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "error-test", map[string]string{"file.txt": "content"})
+
+		_, err = store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Error test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "nonexistent-branch"},
+			},
+		})
+		if err == nil {
+			t.Error("Create should fail when checkout fails")
+		}
+
+		output := err.Error()
+		if !strings.Contains(output, "checkout") && !strings.Contains(output, "ref not found") {
+			t.Errorf("Error should mention checkout failure, got: %s", output)
+		}
+	})
+
+	t.Run("should track clone calls for verification", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		mockGit := &git.MockGit{}
+		mockGit.SetCurrentBranchResult("main")
+
+		store, err := workspace.NewFSStore(env.TempDir, mockGit)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "clone-test", map[string]string{"file.txt": "content"})
+
+		_, err = store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Clone tracking test",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		calls := mockGit.GetCloneCalls()
+		if len(calls) != 1 {
+			t.Errorf("Expected 1 clone call, got: %d", len(calls))
+		}
+		if len(calls) > 0 && calls[0].URL != repoURL {
+			t.Errorf("Expected clone URL %s, got: %s", repoURL, calls[0].URL)
+		}
+	})
+}
+
 func TestRemove(t *testing.T) {
 	t.Run("should exit with error for nonexistent workspace", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
@@ -290,6 +429,160 @@ func TestRemove(t *testing.T) {
 		output := env.Output()
 		if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
 			t.Errorf("Output should mention workspace not found or failed to get, got: %s", output)
+		}
+	})
+
+	t.Run("should remove workspace with confirmation 'y'", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace to remove",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.SetStdin("y\n")
+		env.ResetBuffers()
+		env.Runner().Remove([]string{ws.Handle})
+
+		if env.ExitCalled() {
+			t.Fatalf("Remove exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "removed") {
+			t.Errorf("Remove output should mention workspace removed, got: %s", output)
+		}
+
+		_, err = store.Get(ctx, ws.Handle)
+		if err == nil {
+			t.Error("Workspace should have been removed")
+		}
+	})
+
+	t.Run("should not remove workspace with confirmation 'n'", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace to keep",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.SetStdin("n\n")
+		env.ResetBuffers()
+		env.Runner().Remove([]string{ws.Handle})
+
+		if env.ExitCalled() {
+			t.Fatalf("Remove exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "cancelled") {
+			t.Errorf("Remove output should mention operation cancelled, got: %s", output)
+		}
+
+		_, err = store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Error("Workspace should not have been removed")
+		}
+	})
+
+	t.Run("should not remove workspace with confirmation 'yes' (lowercase)", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace with yes confirmation",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.SetStdin("yes\n")
+		env.ResetBuffers()
+		env.Runner().Remove([]string{ws.Handle})
+
+		if env.ExitCalled() {
+			t.Fatalf("Remove exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		_, err = store.Get(ctx, ws.Handle)
+		if err == nil {
+			t.Error("Workspace should have been removed")
+		}
+	})
+
+	t.Run("should handle empty stdin gracefully", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace no stdin",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.SetStdin("")
+		env.ResetBuffers()
+		env.Runner().Remove([]string{ws.Handle})
+
+		if !env.ExitCalled() {
+			t.Error("Remove should exit when stdin read fails")
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "input") && !strings.Contains(output, "read") {
+			t.Errorf("Remove output should mention input read error, got: %s", output)
 		}
 	})
 }
@@ -328,6 +621,176 @@ func TestPath(t *testing.T) {
 		output := env.Output()
 		if !strings.Contains(output, "not found") && !strings.Contains(output, "failed to get") {
 			t.Errorf("Path output should mention workspace not found or failed to get, got: %s", output)
+		}
+	})
+}
+
+func TestUpdate(t *testing.T) {
+	t.Run("should fail cleanly for nonexistent workspace", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		env.ResetBuffers()
+		env.Runner().Update([]string{"--purpose", "New purpose", "nonexistent-handle"})
+
+		if !env.ExitCalled() {
+			t.Error("Update should exit with error for nonexistent workspace")
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "workspace") && !strings.Contains(output, "purpose") {
+			t.Errorf("Update output should mention workspace and purpose, got: %s", output)
+		}
+	})
+
+	t.Run("should fail when --purpose flag is missing", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Original purpose",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().Update([]string{ws.Handle})
+
+		if !env.ExitCalled() {
+			t.Error("Update should exit with error when --purpose is missing")
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "purpose") || !strings.Contains(output, "flag") {
+			t.Errorf("Update output should mention missing --purpose flag, got: %s", output)
+		}
+	})
+
+	t.Run("should successfully update workspace purpose", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Original purpose",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().Update([]string{"--purpose", "Updated purpose", ws.Handle})
+
+		if env.ExitCalled() {
+			t.Fatalf("Update exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "purpose updated") {
+			t.Errorf("Update output should mention purpose updated, got: %s", output)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if retrieved.Purpose != "Updated purpose" {
+			t.Errorf("Expected purpose 'Updated purpose', got: %s", retrieved.Purpose)
+		}
+	})
+
+	t.Run("should handle handle-less update by finding workspace in current directory", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Original purpose",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		if err := os.Chdir(ws.Path); err != nil {
+			t.Fatalf("Failed to change to workspace directory: %v", err)
+		}
+		defer os.Chdir("/")
+
+		env.ResetBuffers()
+		env.Runner().Update([]string{"--purpose", "Auto-found workspace purpose"})
+
+		if env.ExitCalled() {
+			t.Fatalf("Update exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if retrieved.Purpose != "Auto-found workspace purpose" {
+			t.Errorf("Expected purpose 'Auto-found workspace purpose', got: %s", retrieved.Purpose)
+		}
+	})
+
+	t.Run("should fail with empty purpose", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Original purpose",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().Update([]string{"--purpose", "", ws.Handle})
+
+		if !env.ExitCalled() {
+			t.Error("Update should exit with error for empty purpose")
 		}
 	})
 }

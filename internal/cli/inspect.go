@@ -9,7 +9,7 @@ import (
 )
 
 func (r *Runner) Inspect(args []string) {
-	l := logger.NewLogger(logger.INFO, "inspect")
+	l := r.getLogger()
 
 	fs := flag.NewFlagSet("inspect", flag.ExitOnError)
 

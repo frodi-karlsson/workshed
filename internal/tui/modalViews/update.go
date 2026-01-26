@@ -5,6 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/key"
+	"github.com/frodi/workshed/internal/tui/components"
 )
 
 type UpdateModal struct {
@@ -62,13 +63,13 @@ func (m UpdateModal) View() string {
 			lipgloss.Left,
 			lipgloss.NewStyle().
 				Bold(true).
-				Foreground(colorText).
+				Foreground(components.ColorText).
 				Render("Update Purpose for \""+m.handle+"\""),
 			"\n",
 			m.textInput.View(),
 			"\n",
 			lipgloss.NewStyle().
-				Foreground(colorVeryMuted).
+				Foreground(components.ColorVeryMuted).
 				MarginTop(1).
 				Render("[Enter] Save  [Esc] Cancel"),
 		),

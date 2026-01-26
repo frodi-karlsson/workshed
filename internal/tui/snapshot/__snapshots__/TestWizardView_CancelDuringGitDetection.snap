@@ -22,8 +22,15 @@ TestWizardView_CancelDuringGitDetection
         "Purpose": "My project",
         "RepoCount": 0,
         "FinishMode": false,
-        "Loading": true,
+        "Loading": false,
         "Done": false
+      }
+    },
+    {
+      "Type": "*views.modal_ErrorView",
+      "Data": {
+        "Type": "ErrorView",
+        "Error": "at least one repository is required"
       }
     }
   ]

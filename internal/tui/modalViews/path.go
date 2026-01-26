@@ -3,6 +3,7 @@ package modalViews
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -45,25 +46,25 @@ func (m PathModal) Update(msg tea.Msg) (PathModal, bool) {
 
 func (m PathModal) View() string {
 	return modalFrame().
-		BorderForeground(colorSuccess).
+		BorderForeground(components.ColorSuccess).
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				lipgloss.NewStyle().
 					Bold(true).
-					Foreground(colorText).
+					Foreground(components.ColorText).
 					Render("Workspace Path"),
 				"\n",
 				lipgloss.NewStyle().
-					Foreground(colorMuted).
+					Foreground(components.ColorMuted).
 					Render(m.workspace.Path),
 				"\n\n",
 				lipgloss.NewStyle().
-					Foreground(colorSuccess).
+					Foreground(components.ColorSuccess).
 					Render("Path copied to clipboard!"),
 				"\n",
 				lipgloss.NewStyle().
-					Foreground(colorVeryMuted).
+					Foreground(components.ColorVeryMuted).
 					Render("[Esc/q/Enter] Dismiss"),
 			),
 		)

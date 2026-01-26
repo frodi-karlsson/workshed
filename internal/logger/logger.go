@@ -36,20 +36,16 @@ type Logger struct {
 	writer    io.Writer
 }
 
-type CommandContext struct {
-	Command string
-	Args    []string
-}
+type LoggerOption func(*Logger)
 
-func NewLogger(level LogLevel, command string) *Logger {
-	var writer io.Writer = os.Stdout
-	if testOutputWriter != nil {
-		writer = testOutputWriter
+func WithTestOutput(writer io.Writer) LoggerOption {
+	return func(l *Logger) {
+		l.writer = writer
+		l.log = log.New(writer, "", 0)
 	}
-	return NewLoggerWithWriter(level, command, writer)
 }
 
-func NewLoggerWithWriter(level LogLevel, command string, writer io.Writer) *Logger {
+func NewLogger(level LogLevel, command string, opts ...LoggerOption) *Logger {
 	format := HUMAN
 	if envFormat := os.Getenv("WORKSHED_LOG_FORMAT"); envFormat != "" {
 		switch envFormat {
@@ -60,33 +56,20 @@ func NewLoggerWithWriter(level LogLevel, command string, writer io.Writer) *Logg
 		}
 	}
 
-	return &Logger{
+	l := &Logger{
 		level:     level,
 		format:    format,
 		command:   command,
-		log:       log.New(writer, "", 0),
+		log:       log.New(os.Stdout, "", 0),
 		timestamp: format == JSON,
-		writer:    writer,
+		writer:    os.Stdout,
 	}
-}
 
-func (l *Logger) WithWriter(writer io.Writer) *Logger {
-	newLogger := *l
-	newLogger.log = log.New(writer, "", 0)
-	newLogger.writer = writer
-	return &newLogger
-}
+	for _, opt := range opts {
+		opt(l)
+	}
 
-var (
-	testOutputWriter io.Writer
-)
-
-func SetTestOutputWriter(writer io.Writer) {
-	testOutputWriter = writer
-}
-
-func ClearTestOutputWriter() {
-	testOutputWriter = nil
+	return l
 }
 
 func (l *Logger) Error(msg string, args ...interface{}) {
@@ -117,13 +100,6 @@ func (l *Logger) Debug(msg string, args ...interface{}) {
 	if l.level <= DEBUG {
 		l.logMessage("DEBUG", msg, args)
 	}
-}
-
-// WithContext creates a copy of the logger with additional context
-func (l *Logger) WithContext(ctx CommandContext) *Logger {
-	newLogger := *l
-	newLogger.command = ctx.Command
-	return &newLogger
 }
 
 // Internal log dispatcher

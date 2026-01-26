@@ -70,8 +70,8 @@ The TUI uses the same store interface as CLI commands:
 
 ```
 TUI (internal/tui) ──> Workspace (internal/workspace)
-    dashboardModel.store     FSStore (interface)
-    store.List(ctx, opts)    FSStore.List(ctx, opts)
+    StackModel.store        FSStore (interface)
+    store.List(ctx, opts)   FSStore.List(ctx, opts)
 ```
 
 Both layers depend on the same interface. This ensures consistent behavior regardless of how the user interacts.
@@ -105,11 +105,11 @@ Tests use in-memory or mock stores. The production implementation uses the files
 ### Interactive Session
 
 1. User runs `workshed` (no command)
-2. `main.go` calls `RunMainDashboard`
-3. TUI creates dashboard model with store
+2. `main.go` calls `RunStackModel`
+3. TUI creates stack model with store
 4. Bubble tea program runs event loop
 5. User navigates, selects, creates
-6. Model calls store operations
+6. Views call store operations
 7. View updates automatically
 8. On exit, control returns to shell
 
@@ -143,7 +143,7 @@ type store interface {
 }
 ```
 
-This interface lives in `internal/tui` so both packages can import it.
+This interface is defined in `internal/workspace` and is imported by both CLI and TUI packages.
 
 ### Logger Interface
 
@@ -206,7 +206,7 @@ The TUI handles errors differently, showing them in a modal with recovery option
 ### Integration Points
 
 - `cli_integration_test.go`: Complete CLI workflows
-- `tui/testing.go`: Test utilities for TUI
+- `internal/tui/snapshot/`: Snapshot tests for TUI views
 - `workspace/...`: Tests for persistence logic
 
 ### Test Isolation
@@ -231,5 +231,6 @@ When these appear, the design has drifted. Refactor toward simplicity.
 
 - [CLI Architecture](cli.md) - Command structure, patterns, and conventions
 - [TUI Architecture](tui.md) - View design, state management, and interaction patterns
-- [Workspace Package](../workspace.md) - Domain model and persistence (if exists)
+- [Testing Architecture](testing.md) - Snapshot testing and test patterns
+- [Workspace Package](../workspace.md) - Domain model and persistence
 - [Logger Package](../logger.md) - Logging patterns and usage (if exists)

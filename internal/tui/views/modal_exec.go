@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/key"
 	"github.com/frodi/workshed/internal/store"
+	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -78,7 +79,7 @@ func (v *modal_ExecView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 }
 
 func (v *modal_ExecView) View() string {
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(ColorText)
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(components.ColorText)
 
 	if v.done {
 		var resultLines []string
@@ -95,7 +96,7 @@ func (v *modal_ExecView) View() string {
 		return ModalFrame().Render(
 			lipgloss.JoinVertical(
 				lipgloss.Left, content, "\n",
-				lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Enter/Esc] Dismiss"),
+				lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter/Esc] Dismiss"),
 			),
 		)
 	}
@@ -109,9 +110,9 @@ func (v *modal_ExecView) View() string {
 			lipgloss.Left,
 			headerStyle.Render("Run command in:"), "\n",
 			v.workspace.Handle+" ("+v.workspace.Purpose+")", "\n", "\n",
-			lipgloss.NewStyle().Foreground(ColorMuted).Render("Repositories: "),
+			lipgloss.NewStyle().Foreground(components.ColorMuted).Render("Repositories: "),
 		) + "\n" + v.input.View() + "\n" +
-			lipgloss.NewStyle().Foreground(ColorVeryMuted).Render("[Enter] Run  [Esc] Cancel"),
+			lipgloss.NewStyle().Foreground(components.ColorVeryMuted).Render("[Enter] Run  [Esc] Cancel"),
 	)
 }
 

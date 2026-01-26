@@ -16,6 +16,7 @@ var (
 	ColorBackground = lipgloss.Color("#3C3C3C")
 	ColorHighlight  = lipgloss.Color("#5C5CFF")
 	ColorWarning    = lipgloss.Color("#FFB347")
+	ColorGold       = lipgloss.Color("#FFD700")
 )
 
 type StyleSet struct {

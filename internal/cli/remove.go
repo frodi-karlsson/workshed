@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/frodi/workshed/internal/logger"
@@ -12,7 +11,7 @@ import (
 )
 
 func (r *Runner) Remove(args []string) {
-	l := logger.NewLogger(logger.INFO, "remove")
+	l := r.getLogger()
 
 	fs := flag.NewFlagSet("remove", flag.ExitOnError)
 	force := fs.Bool("force", false, "Skip confirmation prompt")
@@ -52,7 +51,7 @@ func (r *Runner) Remove(args []string) {
 			return
 		}
 
-		reader := bufio.NewReader(os.Stdin)
+		reader := bufio.NewReader(r.Stdin)
 		response, err := reader.ReadString('\n')
 		if err != nil {
 			l.Error("failed to read user input", "error", err)

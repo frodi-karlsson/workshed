@@ -15,14 +15,17 @@ import (
 type Runner struct {
 	Stderr   io.Writer
 	Stdout   io.Writer
+	Stdin    io.Reader
 	ExitFunc func(int)
 	Store    store.Store
+	Logger   *logger.Logger
 }
 
 func NewRunner() *Runner {
 	return &Runner{
 		Stderr:   os.Stderr,
 		Stdout:   os.Stdout,
+		Stdin:    os.Stdin,
 		ExitFunc: os.Exit,
 	}
 }
@@ -33,7 +36,7 @@ func (r *Runner) getWorkshedRoot() string {
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		l := logger.NewLogger(logger.ERROR, "workshed")
+		l := r.getLogger()
 		l.Error("failed to determine home directory", "error", err)
 		r.ExitFunc(1)
 		return ""
@@ -41,11 +44,18 @@ func (r *Runner) getWorkshedRoot() string {
 	return filepath.Join(home, ".workshed", "workspaces")
 }
 
+func (r *Runner) getLogger() *logger.Logger {
+	if r.Logger != nil {
+		return r.Logger
+	}
+	return logger.NewLogger(logger.ERROR, "workshed")
+}
+
 func (r *Runner) getStore() store.Store {
 	if r.Store != nil {
 		return r.Store
 	}
-	l := logger.NewLogger(logger.ERROR, "workshed")
+	l := r.getLogger()
 	s, err := workspace.NewFSStore(r.getWorkshedRoot())
 	if err != nil {
 		l.Error("failed to create workspace store", "error", err)
@@ -120,7 +130,7 @@ func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, l *lo
 }
 
 func (r *Runner) RunMainDashboard() {
-	l := logger.NewLogger(logger.ERROR, "workshed")
+	l := r.getLogger()
 	s := r.getStore()
 	ctx := context.Background()
 

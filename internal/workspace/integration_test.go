@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/frodi/workshed/internal/git"
 )
 
 func TestIntegrationCreate(t *testing.T) {
@@ -105,10 +107,10 @@ func TestIntegrationCreate(t *testing.T) {
 	})
 
 	t.Run("should handle special characters in purpose", func(t *testing.T) {
-		store, _ := CreateTestStore(t)
+		store, root, _ := CreateMockedTestStore(t)
 		ctx := context.Background()
 
-		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test"})
+		fakeRepoPath := CreateFakeRepo(t, root, "fake-repo")
 
 		testCases := []struct {
 			name    string
@@ -126,7 +128,7 @@ func TestIntegrationCreate(t *testing.T) {
 				ws, err := store.Create(ctx, CreateOptions{
 					Purpose: tc.purpose,
 					Repositories: []RepositoryOption{
-						{URL: repoURL, Ref: "main"},
+						{URL: fakeRepoPath, Ref: "main"},
 					},
 				})
 				if err != nil {
@@ -146,10 +148,10 @@ func TestIntegrationCreate(t *testing.T) {
 	})
 
 	t.Run("should avoid collisions during concurrent creation", func(t *testing.T) {
-		store, _ := CreateTestStore(t)
+		store, root, _ := CreateMockedTestStore(t)
 		ctx := context.Background()
 
-		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test"})
+		fakeRepoPath := CreateFakeRepo(t, root, "fake-repo")
 
 		numWorkspaces := 10
 
@@ -166,7 +168,7 @@ func TestIntegrationCreate(t *testing.T) {
 				ws, err := store.Create(ctx, CreateOptions{
 					Purpose: "Concurrent workspace",
 					Repositories: []RepositoryOption{
-						{URL: repoURL, Ref: "main"},
+						{URL: fakeRepoPath, Ref: "main"},
 					},
 				})
 				results <- result{ws, err, idx}
@@ -226,13 +228,13 @@ func TestIntegrationCreate(t *testing.T) {
 
 func TestIntegrationGet(t *testing.T) {
 	t.Run("should handle corrupted metadata gracefully", func(t *testing.T) {
-		store, _ := CreateTestStore(t)
+		store, root, _ := CreateMockedTestStore(t)
 		ctx := context.Background()
 
-		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test"})
+		fakeRepoPath := CreateFakeRepo(t, root, "fake-repo")
 
 		ws := store.CreateMust(ctx, "Test workspace", []RepositoryOption{
-			{URL: repoURL, Ref: "main"},
+			{URL: fakeRepoPath, Ref: "main"},
 		})
 
 		metaPath := filepath.Join(ws.Path, metadataFileName)
@@ -247,13 +249,13 @@ func TestIntegrationGet(t *testing.T) {
 	})
 
 	t.Run("should detect malformed workspace structure", func(t *testing.T) {
-		store, _ := CreateTestStore(t)
+		store, root, _ := CreateMockedTestStore(t)
 		ctx := context.Background()
 
-		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"README.md": "# Test"})
+		fakeRepoPath := CreateFakeRepo(t, root, "fake-repo")
 
 		ws := store.CreateMust(ctx, "Test workspace", []RepositoryOption{
-			{URL: repoURL, Ref: "main"},
+			{URL: fakeRepoPath, Ref: "main"},
 		})
 
 		if err := os.RemoveAll(ws.Path); err != nil {
@@ -364,13 +366,13 @@ func TestIntegrationExec(t *testing.T) {
 	})
 
 	t.Run("should return error for nonexistent repository", func(t *testing.T) {
-		store, _ := CreateTestStore(t)
+		store, root, _ := CreateMockedTestStore(t)
 		ctx := context.Background()
 
-		repoURL := CreateLocalGitRepo(t, "repo1", map[string]string{"file.txt": "content"})
+		fakeRepoPath := CreateFakeRepo(t, root, "fake-repo1")
 
 		ws := store.CreateMust(ctx, "Test exec", []RepositoryOption{
-			{URL: repoURL, Ref: "main"},
+			{URL: fakeRepoPath, Ref: "main"},
 		})
 
 		_, err := store.Exec(ctx, ws.Handle, ExecOptions{
@@ -452,13 +454,13 @@ func TestIntegrationRemove(t *testing.T) {
 	})
 
 	t.Run("should handle remove of corrupted workspace directory", func(t *testing.T) {
-		store, _ := CreateTestStore(t)
+		store, root, _ := CreateMockedTestStore(t)
 		ctx := context.Background()
 
-		repoURL := CreateLocalGitRepo(t, "repo", map[string]string{"file.txt": "content"})
+		fakeRepoPath := CreateFakeRepo(t, root, "fake-repo")
 
 		ws := store.CreateMust(ctx, "Test corrupted remove", []RepositoryOption{
-			{URL: repoURL, Ref: "main"},
+			{URL: fakeRepoPath, Ref: "main"},
 		})
 
 		if err := os.RemoveAll(ws.Path); err != nil {
@@ -468,6 +470,151 @@ func TestIntegrationRemove(t *testing.T) {
 		err := store.Remove(ctx, ws.Handle)
 		if err == nil {
 			t.Error("Expected error when workspace directory is missing")
+		}
+	})
+}
+
+func TestMockGitIntegration(t *testing.T) {
+	t.Run("should use mocked git for workspace creation", func(t *testing.T) {
+		store, root, mockGit := CreateMockedTestStore(t)
+		ctx := context.Background()
+
+		fakeRepoPath := CreateFakeRepo(t, root, "fake-local-repo")
+
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Mocked git test",
+			Repositories: []RepositoryOption{
+				{URL: fakeRepoPath, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		if ws == nil {
+			t.Fatal("Expected workspace to be created with mocked git")
+		}
+
+		calls := mockGit.GetCloneCalls()
+		if len(calls) != 1 {
+			t.Errorf("Expected 1 clone call, got: %d", len(calls))
+		}
+
+		checkoutCalls := mockGit.GetCheckoutCalls()
+		if len(checkoutCalls) != 1 {
+			t.Errorf("Expected 1 checkout call, got: %d", len(checkoutCalls))
+		}
+	})
+
+	t.Run("should handle checkout errors via mock", func(t *testing.T) {
+		ctx := context.Background()
+
+		fakeRepoPath := CreateFakeRepo(t, t.TempDir(), "fake-repo")
+
+		mockGit := &git.MockGit{}
+		mockGit.SetCheckoutErr(&git.GitError{
+			Operation: "checkout",
+			Hint:      "ref not found",
+			Details:   "reference not found",
+		})
+
+		storeWithErr, err := NewFSStore(t.TempDir(), mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		_, err = storeWithErr.Create(ctx, CreateOptions{
+			Purpose: "Checkout error test",
+			Repositories: []RepositoryOption{
+				{URL: fakeRepoPath, Ref: "nonexistent"},
+			},
+		})
+		if err == nil {
+			t.Error("Expected error for checkout failure")
+		}
+
+		output := err.Error()
+		if !strings.Contains(output, "checkout") && !strings.Contains(output, "ref not found") {
+			t.Errorf("Error should mention checkout failure, got: %s", output)
+		}
+	})
+
+	t.Run("should track clone call arguments", func(t *testing.T) {
+		store, root, mockGit := CreateMockedTestStore(t)
+		ctx := context.Background()
+
+		fakeRepoPath := CreateFakeRepo(t, root, "my-repo")
+
+		_, err := store.Create(ctx, CreateOptions{
+			Purpose: "Clone args test",
+			Repositories: []RepositoryOption{
+				{URL: fakeRepoPath, Ref: "develop"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		calls := mockGit.GetCloneCalls()
+		if len(calls) != 1 {
+			t.Fatalf("Expected 1 clone call, got: %d", len(calls))
+		}
+
+		if calls[0].URL != fakeRepoPath {
+			t.Errorf("Expected clone URL %s, got: %s", fakeRepoPath, calls[0].URL)
+		}
+
+		if calls[0].Opts.Depth != 0 {
+			t.Errorf("Expected depth 0 (full clone), got: %d", calls[0].Opts.Depth)
+		}
+	})
+
+	t.Run("should handle clone errors via mock", func(t *testing.T) {
+		fakeRepoPath := CreateFakeRepo(t, t.TempDir(), "nonexistent-repo")
+
+		mockGit := &git.MockGit{}
+		mockGit.SetCloneErr(&git.GitError{
+			Operation: "clone",
+			Hint:      "repository not found",
+			Details:   "repository not found",
+		})
+
+		store, err := NewFSStore(t.TempDir(), mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		_, err = store.Create(ctx, CreateOptions{
+			Purpose: "Clone error test",
+			Repositories: []RepositoryOption{
+				{URL: fakeRepoPath, Ref: "main"},
+			},
+		})
+		if err == nil {
+			t.Error("Expected error for clone failure")
+		}
+	})
+
+	t.Run("should verify mocked git is used for local repo without ref", func(t *testing.T) {
+		store, root, mockGit := CreateMockedTestStore(t)
+		ctx := context.Background()
+
+		fakeRepoPath := CreateFakeRepo(t, root, "local-repo")
+
+		_, err := store.Create(ctx, CreateOptions{
+			Purpose: "Current branch test",
+			Repositories: []RepositoryOption{
+				{URL: fakeRepoPath, Ref: ""},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		branchCalls := mockGit.GetCurrentBranchCalls()
+		if len(branchCalls) != 1 {
+			t.Errorf("Expected 1 CurrentBranch call, got: %d", len(branchCalls))
 		}
 	})
 }

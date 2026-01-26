@@ -8,7 +8,7 @@ import (
 )
 
 func (r *Runner) Update(args []string) {
-	l := logger.NewLogger(logger.INFO, "update")
+	l := r.getLogger()
 
 	fs := flag.NewFlagSet("update", flag.ExitOnError)
 	purpose := fs.String("purpose", "", "New purpose for the workspace (required)")
