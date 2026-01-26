@@ -6,21 +6,20 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 type modal_InspectView struct {
-	store     store.Store
+	store     workspace.Store
 	ctx       context.Context
 	handle    string
 	workspace *workspace.Workspace
 	size      measure.Window
 }
 
-func NewInspectView(s store.Store, ctx context.Context, handle string) *modal_InspectView {
+func NewInspectView(s workspace.Store, ctx context.Context, handle string) *modal_InspectView {
 	ws, _ := s.Get(ctx, handle)
 	return &modal_InspectView{
 		store:     s,

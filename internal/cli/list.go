@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"text/tabwriter"
 
@@ -15,11 +16,16 @@ func (r *Runner) List(args []string) {
 
 	fs := flag.NewFlagSet("list", flag.ExitOnError)
 	purposeFilter := fs.String("purpose", "", "Filter by purpose (case-insensitive substring match)")
+	jsonOutput := fs.Bool("json", false, "Output as JSON")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed list [--purpose <filter>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed list [--purpose <filter>] [--json]\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed list\n")
+		logger.SafeFprintf(r.Stderr, "  workshed list --purpose payment\n")
+		logger.SafeFprintf(r.Stderr, "  workshed list --purpose \"API\" --json\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -42,7 +48,17 @@ func (r *Runner) List(args []string) {
 	}
 
 	if len(workspaces) == 0 {
-		l.Info("no workspaces found")
+		if *jsonOutput {
+			logger.SafeFprintln(r.Stdout, "[]")
+		} else {
+			l.Info("no workspaces found")
+		}
+		return
+	}
+
+	if *jsonOutput {
+		data, _ := json.MarshalIndent(workspaces, "", "  ")
+		logger.SafeFprintln(r.Stdout, string(data))
 		return
 	}
 

@@ -24,7 +24,7 @@ TestDashboardView_ContextMenuActions/path
           {
             "Key": "i",
             "Label": "Inspect",
-            "Desc": "Show workspace details"
+            "Desc": "View workspace details"
           },
           {
             "Key": "p",
@@ -32,33 +32,54 @@ TestDashboardView_ContextMenuActions/path
             "Desc": "Copy path to clipboard"
           },
           {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
             "Key": "e",
             "Label": "Exec",
-            "Desc": "Run command in repositories"
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
           },
           {
             "Key": "a",
-            "Label": "Add Repo",
-            "Desc": "Add repository to workspace"
-          },
-          {
-            "Key": "d",
-            "Label": "Remove Repo",
-            "Desc": "Remove repository"
-          },
-          {
-            "Key": "u",
-            "Label": "Update",
-            "Desc": "Change workspace purpose"
+            "Label": "Add",
+            "Desc": "Add repository"
           },
           {
             "Key": "r",
             "Label": "Remove",
-            "Desc": "Delete workspace (confirm)"
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
           }
         ],
-        "SelectedKey": "i",
-        "Stale": false
+        "SelectedKey": "p",
+        "CurrentPage": 1,
+        "PageCount": 3
       }
     },
     {
@@ -98,7 +119,7 @@ TestDashboardView_ContextMenuActions/exec
           {
             "Key": "i",
             "Label": "Inspect",
-            "Desc": "Show workspace details"
+            "Desc": "View workspace details"
           },
           {
             "Key": "p",
@@ -106,33 +127,54 @@ TestDashboardView_ContextMenuActions/exec
             "Desc": "Copy path to clipboard"
           },
           {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
             "Key": "e",
             "Label": "Exec",
-            "Desc": "Run command in repositories"
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
           },
           {
             "Key": "a",
-            "Label": "Add Repo",
-            "Desc": "Add repository to workspace"
-          },
-          {
-            "Key": "d",
-            "Label": "Remove Repo",
-            "Desc": "Remove repository"
-          },
-          {
-            "Key": "u",
-            "Label": "Update",
-            "Desc": "Change workspace purpose"
+            "Label": "Add",
+            "Desc": "Add repository"
           },
           {
             "Key": "r",
             "Label": "Remove",
-            "Desc": "Delete workspace (confirm)"
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
           }
         ],
-        "SelectedKey": "i",
-        "Stale": false
+        "SelectedKey": "e",
+        "CurrentPage": 2,
+        "PageCount": 3
       }
     },
     {
@@ -174,7 +216,7 @@ TestDashboardView_ContextMenuActions/update_purpose
           {
             "Key": "i",
             "Label": "Inspect",
-            "Desc": "Show workspace details"
+            "Desc": "View workspace details"
           },
           {
             "Key": "p",
@@ -182,33 +224,54 @@ TestDashboardView_ContextMenuActions/update_purpose
             "Desc": "Copy path to clipboard"
           },
           {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
             "Key": "e",
             "Label": "Exec",
-            "Desc": "Run command in repositories"
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
           },
           {
             "Key": "a",
-            "Label": "Add Repo",
-            "Desc": "Add repository to workspace"
-          },
-          {
-            "Key": "d",
-            "Label": "Remove Repo",
-            "Desc": "Remove repository"
-          },
-          {
-            "Key": "u",
-            "Label": "Update",
-            "Desc": "Change workspace purpose"
+            "Label": "Add",
+            "Desc": "Add repository"
           },
           {
             "Key": "r",
             "Label": "Remove",
-            "Desc": "Delete workspace (confirm)"
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
           }
         ],
-        "SelectedKey": "i",
-        "Stale": false
+        "SelectedKey": "u",
+        "CurrentPage": 1,
+        "PageCount": 3
       }
     },
     {
@@ -248,7 +311,7 @@ TestDashboardView_ContextMenuActions/remove_confirm
           {
             "Key": "i",
             "Label": "Inspect",
-            "Desc": "Show workspace details"
+            "Desc": "View workspace details"
           },
           {
             "Key": "p",
@@ -256,42 +319,420 @@ TestDashboardView_ContextMenuActions/remove_confirm
             "Desc": "Copy path to clipboard"
           },
           {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
             "Key": "e",
             "Label": "Exec",
-            "Desc": "Run command in repositories"
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
           },
           {
             "Key": "a",
-            "Label": "Add Repo",
-            "Desc": "Add repository to workspace"
-          },
-          {
-            "Key": "d",
-            "Label": "Remove Repo",
-            "Desc": "Remove repository"
-          },
-          {
-            "Key": "u",
-            "Label": "Update",
-            "Desc": "Change workspace purpose"
+            "Label": "Add",
+            "Desc": "Add repository"
           },
           {
             "Key": "r",
             "Label": "Remove",
-            "Desc": "Delete workspace (confirm)"
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
           }
         ],
-        "SelectedKey": "i",
-        "Stale": false
+        "SelectedKey": "r",
+        "CurrentPage": 2,
+        "PageCount": 3
       }
     },
     {
-      "Type": "*views.modal_RemoveView",
+      "Type": "*views.RemoveRepoView",
       "Data": {
-        "Type": "RemoveView",
+        "Type": "RemoveRepoView",
         "Handle": "test-ws",
-        "Done": false,
-        "Confirm": false
+        "RepoCount": 0,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ContextMenuActions/pagination - 1]
+initial
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "View workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
+          },
+          {
+            "Key": "a",
+            "Label": "Add",
+            "Desc": "Add repository"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
+          }
+        ],
+        "SelectedKey": "i",
+        "CurrentPage": 1,
+        "PageCount": 3
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ContextMenuActions/pagination - 2]
+moved_down
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "View workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
+          },
+          {
+            "Key": "a",
+            "Label": "Add",
+            "Desc": "Add repository"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
+          }
+        ],
+        "SelectedKey": "p",
+        "CurrentPage": 1,
+        "PageCount": 3
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ContextMenuActions/pagination - 3]
+next_page
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "View workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
+          },
+          {
+            "Key": "a",
+            "Label": "Add",
+            "Desc": "Add repository"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
+          }
+        ],
+        "SelectedKey": "e",
+        "CurrentPage": 2,
+        "PageCount": 3
+      }
+    }
+  ]
+}
+---
+
+[TestDashboardView_ContextMenuActions/capture - 1]
+TestDashboardView_ContextMenuActions/capture
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "test-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "View workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
+          },
+          {
+            "Key": "a",
+            "Label": "Add",
+            "Desc": "Add repository"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
+          }
+        ],
+        "SelectedKey": "c",
+        "CurrentPage": 3,
+        "PageCount": 3
+      }
+    },
+    {
+      "Type": "*views.CapturesMenuView",
+      "Data": {
+        "Type": "CapturesMenuView",
+        "Handle": "test-ws",
+        "HasCaptures": false,
+        "CaptureCnt": 0
       }
     }
   ]

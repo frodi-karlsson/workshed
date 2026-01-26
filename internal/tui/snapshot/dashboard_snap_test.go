@@ -303,11 +303,11 @@ func TestDashboardView_ContextMenuActions(t *testing.T) {
 	t.Run("update_purpose", func(t *testing.T) {
 		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
 			snapshot.WithWorkspaces([]*workspace.Workspace{
-				{Handle: "test-ws", Purpose: "Old purpose", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
 			}),
 		})
 		scenario.Enter("Open context menu")
-		scenario.Key("u", "Select update")
+		scenario.Key("u", "Select update purpose")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
 	})
@@ -319,9 +319,40 @@ func TestDashboardView_ContextMenuActions(t *testing.T) {
 			}),
 		})
 		scenario.Enter("Open context menu")
-		scenario.Key("r", "Select remove")
+		scenario.Key("r", "Select remove repo")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("capture", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Enter("Open context menu")
+		scenario.Key("c", "Select capture")
+		output := scenario.Record()
+		snapshot.Match(t, t.Name(), output)
+	})
+
+	t.Run("pagination", func(t *testing.T) {
+		scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+			snapshot.WithWorkspaces([]*workspace.Workspace{
+				{Handle: "test-ws", Purpose: "Test workspace", CreatedAt: time.Now(), Repositories: []workspace.Repository{}},
+			}),
+		})
+		scenario.Enter("Open context menu")
+		output := scenario.Record()
+		snapshot.Match(t, "initial", output)
+
+		scenario.Key("down", "Move down to second item")
+		output = scenario.Record()
+		snapshot.Match(t, "moved_down", output)
+
+		scenario.Key("tab", "Go to next page")
+		output = scenario.Record()
+		snapshot.Match(t, "next_page", output)
 	})
 }
 

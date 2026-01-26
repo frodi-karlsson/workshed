@@ -6,13 +6,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
+	"github.com/frodi/workshed/internal/workspace"
 )
 
 type modal_RemoveView struct {
-	store   store.Store
+	store   workspace.Store
 	ctx     context.Context
 	handle  string
 	done    bool
@@ -20,7 +20,7 @@ type modal_RemoveView struct {
 	size    measure.Window
 }
 
-func NewRemoveView(s store.Store, ctx context.Context, handle string) *modal_RemoveView {
+func NewRemoveView(s workspace.Store, ctx context.Context, handle string) *modal_RemoveView {
 	return &modal_RemoveView{
 		store:  s,
 		ctx:    ctx,

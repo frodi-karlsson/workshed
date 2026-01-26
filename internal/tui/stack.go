@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/key"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/tui/views"
@@ -17,7 +16,7 @@ import (
 
 type StackModel struct {
 	stack         []views.View
-	store         store.Store
+	store         workspace.Store
 	ctx           context.Context
 	windowSize    measure.Window
 	invocationCtx workspace.InvocationContext
@@ -32,7 +31,7 @@ type ViewSnapshot struct {
 	Data interface{}
 }
 
-func NewStackModel(ctx context.Context, s store.Store, invocationCtx workspace.InvocationContext) StackModel {
+func NewStackModel(ctx context.Context, s workspace.Store, invocationCtx workspace.InvocationContext) StackModel {
 	dashboard := views.NewDashboardView(ctx, s, invocationCtx)
 	return StackModel{
 		stack:         []views.View{&dashboard},
@@ -162,7 +161,7 @@ func (m *StackModel) handleStackAction(action views.StackAction) {
 	}
 }
 
-func RunStackModel(ctx context.Context, s store.Store, invocationCtx workspace.InvocationContext) error {
+func RunStackModel(ctx context.Context, s workspace.Store, invocationCtx workspace.InvocationContext) error {
 	m := NewStackModel(ctx, s, invocationCtx)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())

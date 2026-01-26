@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/frodi/workshed/internal/logger"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui"
 	"github.com/frodi/workshed/internal/workspace"
 )
@@ -17,7 +16,7 @@ type Runner struct {
 	Stdout        io.Writer
 	Stdin         io.Reader
 	ExitFunc      func(int)
-	Store         store.Store
+	Store         workspace.Store
 	Logger        *logger.Logger
 	InvocationCWD string
 }
@@ -57,7 +56,7 @@ func (r *Runner) getLogger() *logger.Logger {
 	return logger.NewLogger(logger.ERROR, "workshed")
 }
 
-func (r *Runner) getStore() store.Store {
+func (r *Runner) getStore() workspace.Store {
 	if r.Store != nil {
 		return r.Store
 	}
@@ -78,14 +77,19 @@ Usage:
   workshed <command> [flags]
 
 Commands:
-  create    Create a new workspace
-  list      List workspaces
-  inspect   Show workspace details
-  path      Show workspace path
-  exec      Run a command in repositories
-  repo      Manage repositories in a workspace
-  remove    Remove a workspace
-  update    Update workspace purpose
+  create     Create a new workspace
+  list       List workspaces
+  inspect    Show workspace details
+  path       Show workspace path
+  exec       Run a command in repositories
+  repo       Manage repositories in a workspace
+  captures   List captures
+  capture    Create a capture
+  apply      Apply a captured state
+  derive     Derive workspace context
+  validate   Validate AGENTS.md
+  remove     Remove a workspace
+  update     Update workspace purpose
 
 Flags:
   -h, --help     Show help
@@ -104,12 +108,21 @@ workshed create --purpose "Debug payment timeout" \
 workshed create --purpose "Local exploration"
 
 # Commands can use current directory to find workspace
+cd $(workshed path)
 workshed exec -- make test
 workshed inspect
-workshed path
-workshed update --purpose "New purpose"
+workshed captures
+workshed capture --name "Before changes"
+workshed validate
+
+# Apply a capture by name
+workshed apply --name "Before changes"
+
+# List all workspaces
+workshed list --purpose "payment"
+
+# Remove a workspace
 workshed remove
-workshed list
 `
 	logger.SafeFprintf(r.Stderr, "%s\n", msg)
 }

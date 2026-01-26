@@ -1,0 +1,119 @@
+
+[TestCaptureView_CreateSuccess - 1]
+TestCaptureView_CreateSuccess
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "my-workspace",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "View workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
+          },
+          {
+            "Key": "a",
+            "Label": "Add",
+            "Desc": "Add repository"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create state snapshot"
+          },
+          {
+            "Key": "A",
+            "Label": "Apply",
+            "Desc": "Restore captured state"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
+          }
+        ],
+        "SelectedKey": "c",
+        "CurrentPage": 3,
+        "PageCount": 4
+      }
+    },
+    {
+      "Type": "*views.modal_CaptureView",
+      "Data": {
+        "Type": "CaptureView",
+        "Handle": "my-workspace",
+        "Name": "Before migration",
+        "Description": "",
+        "Step": 1,
+        "Done": false,
+        "CaptureID": "",
+        "RepoCount": 2,
+        "GitState": [
+          {
+            "Repository": "backend",
+            "Branch": "main",
+            "Commit": "",
+            "Dirty": false
+          },
+          {
+            "Repository": "frontend",
+            "Branch": "",
+            "Commit": "",
+            "Dirty": false
+          }
+        ]
+      }
+    }
+  ]
+}
+---

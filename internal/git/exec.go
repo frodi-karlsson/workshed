@@ -70,3 +70,35 @@ func (RealGit) CurrentBranch(ctx context.Context, dir string) (string, error) {
 
 	return strings.TrimSpace(string(output)), nil
 }
+
+func (RealGit) RevParse(ctx context.Context, dir, ref string) (string, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", ref)
+	cmd.Dir = absDir
+	output, err := cmd.Output()
+	if err != nil {
+		return "", ClassifyError("rev-parse", err, output)
+	}
+
+	return strings.TrimSpace(string(output)), nil
+}
+
+func (RealGit) StatusPorcelain(ctx context.Context, dir string) (string, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
+	cmd.Dir = absDir
+	output, err := cmd.Output()
+	if err != nil {
+		return "", ClassifyError("status", err, output)
+	}
+
+	return strings.TrimSpace(string(output)), nil
+}

@@ -20,8 +20,12 @@ func (r *Runner) RepoRemove(args []string) {
 
 	fs.Usage = func() {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed repo remove <handle> --repo <name> [--force]\n\n")
+		logger.SafeFprintf(r.Stderr, "Remove a repository from a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repo remove my-workspace --repo api\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repo remove --repo frontend --force\n")
 	}
 
 	if err := fs.Parse(args); err != nil {

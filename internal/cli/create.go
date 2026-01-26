@@ -30,6 +30,11 @@ func (r *Runner) Create(args []string) {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed create --purpose <purpose> [--repo url@ref]... [--template <dir>] [--map key=value]...\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed create --purpose \"Debug payment timeout\" --repo github.com/org/api@main\n")
+		logger.SafeFprintf(r.Stderr, "  workshed create -r github.com/org/frontend@feature -r github.com/org/backend@feature\n")
+		logger.SafeFprintf(r.Stderr, "  workshed create --purpose \"New feature\" --template ~/templates/react-app --map name=myapp\n")
+		logger.SafeFprintf(r.Stderr, "  workshed create --purpose \"Local exploration\"\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -78,7 +83,7 @@ func (r *Runner) Create(args []string) {
 			if repo == "" {
 				continue
 			}
-			url, ref := parseRepoFlag(repo)
+			url, ref := workspace.ParseRepoFlag(repo)
 			repoOpts = append(repoOpts, workspace.RepositoryOption{
 				URL: url,
 				Ref: ref,
@@ -109,34 +114,8 @@ func (r *Runner) Create(args []string) {
 		for i, repo := range ws.Repositories {
 			repoNames[i] = repo.Name
 		}
-		l.Success("workspace created", "handle", ws.Handle, "path", ws.Path, "repos", strings.Join(repoNames, ", "))
+		l.Success("workspace created", "handle", ws.Handle, "path", ws.Path, "note", "handle is auto-generated", "repos", strings.Join(repoNames, ", "))
 	} else {
-		l.Success("workspace created", "handle", ws.Handle, "path", ws.Path)
+		l.Success("workspace created", "handle", ws.Handle, "path", ws.Path, "note", "handle is auto-generated")
 	}
-}
-
-func parseRepoFlag(repo string) (url, ref string) {
-	if strings.HasPrefix(repo, "git@") {
-		colonIdx := strings.Index(repo, ":")
-		if colonIdx != -1 {
-			atIdx := strings.LastIndex(repo[colonIdx:], "@")
-			if atIdx != -1 {
-				actualIdx := colonIdx + atIdx
-				url = repo[:actualIdx]
-				ref = repo[actualIdx+1:]
-				return url, ref
-			}
-		}
-		return repo, ""
-	}
-
-	atIdx := strings.LastIndex(repo, "@")
-	if atIdx != -1 {
-		url = repo[:atIdx]
-		ref = repo[atIdx+1:]
-	} else {
-		url = repo
-	}
-
-	return url, ref
 }

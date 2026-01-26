@@ -5,11 +5,10 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
-func ShowInspectModal(ctx context.Context, s store.Store, handle string) error {
+func ShowInspectModal(ctx context.Context, s workspace.Store, handle string) error {
 	ws, err := s.Get(ctx, handle)
 	if err != nil {
 		return err

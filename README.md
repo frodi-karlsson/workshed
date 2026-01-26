@@ -62,6 +62,9 @@ workshed create --purpose "New feature" --template ~/templates/node --map env=pr
 # Run commands in all repositories
 workshed exec -- make test
 
+# Capture state with intent before making changes
+workshed capture --name "Starting point" --description "Initial workspace state"
+
 # Add/remove repositories
 workshed repo add my-workspace --repo https://github.com/org/new-repo@main
 workshed repo remove my-workspace --repo new-repo
@@ -79,7 +82,10 @@ workshed remove
 ## Key Concepts
 
 ### Purpose
-A workspace must have a purpose. This is stored as metadata and used for listing and discovery. The handle (e.g. `aquatic-fish-motion`) is randomly generated and not meaningful.
+A workspace must have a purpose. This is stored as metadata and used for listing and discovery.
+
+### Handle
+Each workspace is identified by an auto-generated, random handle (e.g. `aquatic-fish-motion`). Handles are not meaningful — they simply provide a stable identifier for the workspace. The handle is displayed in command output and used for CLI commands that require a workspace reference.
 
 ### Layout
 A workspace is a directory containing:
@@ -152,6 +158,58 @@ workshed create --purpose "New SPA" \
   --map env=production
 ```
 
+## State & Context Management
+
+Workshed provides lightweight primitives for capturing and deriving workspace context. These features are designed to support exploratory, parallel, and agent-assisted workflows — not to guarantee perfect reproducibility.
+
+### Captures
+
+A capture records observed git state (commit, branch, dirty status) for all repositories in a workspace. Captures are **descriptive snapshots, not authoritative checkpoints**. They document what was, without guaranteeing what will be.
+
+Every capture requires intent: provide `--kind`, `--description`, or `--tag` to clarify why the capture exists.
+
+### Apply
+
+The `apply` command attempts to restore git state from a capture. It uses non-interactive, fail-fast preflight checks to detect blocking conditions:
+
+- **Dirty working trees** — would lose uncommitted changes
+- **Missing repositories** — capture references repos not in the workspace
+
+Apply does not enforce HEAD matching or historical correctness. It attempts the operation and reports success or failure.
+
+### Derive
+
+The `derive` command produces machine-readable workspace context as JSON. The output includes:
+
+- Repository paths and metadata
+- Capture history with git state
+- Execution records and timing
+- Aggregate counts and timestamps
+
+This output is designed for tools, scripts, and AI agents that need structured workspace information.
+
+### Example Usage
+
+```bash
+# Capture current state with intent
+workshed capture --name "Before refactor" \
+  --description "API change point"
+
+# Inspect recent captures via derived context
+workshed derive | jq '.captures[:3]'
+
+# Attempt to restore a previous capture
+workshed apply 01HVABCDEFG
+workshed apply --name "Before refactor"
+workshed apply my-workspace --name "Starting point"
+
+# Validate AGENTS.md in the current workspace
+workshed validate
+
+# Validate a custom file or another workspace
+workshed validate --path CUSTOM.md my-workspace
+```
+
 ---
 
 ## Commands
@@ -164,6 +222,10 @@ workshed create --purpose "New SPA" \
 | `workshed inspect` | Show workspace details |
 | `workshed path` | Print workspace path |
 | `workshed exec -- <cmd>` | Run command in repositories |
+| `workshed capture` | Record a descriptive snapshot of git state |
+| `workshed apply` | Attempt to restore git state from a capture |
+| `workshed derive` | Generate workspace context as JSON |
+| `workshed validate` | Validate AGENTS.md structure |
 | `workshed repo add` | Add repository to workspace |
 | `workshed repo remove` | Remove repository from workspace |
 | `workshed update` | Update workspace purpose |

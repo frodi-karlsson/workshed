@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/key"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -52,7 +51,7 @@ func (s SortOrder) Next() SortOrder {
 }
 
 type DashboardView struct {
-	store         store.Store
+	store         workspace.Store
 	ctx           context.Context
 	list          list.Model
 	textInput     textinput.Model
@@ -88,7 +87,7 @@ func (w WorkspaceItem) FilterValue() string {
 }
 
 // NewDashboardView creates a new dashboard view.
-func NewDashboardView(ctx context.Context, s store.Store, invocationCtx workspace.InvocationContext) DashboardView {
+func NewDashboardView(ctx context.Context, s workspace.Store, invocationCtx workspace.InvocationContext) DashboardView {
 	ti := textinput.New()
 	ti.Placeholder = "Filter workspaces..."
 	ti.CharLimit = 100

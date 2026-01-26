@@ -1,29 +1,4 @@
 
-[TestDashboardView_Overlays/help - 1]
-TestDashboardView_Overlays/help
-{
-  "Views": [
-    {
-      "Type": "*views.DashboardView",
-      "Data": {
-        "Type": "DashboardView",
-        "FilterMode": false,
-        "FilterQuery": "",
-        "ItemCount": 0,
-        "SelectedIndex": 0,
-        "HasError": false
-      }
-    },
-    {
-      "Type": "*views.HelpView",
-      "Data": {
-        "Type": "HelpView"
-      }
-    }
-  ]
-}
----
-
 [TestDashboardView_Overlays/wizard - 1]
 TestDashboardView_Overlays/wizard
 {

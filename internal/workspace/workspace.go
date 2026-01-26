@@ -125,4 +125,22 @@ type Store interface {
 
 	// RemoveRepository removes a repository from an existing workspace.
 	RemoveRepository(ctx context.Context, handle string, repoName string) error
+
+	// Execution record operations
+	RecordExecution(ctx context.Context, handle string, record ExecutionRecord) error
+	GetExecution(ctx context.Context, handle, execID string) (*ExecutionRecord, error)
+	ListExecutions(ctx context.Context, handle string, opts ListExecutionsOptions) ([]ExecutionRecord, error)
+
+	// Capture operations
+	CaptureState(ctx context.Context, handle string, opts CaptureOptions) (*Capture, error)
+	ApplyCapture(ctx context.Context, handle string, captureID string) error
+	PreflightApply(ctx context.Context, handle string, captureID string) (ApplyPreflightResult, error)
+	GetCapture(ctx context.Context, handle, captureID string) (*Capture, error)
+	ListCaptures(ctx context.Context, handle string) ([]Capture, error)
+
+	// Context derivation
+	DeriveContext(ctx context.Context, handle string) (*WorkspaceContext, error)
+
+	// AGENTS.md validation
+	ValidateAgents(ctx context.Context, handle string, agentsPath string) (AgentsValidationResult, error)
 }

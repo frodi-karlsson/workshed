@@ -29,6 +29,16 @@ Workspace
 Workspace metadata stored in: <workspace>/.workshed.json
 ```
 
+### Artifacts
+
+Workshed maintains several artifact types under `.workshed/`:
+
+| Artifact | Location | Purpose |
+|----------|----------|---------|
+| Executions | `.workshed/executions/<ulid>/` | Durable records of command executions |
+| Captures | `.workshed/captures/<ulid>/` | Descriptive snapshots of git state |
+| Context | `.workshed/context.json` | Derived workspace metadata |
+
 ### Store Interface
 
 The `Store` interface abstracts persistence operations:
@@ -43,11 +53,63 @@ type Store interface {
     UpdatePurpose(ctx context.Context, handle string, purpose string) error
     FindWorkspace(ctx context.Context, dir string) (*Workspace, error)
     Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error)
-    AddRepository(ctx context.Context, handle string, repo RepositoryOption) error
-    AddRepositories(ctx context.Context, handle string, repos []RepositoryOption) error
+    AddRepository(ctx context.Context, handle string, repo RepositoryOption, invocationCWD string) error
+    AddRepositories(ctx context.Context, handle string, repos []RepositoryOption, invocationCWD string) error
     RemoveRepository(ctx context.Context, handle string, repoName string) error
+
+    // Execution records
+    RecordExecution(ctx context.Context, handle string, record ExecutionRecord) error
+    GetExecution(ctx context.Context, handle, execID string) (*ExecutionRecord, error)
+    ListExecutions(ctx context.Context, handle string, opts ListExecutionsOptions) ([]ExecutionRecord, error)
+
+    // State capture and apply
+    CaptureState(ctx context.Context, handle string, opts CaptureOptions) (*Capture, error)
+    ApplyCapture(ctx context.Context, handle string, captureID string) error
+    PreflightApply(ctx context.Context, handle string, captureID string) (ApplyPreflightResult, error)
+    GetCapture(ctx context.Context, handle, captureID string) (*Capture, error)
+    ListCaptures(ctx context.Context, handle string) ([]Capture, error)
+
+    // Context derivation
+    DeriveContext(ctx context.Context, handle string) (*WorkspaceContext, error)
+
+    // Validation
+    ValidateAgents(ctx context.Context, handle string, agentsPath string) (AgentsValidationResult, error)
 }
 ```
+
+### Execution Records
+
+Execution records are durable artifacts created during `exec` operations:
+
+```
+.workshed/executions/<ulid>/
+├── record.json       # ExecutionRecord with command, results, timing
+├── stdout/           # Per-repository stdout files
+└── stderr/           # Per-repository stderr files
+```
+
+The record includes:
+- Command executed and target scope
+- Per-repository exit codes and duration
+- Timestamps for start/completion
+- Links to output files
+
+### Captures
+
+Captures are **descriptive snapshots, not authoritative state**. They document git state at a point in time without implying a restoration contract.
+
+```
+.workshed/captures/<ulid>/
+└── capture.json      # GitRef list with commit, branch, status
+```
+
+Each capture includes:
+- **Kind**: Describes why the capture exists (manual, execution, checkpoint)
+- **SourceExecutionID**: Optional link to originating execution record
+- **GitState**: Per-repository commit hash, branch, and dirty status
+- **Metadata**: User-provided description, tags, custom fields
+
+Captures are **descriptive snapshots, not authoritative state**. They document git state at a point in time without implying restoration will produce identical results.
 
 Implementations:
 - `FSStore`: Filesystem-based store (primary implementation)
@@ -67,6 +129,7 @@ Handles are unique, generated identifiers for workspaces:
 ```
 internal/workspace/
 ├── workspace.go       # Core types (Workspace, Repository, Store interface)
+├── types.go           # Extended types (ExecutionRecord, Capture, WorkspaceContext)
 ├── store.go          # FSStore implementation
 ├── store_test.go     # Unit tests
 ├── integration_test.go # Integration tests
@@ -133,6 +196,46 @@ Repositories are typically cloned during workspace creation:
 - Uses `os.RemoveAll()` on workspace path
 - All cloned repositories are removed
 - No separate cleanup of metadata and repos needed
+
+### Execution Records
+
+`RecordExecution()` creates durable artifacts for command invocations:
+
+1. Create `.workshed/executions/<ulid>/` directory
+2. Write `record.json` with execution metadata
+3. Create `stdout/` and `stderr/` subdirectories
+4. On completion, update record with exit codes and duration
+
+Execution records are never deleted by workshed. They serve as an audit trail.
+
+### State Capture
+
+`CaptureState()` creates descriptive snapshots of git state:
+
+1. Create `.workshed/captures/<ulid>/` directory
+2. For each repository, record:
+   - Commit hash (`git rev-parse HEAD`)
+   - Current branch (`git branch --show-current`)
+   - Working tree status (`git status --porcelain`)
+3. Write `capture.json` with all GitRef data
+
+Captures are **descriptive, not authoritative**. They document state without guaranteeing restoration will produce identical results.
+
+### Apply with Preflight
+
+`ApplyCapture()` restores git state with safety checks:
+
+1. Call `PreflightApply()` to validate workspace state
+2. Fail fast if preflight returns errors (non-interactive)
+3. For each repository: `git checkout <commit>`
+
+Preflight detects conditions that would block safe restoration:
+- Dirty working trees (would lose uncommitted changes)
+- Missing repositories (capture references nonexistent repos)
+- HEAD mismatches (current state differs from capture)
+- Git failures (checkout operation errors)
+
+Preflight errors are structured for programmatic handling but do not prompt the user.
 
 ## Error Handling
 

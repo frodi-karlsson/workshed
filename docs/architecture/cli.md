@@ -18,6 +18,7 @@ Create logger -> Parse flags -> Validate inputs -> Execute -> Handle errors
 
 Commands are functions in `internal/cli/`:
 - `Create`, `List`, `Inspect`, `Path`, `Exec`, `Remove`, `Update`, `Repo`
+- `Capture`, `Apply`, `Derive`, `Validate`
 
 ### Dependencies
 
@@ -109,7 +110,43 @@ func (r *Runner) Repo(args []string) {
 
 Both subcommands follow the standard pattern but add validation for repository uniqueness (no duplicate URLs or names) and clone/remove operations.
 
+### State Management Commands
+
+Workshed provides commands for state management:
+
+- **capture**: Creates descriptive snapshots of git state. Captures are not authoritative state records; they document the current state of repositories at a point in time.
+- **apply**: Restores git state from a capture. Includes preflight validation to detect conditions that would block safe restoration.
+
+  Syntax:
+  ```
+  workshed apply [<handle>] <capture-id>
+  workshed apply [<handle>] --name <capture-name>
+  ```
+
+  Examples:
+  ```
+  workshed apply 01HVABCDEFG
+  workshed apply --name "Before refactor"
+  workshed apply my-workspace 01HVABCDEFG
+  workshed apply my-workspace --name "Starting point"
+  ```
+
+- **derive**: Generates workspace context as JSON, including repository paths, metadata, and artifact counts.
+- **validate**: Checks AGENTS.md structure against expected sections.
+
+These commands compose primitive operations from the workspace package.
+
 ## Error Handling and Logging
+
+### Preflight Validation
+
+Apply operations use non-interactive preflight validation to detect blocking conditions before attempting state restoration:
+
+- Dirty working trees (would lose uncommitted changes)
+- Missing repositories (capture references repos not in workspace)
+- HEAD mismatches (current state differs from capture)
+
+Preflight failures return structured errors describing what would block a safe apply, without prompting the user.
 
 ### Structured Logger
 

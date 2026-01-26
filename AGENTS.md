@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Minimal Template
+
+For new workspaces, use this minimal template:
+
+```markdown
+# Task
+
+## Goal
+
+## Commands
+
+## Notes
+```
+
+See [github.com/frodi/workshed/AGENTS.md](https://github.com/frodi/workshed/blob/main/AGENTS.md) for a comprehensive reference.
+
+---
+
 ## Running
 
 Make religious use of the Makefile. It defines all common tasks.

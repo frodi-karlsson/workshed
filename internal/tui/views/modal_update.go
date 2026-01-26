@@ -7,20 +7,20 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/key"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
+	"github.com/frodi/workshed/internal/workspace"
 )
 
 type modal_UpdateView struct {
-	store  store.Store
+	store  workspace.Store
 	ctx    context.Context
 	handle string
 	input  textinput.Model
 	size   measure.Window
 }
 
-func NewUpdateView(s store.Store, ctx context.Context, handle string) *modal_UpdateView {
+func NewUpdateView(s workspace.Store, ctx context.Context, handle string) *modal_UpdateView {
 	ti := textinput.New()
 	ti.Placeholder = "New purpose..."
 	ti.Focus()

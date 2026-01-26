@@ -6,17 +6,23 @@ import (
 )
 
 type MockGit struct {
-	mu                  sync.Mutex
-	cloneErr            error
-	checkoutErr         error
-	getRemoteErr        error
-	getRemoteURLResult  string
-	currentBranchErr    error
-	currentBranchResult string
-	cloneCalls          []CloneCall
-	checkoutCalls       []CheckoutCall
-	getRemoteCalls      []GetRemoteCall
-	currentBranchCalls  []CurrentBranchCall
+	mu                    sync.Mutex
+	cloneErr              error
+	checkoutErr           error
+	getRemoteErr          error
+	getRemoteURLResult    string
+	currentBranchErr      error
+	currentBranchResult   string
+	revParseErr           error
+	revParseResult        string
+	statusPorcelainErr    error
+	statusPorcelainResult string
+	cloneCalls            []CloneCall
+	checkoutCalls         []CheckoutCall
+	getRemoteCalls        []GetRemoteCall
+	currentBranchCalls    []CurrentBranchCall
+	revParseCalls         []RevParseCall
+	statusPorcelainCalls  []StatusPorcelainCall
 }
 
 type CloneCall struct {
@@ -35,6 +41,15 @@ type GetRemoteCall struct {
 }
 
 type CurrentBranchCall struct {
+	Dir string
+}
+
+type RevParseCall struct {
+	Dir string
+	Ref string
+}
+
+type StatusPorcelainCall struct {
 	Dir string
 }
 
@@ -134,4 +149,62 @@ func (m *MockGit) GetCurrentBranchCalls() []CurrentBranchCall {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return append([]CurrentBranchCall{}, m.currentBranchCalls...)
+}
+
+func (m *MockGit) RevParse(ctx context.Context, dir, ref string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.revParseCalls = append(m.revParseCalls, RevParseCall{Dir: dir, Ref: ref})
+	if m.revParseErr != nil {
+		return "", m.revParseErr
+	}
+	return m.revParseResult, nil
+}
+
+func (m *MockGit) SetRevParseErr(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.revParseErr = err
+}
+
+func (m *MockGit) SetRevParseResult(commit string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.revParseResult = commit
+}
+
+func (m *MockGit) GetRevParseCalls() []RevParseCall {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]RevParseCall{}, m.revParseCalls...)
+}
+
+func (m *MockGit) StatusPorcelain(ctx context.Context, dir string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.statusPorcelainCalls = append(m.statusPorcelainCalls, StatusPorcelainCall{Dir: dir})
+	if m.statusPorcelainErr != nil {
+		return "", m.statusPorcelainErr
+	}
+	return m.statusPorcelainResult, nil
+}
+
+func (m *MockGit) SetStatusPorcelainErr(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.statusPorcelainErr = err
+}
+
+func (m *MockGit) SetStatusPorcelainResult(status string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.statusPorcelainResult = status
+}
+
+func (m *MockGit) GetStatusPorcelainCalls() []StatusPorcelainCall {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]StatusPorcelainCall{}, m.statusPorcelainCalls...)
 }

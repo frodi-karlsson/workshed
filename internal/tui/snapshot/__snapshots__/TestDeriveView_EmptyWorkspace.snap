@@ -1,0 +1,99 @@
+
+[TestDeriveView_EmptyWorkspace - 1]
+TestDeriveView_EmptyWorkspace
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 1,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ContextMenuView",
+      "Data": {
+        "Type": "ContextMenuView",
+        "Handle": "empty-ws",
+        "Items": [
+          {
+            "Key": "i",
+            "Label": "Inspect",
+            "Desc": "View workspace details"
+          },
+          {
+            "Key": "p",
+            "Label": "Path",
+            "Desc": "Copy path to clipboard"
+          },
+          {
+            "Key": "u",
+            "Label": "Update",
+            "Desc": "Edit purpose"
+          },
+          {
+            "Key": "e",
+            "Label": "Exec",
+            "Desc": "Run command"
+          },
+          {
+            "Key": "h",
+            "Label": "History",
+            "Desc": "Execution history"
+          },
+          {
+            "Key": "a",
+            "Label": "Add",
+            "Desc": "Add repository"
+          },
+          {
+            "Key": "r",
+            "Label": "Remove",
+            "Desc": "Remove repository"
+          },
+          {
+            "Key": "c",
+            "Label": "Capture",
+            "Desc": "Create or view captures"
+          },
+          {
+            "Key": "D",
+            "Label": "Derive",
+            "Desc": "Generate context JSON"
+          },
+          {
+            "Key": "v",
+            "Label": "Validate",
+            "Desc": "Check AGENTS.md"
+          },
+          {
+            "Key": "k",
+            "Label": "Health",
+            "Desc": "Check workspace health"
+          }
+        ],
+        "SelectedKey": "D",
+        "CurrentPage": 3,
+        "PageCount": 3
+      }
+    },
+    {
+      "Type": "*views.view_DeriveView",
+      "Data": {
+        "Type": "DeriveView",
+        "Handle": "empty-ws",
+        "Purpose": "Empty workspace",
+        "RepoCount": 0,
+        "CaptureCount": 0,
+        "ExecCount": 0,
+        "Version": 1
+      }
+    }
+  ]
+}
+---

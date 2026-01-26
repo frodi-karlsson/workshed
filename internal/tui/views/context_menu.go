@@ -3,62 +3,71 @@ package views
 import (
 	"context"
 
-	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
-type MenuItem struct {
-	key      string
-	label    string
-	desc     string
-	selected bool
-}
-
-func (m MenuItem) Title() string       { return "[" + m.key + "] " + m.label }
-func (m MenuItem) Description() string { return m.desc }
-func (m MenuItem) FilterValue() string { return m.key + " " + m.label }
-
 type ContextMenuView struct {
-	store         store.Store
+	store         workspace.Store
 	ctx           context.Context
 	handle        string
-	list          list.Model
+	menu          components.MenuModel
 	stale         bool
 	size          measure.Window
 	invocationCtx workspace.InvocationContext
 }
 
-func NewContextMenuView(s store.Store, ctx context.Context, handle string, invocationCtx workspace.InvocationContext) ContextMenuView {
-	items := []list.Item{
-		MenuItem{key: "i", label: "Inspect", desc: "Show workspace details", selected: false},
-		MenuItem{key: "p", label: "Path", desc: "Copy path to clipboard", selected: false},
-		MenuItem{key: "e", label: "Exec", desc: "Run command in repositories", selected: false},
-		MenuItem{key: "a", label: "Add Repo", desc: "Add repository to workspace", selected: false},
-		MenuItem{key: "d", label: "Remove Repo", desc: "Remove repository", selected: false},
-		MenuItem{key: "u", label: "Update", desc: "Change workspace purpose", selected: false},
-		MenuItem{key: "r", label: "Remove", desc: "Delete workspace (confirm)", selected: false},
+func NewContextMenuView(s workspace.Store, ctx context.Context, handle string, invocationCtx workspace.InvocationContext) ContextMenuView {
+	sections := []components.MenuSection{
+		{
+			Name: "Info",
+			Items: []components.MenuItem{
+				{Key: "i", Label: "Inspect", Desc: "View workspace details", Section: "Info"},
+				{Key: "p", Label: "Path", Desc: "Copy path to clipboard", Section: "Info"},
+				{Key: "u", Label: "Update", Desc: "Edit purpose", Section: "Info"},
+			},
+		},
+		{
+			Name: "Actions",
+			Items: []components.MenuItem{
+				{Key: "e", Label: "Exec", Desc: "Run command", Section: "Actions"},
+				{Key: "h", Label: "History", Desc: "Execution history", Section: "Actions"},
+			},
+		},
+		{
+			Name: "Repositories",
+			Items: []components.MenuItem{
+				{Key: "a", Label: "Add", Desc: "Add repository", Section: "Repositories"},
+				{Key: "r", Label: "Remove", Desc: "Remove repository", Section: "Repositories"},
+			},
+		},
+		{
+			Name: "State",
+			Items: []components.MenuItem{
+				{Key: "c", Label: "Capture", Desc: "Create or view captures", Section: "State"},
+			},
+		},
+		{
+			Name: "System",
+			Items: []components.MenuItem{
+				{Key: "D", Label: "Derive", Desc: "Generate context JSON", Section: "System"},
+				{Key: "v", Label: "Validate", Desc: "Check AGENTS.md", Section: "System"},
+				{Key: "k", Label: "Health", Desc: "Check workspace health", Section: "System"},
+			},
+		},
 	}
 
-	l := list.New(items, list.NewDefaultDelegate(), 30, 10)
-	l.Title = "Actions for \"" + handle + "\""
-	l.SetShowTitle(true)
-	l.SetShowStatusBar(false)
-	l.SetShowHelp(false)
-	l.SetFilteringEnabled(false)
-	l.Styles.NoItems = lipgloss.NewStyle().Foreground(components.ColorVeryMuted)
-	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
-	l.Styles.HelpStyle = lipgloss.NewStyle().Foreground(components.ColorMuted)
+	menu := components.NewMenuModel()
+	menu.SetSections(sections)
 
 	return ContextMenuView{
 		store:         s,
 		ctx:           ctx,
 		handle:        handle,
-		list:          l,
+		menu:          menu,
+		stale:         false,
 		invocationCtx: invocationCtx,
 	}
 }
@@ -69,7 +78,7 @@ func (v *ContextMenuView) Init() tea.Cmd {
 
 func (v *ContextMenuView) SetSize(size measure.Window) {
 	v.size = size
-	v.list.SetSize(size.ListWidth(), size.ListHeight())
+	v.menu.SetSize(size.ListWidth(), size.ListHeight())
 }
 
 func (v *ContextMenuView) OnPush() {}
@@ -97,27 +106,24 @@ func (v *ContextMenuView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return ViewResult{Action: StackPop{}}, nil
 		case tea.KeyEnter:
-			selected := v.list.SelectedItem()
+			selected := v.menu.SelectedItem()
 			if selected != nil {
-				if mi, ok := selected.(MenuItem); ok {
-					return v.handleMenuAction(mi.key), nil
-				}
+				return v.handleMenuAction(selected.Key), nil
 			}
 			return ViewResult{}, nil
-		}
-		key := msg.String()
-		if len(key) == 1 {
-			for _, item := range v.list.Items() {
-				if mi, ok := item.(MenuItem); ok && mi.key == key {
-					return v.handleMenuAction(mi.key), nil
+		case tea.KeyRunes:
+			if len(msg.Runes) == 1 {
+				key := string(msg.Runes[0])
+				selected := v.menu.SelectByKey(key)
+				if selected != nil {
+					return v.handleMenuAction(key), nil
 				}
 			}
 		}
+		v.menu.Update(msg)
 	}
 
-	var cmd tea.Cmd
-	v.list, cmd = v.list.Update(msg)
-	return ViewResult{}, cmd
+	return ViewResult{}, nil
 }
 
 func (v ContextMenuView) handleMenuAction(key string) ViewResult {
@@ -128,43 +134,50 @@ func (v ContextMenuView) handleMenuAction(key string) ViewResult {
 	case "p":
 		pathView := NewPathView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: pathView}
-	case "e":
-		execView := NewExecView(v.store, v.ctx, v.handle)
-		return ViewResult{NextView: execView}
-	case "a":
-		addRepoView := NewAddRepoView(v.store, v.ctx, v.handle, v.invocationCtx)
-		return ViewResult{NextView: &addRepoView}
-	case "d":
-		removeRepoView := NewRemoveRepoView(v.store, v.ctx, v.handle)
-		return ViewResult{NextView: removeRepoView}
 	case "u":
 		updateView := NewUpdateView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: updateView}
+	case "e":
+		execView := NewExecView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: execView}
+	case "h":
+		historyView := NewExecHistoryView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: historyView}
+	case "a":
+		addRepoView := NewAddRepoView(v.store, v.ctx, v.handle, v.invocationCtx)
+		return ViewResult{NextView: &addRepoView}
 	case "r":
-		removeView := NewRemoveView(v.store, v.ctx, v.handle)
-		return ViewResult{NextView: removeView}
+		removeRepoView := NewRemoveRepoView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: removeRepoView}
+	case "c":
+		capturesMenu := NewCapturesMenuView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: &capturesMenu}
+	case "D":
+		deriveView := NewDeriveView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: deriveView}
+	case "v":
+		validateView := NewValidateView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: validateView}
+	case "k":
+		healthView := NewHealthView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: healthView}
 	}
 	return ViewResult{}
 }
 
 func (v ContextMenuView) View() string {
 	frameStyle := ModalFrame(v.size)
-
-	return frameStyle.Render(
-		v.list.View() + "\n" +
-			lipgloss.NewStyle().
-				Foreground(components.ColorVeryMuted).
-				MarginTop(1).
-				Render("[↑↓/j/k] Navigate  [Enter] Select  [Esc/Ctrl+C] Cancel"),
-	)
+	return frameStyle.Render(v.menu.View())
 }
 
 type ContextMenuViewSnapshot struct {
-	Type        string
-	Handle      string
-	Items       []MenuItemInfo
-	SelectedKey string
-	Stale       bool
+	Type        string         `json:",omitempty"`
+	Handle      string         `json:",omitempty"`
+	Items       []MenuItemInfo `json:",omitempty"`
+	SelectedKey string         `json:",omitempty"`
+	Stale       bool           `json:",omitempty"`
+	CurrentPage int            `json:",omitempty"`
+	PageCount   int            `json:",omitempty"`
 }
 
 type MenuItemInfo struct {
@@ -174,22 +187,32 @@ type MenuItemInfo struct {
 }
 
 func (v *ContextMenuView) Snapshot() interface{} {
-	items := make([]MenuItemInfo, len(v.list.Items()))
-	for i, item := range v.list.Items() {
-		mi := item.(MenuItem)
-		items[i] = MenuItemInfo{Key: mi.key, Label: mi.label, Desc: mi.desc}
-	}
-	var selectedKey string
-	if selected := v.list.SelectedItem(); selected != nil {
-		if mi, ok := selected.(MenuItem); ok {
-			selectedKey = mi.key
+	sections := v.menu.Sections
+	items := []MenuItemInfo{}
+	for _, section := range sections {
+		for _, item := range section.Items {
+			items = append(items, MenuItemInfo{
+				Key:   item.Key,
+				Label: item.Label,
+				Desc:  item.Desc,
+			})
 		}
 	}
+
+	selectedItem := v.menu.SelectedItem()
+	selectedKey := ""
+	if selectedItem != nil {
+		selectedKey = selectedItem.Key
+	}
+
 	return ContextMenuViewSnapshot{
 		Type:        "ContextMenuView",
 		Handle:      v.handle,
 		Items:       items,
 		SelectedKey: selectedKey,
 		Stale:       v.stale,
+		CurrentPage: v.menu.CurrentPage(),
+		PageCount:   v.menu.PageCount(),
 	}
+
 }

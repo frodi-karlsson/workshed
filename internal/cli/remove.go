@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/charmbracelet/x/term"
 	"github.com/frodi/workshed/internal/logger"
 	flag "github.com/spf13/pflag"
 )
@@ -18,13 +20,26 @@ func (r *Runner) Remove(args []string) {
 
 	fs.Usage = func() {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed remove [<handle>] [--force]\n\n")
+		logger.SafeFprintf(r.Stderr, "Delete a workspace and all its repositories.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed remove\n")
+		logger.SafeFprintf(r.Stderr, "  workshed remove my-workspace\n")
+		logger.SafeFprintf(r.Stderr, "  workshed remove --force\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
 		r.ExitFunc(1)
+	}
+
+	if !*force {
+		if !term.IsTerminal(os.Stdin.Fd()) {
+			l.Error("refusing to run interactively in non-terminal; use --force to skip confirmation", "hint", "workshed remove <handle> --force")
+			r.ExitFunc(1)
+			return
+		}
 	}
 
 	ctx := context.Background()

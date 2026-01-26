@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
@@ -101,10 +100,10 @@ No workspaces found. Create one with:
 )
 
 type Selector struct {
-	store store.Store
+	store workspace.Store
 }
 
-func NewSelector(s store.Store) *Selector {
+func NewSelector(s workspace.Store) *Selector {
 	return &Selector{store: s}
 }
 

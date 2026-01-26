@@ -13,7 +13,13 @@ func (r *Runner) Path(args []string) {
 	fs := flag.NewFlagSet("path", flag.ExitOnError)
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed path [<handle>]\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed path [<handle>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Print the workspace directory path.\n\n")
+		logger.SafeFprintf(r.Stderr, "Examples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed path\n")
+		logger.SafeFprintf(r.Stderr, "  workshed path my-workspace\n")
+		logger.SafeFprintf(r.Stderr, "  cd $(workshed path)\n")
+		logger.SafeFprintf(r.Stderr, "  ls $(workshed path)\n")
 	}
 
 	if err := fs.Parse(args); err != nil {

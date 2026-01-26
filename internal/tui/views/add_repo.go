@@ -8,14 +8,13 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 type AddRepoView struct {
-	store         store.Store
+	store         workspace.Store
 	ctx           context.Context
 	handle        string
 	input         textinput.Model
@@ -27,7 +26,7 @@ type AddRepoView struct {
 	invocationCtx workspace.InvocationContext
 }
 
-func NewAddRepoView(s store.Store, ctx context.Context, handle string, invocationCtx workspace.InvocationContext) AddRepoView {
+func NewAddRepoView(s workspace.Store, ctx context.Context, handle string, invocationCtx workspace.InvocationContext) AddRepoView {
 	ti := textinput.New()
 	ti.Placeholder = "Repository URL (e.g., https://github.com/org/repo@branch)"
 	ti.CharLimit = 500
@@ -103,7 +102,7 @@ func (v *AddRepoView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 				return ViewResult{}, nil
 			}
 
-			url, ref := parseRepoURL(url)
+			url, ref := workspace.ParseRepoFlag(url)
 			v.repos = append(v.repos, workspace.RepositoryOption{
 				URL: url,
 				Ref: ref,
@@ -130,34 +129,6 @@ func (v *AddRepoView) confirmAndAdd() (ViewResult, tea.Cmd) {
 	}
 
 	return ViewResult{Action: StackPopCount{Count: 2}}, nil
-}
-
-func parseRepoURL(input string) (url, ref string) {
-	input = strings.TrimSpace(input)
-
-	if strings.HasPrefix(input, "git@") {
-		colonIdx := strings.Index(input, ":")
-		if colonIdx != -1 {
-			atIdx := strings.LastIndex(input[colonIdx:], "@")
-			if atIdx != -1 {
-				actualIdx := colonIdx + atIdx
-				url = input[:actualIdx]
-				ref = input[actualIdx+1:]
-				return url, ref
-			}
-		}
-		return input, ""
-	}
-
-	atIdx := strings.LastIndex(input, "@")
-	if atIdx != -1 {
-		url = input[:atIdx]
-		ref = input[atIdx+1:]
-	} else {
-		url = input
-	}
-
-	return url, ref
 }
 
 func (v *AddRepoView) View() string {

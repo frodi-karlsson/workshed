@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -33,7 +32,7 @@ func (r RepoItem) FilterValue() string {
 }
 
 type RemoveRepoView struct {
-	store     store.Store
+	store     workspace.Store
 	ctx       context.Context
 	handle    string
 	list      list.Model
@@ -43,7 +42,7 @@ type RemoveRepoView struct {
 	size      measure.Window
 }
 
-func NewRemoveRepoView(s store.Store, ctx context.Context, handle string) *RemoveRepoView {
+func NewRemoveRepoView(s workspace.Store, ctx context.Context, handle string) *RemoveRepoView {
 	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 40, 15)
 	l.Title = "Select repository to remove from \"" + handle + "\""
 	l.SetShowTitle(true)
@@ -201,7 +200,7 @@ type RemoveRepoViewSnapshot struct {
 }
 
 type RemoveRepoConfirmView struct {
-	store    store.Store
+	store    workspace.Store
 	ctx      context.Context
 	handle   string
 	repoName string
@@ -209,7 +208,7 @@ type RemoveRepoConfirmView struct {
 	size     measure.Window
 }
 
-func NewRemoveRepoConfirmView(s store.Store, ctx context.Context, handle, repoName string) *RemoveRepoConfirmView {
+func NewRemoveRepoConfirmView(s workspace.Store, ctx context.Context, handle, repoName string) *RemoveRepoConfirmView {
 	return &RemoveRepoConfirmView{
 		store:    s,
 		ctx:      ctx,

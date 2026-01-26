@@ -31,7 +31,6 @@ var (
 )
 
 // Git defines the interface for interacting with git repositories.
-// Implementations provide either real git operations or mocked behavior for testing.
 type Git interface {
 	// Clone creates a local copy of a remote repository.
 	Clone(ctx context.Context, url, dir string, opts CloneOptions) error
@@ -44,6 +43,12 @@ type Git interface {
 
 	// CurrentBranch returns the name of the currently checked out branch.
 	CurrentBranch(ctx context.Context, dir string) (string, error)
+
+	// RevParse returns the commit hash for a given reference.
+	RevParse(ctx context.Context, dir, ref string) (string, error)
+
+	// StatusPorcelain returns the git status in porcelain format.
+	StatusPorcelain(ctx context.Context, dir string) (string, error)
 }
 
 func ClassifyError(operation string, err error, output []byte) error {

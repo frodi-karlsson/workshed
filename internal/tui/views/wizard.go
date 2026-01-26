@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/git"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
@@ -34,7 +33,7 @@ type workspaceCreateResultMsg struct {
 }
 
 type WizardView struct {
-	store            store.Store
+	store            workspace.Store
 	ctx              context.Context
 	git              git.Git
 	step             int
@@ -53,7 +52,7 @@ type WizardView struct {
 	copyAttempted    bool
 }
 
-func NewWizardView(ctx context.Context, s store.Store, g ...git.Git) WizardView {
+func NewWizardView(ctx context.Context, s workspace.Store, g ...git.Git) WizardView {
 	ti := textinput.New()
 	ti.Placeholder = "What is this workspace for?"
 	ti.Prompt = "> "
@@ -104,32 +103,6 @@ func (v *WizardView) Cancel() {
 	v.loadingType = ""
 }
 
-func parseRepoFlag(repo string) (url, ref string) {
-	if strings.HasPrefix(repo, "git@") {
-		colonIdx := strings.Index(repo, ":")
-		if colonIdx != -1 {
-			atIdx := strings.LastIndex(repo[colonIdx:], "@")
-			if atIdx != -1 {
-				actualIdx := colonIdx + atIdx
-				url = repo[:actualIdx]
-				ref = repo[actualIdx+1:]
-				return url, ref
-			}
-		}
-		return repo, ""
-	}
-
-	atIdx := strings.LastIndex(repo, "@")
-	if atIdx != -1 {
-		url = repo[:atIdx]
-		ref = repo[atIdx+1:]
-	} else {
-		url = repo
-	}
-
-	return url, ref
-}
-
 func (v *WizardView) detectCurrentRepoCmd() tea.Cmd {
 	return func() tea.Msg {
 		url, err := v.git.GetRemoteURL(v.ctx, ".")
@@ -140,7 +113,7 @@ func (v *WizardView) detectCurrentRepoCmd() tea.Cmd {
 	}
 }
 
-func createWorkspaceCmd(ctx context.Context, s store.Store, purpose string, template string, templateVars map[string]string, repos []workspace.RepositoryOption) tea.Cmd {
+func createWorkspaceCmd(ctx context.Context, s workspace.Store, purpose string, template string, templateVars map[string]string, repos []workspace.RepositoryOption) tea.Cmd {
 	return func() tea.Msg {
 		ws, err := s.Create(ctx, workspace.CreateOptions{
 			Purpose:      purpose,
@@ -247,7 +220,7 @@ func (v *WizardView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 					return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.template, v.templateVars, v.repos)
 				}
 
-				url, ref := parseRepoFlag(repoInput)
+				url, ref := workspace.ParseRepoFlag(repoInput)
 				v.repos = append(v.repos, workspace.RepositoryOption{URL: url, Ref: ref})
 				v.repoInput.SetValue("")
 				return ViewResult{}, textinput.Blink

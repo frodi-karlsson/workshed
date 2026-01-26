@@ -5,10 +5,15 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/frodi/workshed/internal/git"
 )
 
 func TestCreateValidation(t *testing.T) {
@@ -144,6 +149,9 @@ func TestIsLocalPath(t *testing.T) {
 		"../parent/path",
 		"path/without/prefix",
 		"/Users/test/repo",
+		"my-repo",
+		"backend",
+		"~/" + string(filepath.Separator) + "projects/repo",
 	}
 
 	for _, path := range localPaths {
@@ -465,6 +473,465 @@ func TestUpdatePurpose(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "workspace not found") {
 			t.Errorf("Expected 'workspace not found' error, got: %v", err)
+		}
+	})
+}
+
+func TestValidateAgents(t *testing.T) {
+	t.Run("should return error for missing file", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		result, err := store.ValidateAgents(ctx, "test", filepath.Join(root, "nonexistent.md"))
+		if err != nil {
+			t.Fatalf("ValidateAgents failed: %v", err)
+		}
+		if result.Valid {
+			t.Error("Expected result to be invalid")
+		}
+		if !strings.Contains(result.Explanation, "not found") {
+			t.Errorf("Expected 'not found' in explanation, got: %s", result.Explanation)
+		}
+	})
+
+	t.Run("should validate required sections", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		agentsPath := filepath.Join(root, "AGENTS.md")
+		content := `# AGENTS.md
+
+## Running
+
+Make religious use of the Makefile.
+
+## Philosophy
+
+Simplicity births reliability.
+
+## Code Guidelines
+
+Prefer clear code.
+
+## Testing Philosophy
+
+Tests exist to increase confidence.
+
+## Design Smells to Watch For
+
+Comments explaining confusing code.
+
+## Final Note
+
+Write less code.
+`
+		if err := os.WriteFile(agentsPath, []byte(content), 0644); err != nil {
+			t.Fatalf("Failed to create AGENTS.md: %v", err)
+		}
+
+		ctx := context.Background()
+		result, err := store.ValidateAgents(ctx, "test", agentsPath)
+		if err != nil {
+			t.Fatalf("ValidateAgents failed: %v", err)
+		}
+		if !result.Valid {
+			t.Errorf("Expected valid result, got: %v", result.Errors)
+		}
+	})
+
+	t.Run("should detect missing sections", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		agentsPath := filepath.Join(root, "AGENTS.md")
+		content := `# AGENTS.md
+
+## Running
+
+Make religious use of the Makefile.
+
+## Philosophy
+
+Simplicity births reliability.
+
+## Code Guidelines
+
+Prefer clear code.
+
+`
+		if err := os.WriteFile(agentsPath, []byte(content), 0644); err != nil {
+			t.Fatalf("Failed to create AGENTS.md: %v", err)
+		}
+
+		ctx := context.Background()
+		result, err := store.ValidateAgents(ctx, "test", agentsPath)
+		if err != nil {
+			t.Fatalf("ValidateAgents failed: %v", err)
+		}
+		if result.Valid {
+			t.Error("Expected result to be invalid")
+		}
+	})
+}
+
+func TestListCaptures(t *testing.T) {
+	t.Run("should return empty list for workspace without captures", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		captures, err := store.ListCaptures(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("ListCaptures failed: %v", err)
+		}
+		if len(captures) != 0 {
+			t.Errorf("Expected 0 captures, got %d", len(captures))
+		}
+	})
+
+	t.Run("should list captures in reverse chronological order", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetRevParseResult("abc123")
+		mockGit.SetCurrentBranchResult("main")
+		mockGit.SetStatusPorcelainResult("")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/test/repo"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		_, err = store.CaptureState(ctx, ws.Handle, CaptureOptions{Name: "First", Kind: CaptureKindCheckpoint})
+		if err != nil {
+			t.Fatalf("First CaptureState failed: %v", err)
+		}
+
+		_, err = store.CaptureState(ctx, ws.Handle, CaptureOptions{Name: "Second", Kind: CaptureKindCheckpoint})
+		if err != nil {
+			t.Fatalf("Second CaptureState failed: %v", err)
+		}
+
+		captures, err := store.ListCaptures(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("ListCaptures failed: %v", err)
+		}
+		if len(captures) != 2 {
+			t.Errorf("Expected 2 captures, got %d", len(captures))
+		}
+		if captures[0].Name != "Second" {
+			t.Errorf("Expected first capture to be 'Second', got: %s", captures[0].Name)
+		}
+	})
+}
+
+func TestGetCapture(t *testing.T) {
+	t.Run("should return error for nonexistent capture", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		_, err = store.GetCapture(ctx, ws.Handle, "nonexistent")
+		if err == nil {
+			t.Error("Expected error for nonexistent capture")
+		}
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("Expected 'not found' in error, got: %v", err)
+		}
+	})
+}
+
+func TestListExecutions(t *testing.T) {
+	t.Run("should return empty list for workspace without executions", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		executions, err := store.ListExecutions(ctx, ws.Handle, ListExecutionsOptions{})
+		if err != nil {
+			t.Fatalf("ListExecutions failed: %v", err)
+		}
+		if len(executions) != 0 {
+			t.Errorf("Expected 0 executions, got %d", len(executions))
+		}
+	})
+}
+
+func TestDeriveContext(t *testing.T) {
+	t.Run("should derive context for workspace", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		context, err := store.DeriveContext(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("DeriveContext failed: %v", err)
+		}
+		if context.Version != ContextVersion {
+			t.Errorf("Expected version %d, got: %d", ContextVersion, context.Version)
+		}
+		if context.Handle != ws.Handle {
+			t.Errorf("Expected handle %s, got: %s", ws.Handle, context.Handle)
+		}
+		if context.Purpose != ws.Purpose {
+			t.Errorf("Expected purpose %s, got: %s", ws.Purpose, context.Purpose)
+		}
+	})
+}
+
+func TestCaptureKind(t *testing.T) {
+	t.Run("should set kind on capture", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetRevParseResult("abc123")
+		mockGit.SetCurrentBranchResult("main")
+		mockGit.SetStatusPorcelainResult("")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/test/repo"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		capture, err := store.CaptureState(ctx, ws.Handle, CaptureOptions{
+			Name: "Test capture",
+			Kind: CaptureKindCheckpoint,
+		})
+		if err != nil {
+			t.Fatalf("CaptureState failed: %v", err)
+		}
+		if capture.Kind != CaptureKindCheckpoint {
+			t.Errorf("Expected kind '%s', got: %s", CaptureKindCheckpoint, capture.Kind)
+		}
+	})
+
+	t.Run("should fail without intent", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetRevParseResult("abc123")
+		mockGit.SetCurrentBranchResult("main")
+		mockGit.SetStatusPorcelainResult("")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/test/repo"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		_, err = store.CaptureState(ctx, ws.Handle, CaptureOptions{
+			Name: "Test capture",
+		})
+		if err == nil {
+			t.Error("Expected error for capture without intent")
+		}
+		if !strings.Contains(err.Error(), "intent") {
+			t.Errorf("Expected 'intent' in error message, got: %v", err)
+		}
+	})
+
+	t.Run("should accept description as intent", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetRevParseResult("abc123")
+		mockGit.SetCurrentBranchResult("main")
+		mockGit.SetStatusPorcelainResult("")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/test/repo"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		capture, err := store.CaptureState(ctx, ws.Handle, CaptureOptions{
+			Name:        "Test capture",
+			Description: "This is why I captured this state",
+		})
+		if err != nil {
+			t.Fatalf("CaptureState failed: %v", err)
+		}
+		if capture.Metadata.Description != "This is why I captured this state" {
+			t.Errorf("Expected description, got: %s", capture.Metadata.Description)
+		}
+	})
+
+	t.Run("should accept tags as intent", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetRevParseResult("abc123")
+		mockGit.SetCurrentBranchResult("main")
+		mockGit.SetStatusPorcelainResult("")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/test/repo"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		capture, err := store.CaptureState(ctx, ws.Handle, CaptureOptions{
+			Name: "Test capture",
+			Tags: []string{"bugfix", "investigation"},
+		})
+		if err != nil {
+			t.Fatalf("CaptureState failed: %v", err)
+		}
+		if len(capture.Metadata.Tags) != 2 {
+			t.Errorf("Expected 2 tags, got: %d", len(capture.Metadata.Tags))
+		}
+	})
+}
+
+func TestPreflightApply(t *testing.T) {
+	t.Run("should detect missing repository in capture", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose:      "Test workspace",
+			Repositories: []RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		capture := &Capture{
+			ID:        "01H5V3ABCDEF",
+			Timestamp: time.Now(),
+			Handle:    ws.Handle,
+			Name:      "Test capture",
+			Kind:      "manual",
+			GitState: []GitRef{
+				{Repository: "nonexistent-repo", Commit: "abc123"},
+			},
+		}
+
+		capturePath := filepath.Join(ws.Path, ".workshed", "captures", capture.ID, "capture.json")
+		if err := os.MkdirAll(filepath.Dir(capturePath), 0755); err != nil {
+			t.Fatalf("Failed to create capture dir: %v", err)
+		}
+		data, _ := json.MarshalIndent(capture, "", "  ")
+		if err := os.WriteFile(capturePath, data, 0644); err != nil {
+			t.Fatalf("Failed to write capture: %v", err)
+		}
+
+		result, err := store.PreflightApply(ctx, ws.Handle, capture.ID)
+		if err != nil {
+			t.Fatalf("PreflightApply failed: %v", err)
+		}
+		if result.Valid {
+			t.Error("Expected preflight to be invalid for missing repository")
+		}
+		found := false
+		for _, e := range result.Errors {
+			if e.Reason == ReasonMissingRepository {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected missing repository error, got: %v", result.Errors)
 		}
 	})
 }

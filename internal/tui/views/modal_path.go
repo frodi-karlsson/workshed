@@ -6,14 +6,13 @@ import (
 	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
 type modal_PathView struct {
-	store        store.Store
+	store        workspace.Store
 	ctx          context.Context
 	handle       string
 	workspace    *workspace.Workspace
@@ -22,7 +21,7 @@ type modal_PathView struct {
 	size         measure.Window
 }
 
-func NewPathView(s store.Store, ctx context.Context, handle string) *modal_PathView {
+func NewPathView(s workspace.Store, ctx context.Context, handle string) *modal_PathView {
 	ws, _ := s.Get(ctx, handle)
 	return &modal_PathView{
 		store:     s,

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/frodi/workshed/internal/testutil"
+	"github.com/frodi/workshed/internal/workspace"
 )
 
 func TestGetWorkshedRoot(t *testing.T) {
@@ -119,7 +120,7 @@ func TestParseRepoFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURL, gotRef := parseRepoFlag(tt.input)
+			gotURL, gotRef := workspace.ParseRepoFlag(tt.input)
 			if gotURL != tt.wantURL {
 				t.Errorf("parseRepoFlag() URL = %v, want %v", gotURL, tt.wantURL)
 			}

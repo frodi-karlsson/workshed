@@ -8,13 +8,13 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/frodi/workshed/internal/store"
 	"github.com/frodi/workshed/internal/tui/components"
 	"github.com/frodi/workshed/internal/tui/measure"
+	"github.com/frodi/workshed/internal/workspace"
 )
 
 type TemplateConfigView struct {
-	store         store.Store
+	store         workspace.Store
 	ctx           context.Context
 	pathInput     components.PathCompleter
 	varsInput     textinput.Model
@@ -25,7 +25,7 @@ type TemplateConfigView struct {
 	size          measure.Window
 }
 
-func NewTemplateConfigView(ctx context.Context, s store.Store, template string, templateVars map[string]string) TemplateConfigView {
+func NewTemplateConfigView(ctx context.Context, s workspace.Store, template string, templateVars map[string]string) TemplateConfigView {
 	pathInput := components.NewPathCompleter()
 	pathInput.SetPlaceholder("Template directory path (leave empty for no template)")
 	pathInput.SetPrompt("> ")

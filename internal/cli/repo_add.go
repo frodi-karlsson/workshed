@@ -21,8 +21,13 @@ func (r *Runner) RepoAdd(args []string) {
 
 	fs.Usage = func() {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed repo add <handle> --repo url[@ref]...\n\n")
+		logger.SafeFprintf(r.Stderr, "Add repositories to a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repo add my-workspace --repo github.com/org/new-repo@main\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repo add -r github.com/org/repo1 -r github.com/org/repo2\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repo add --repo ./local-lib\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -58,7 +63,7 @@ func (r *Runner) RepoAdd(args []string) {
 		if repo == "" {
 			continue
 		}
-		url, ref := parseRepoFlag(repo)
+		url, ref := workspace.ParseRepoFlag(repo)
 		repoOpts = append(repoOpts, workspace.RepositoryOption{
 			URL: url,
 			Ref: ref,

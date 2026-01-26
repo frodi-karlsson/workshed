@@ -15,8 +15,12 @@ func (r *Runner) Update(args []string) {
 
 	fs.Usage = func() {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed update --purpose <purpose> [<handle>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Update the purpose of a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed update --purpose \"New focus area\"\n")
+		logger.SafeFprintf(r.Stderr, "  workshed update --purpose \"Completed\" my-workspace\n")
 	}
 
 	if err := fs.Parse(args); err != nil {

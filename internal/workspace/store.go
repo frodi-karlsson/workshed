@@ -9,14 +9,19 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/handle"
+	"github.com/oklog/ulid/v2"
 )
 
 const metadataFileName = ".workshed.json"
+const executionsDirName = "executions"
+const capturesDirName = "captures"
 
 // FSStore is a filesystem-based workspace store that manages workspace directories and metadata.
 type FSStore struct {
@@ -548,24 +553,7 @@ func isLocalPath(path string) bool {
 		return false
 	}
 
-	if strings.HasPrefix(path, "git@") {
-		return false
-	}
-
-	schemeEnd := strings.Index(path, "://")
-	if schemeEnd != -1 {
-		return false
-	}
-
-	if strings.HasPrefix(path, "/") || strings.Contains(path, string(filepath.Separator)) {
-		return true
-	}
-
-	if path == "." || path == ".." || strings.HasPrefix(path, "~/") {
-		return true
-	}
-
-	return false
+	return !strings.HasPrefix(path, "git@") && !strings.Contains(path, "://")
 }
 
 func validateLocalRepository(path, invocationCWD string) error {
@@ -847,4 +835,511 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	}
 
 	return nil
+}
+
+func (s *FSStore) RecordExecution(ctx context.Context, handle string, record ExecutionRecord) error {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return err
+	}
+
+	workshedDir := filepath.Join(ws.Path, ".workshed")
+	executionsDir := filepath.Join(workshedDir, executionsDirName)
+
+	if err := os.MkdirAll(executionsDir, 0755); err != nil {
+		return fmt.Errorf("creating executions directory: %w", err)
+	}
+
+	execDir := filepath.Join(executionsDir, record.ID)
+	if err := os.MkdirAll(execDir, 0755); err != nil {
+		return fmt.Errorf("creating execution directory: %w", err)
+	}
+
+	stdoutDir := filepath.Join(execDir, "stdout")
+	stderrDir := filepath.Join(execDir, "stderr")
+	if err := os.MkdirAll(stdoutDir, 0755); err != nil {
+		return fmt.Errorf("creating stdout directory: %w", err)
+	}
+	if err := os.MkdirAll(stderrDir, 0755); err != nil {
+		return fmt.Errorf("creating stderr directory: %w", err)
+	}
+
+	for i := range record.Results {
+		result := &record.Results[i]
+		if result.Repository != "" && result.Repository != "root" {
+			result.OutputPath = filepath.Join(result.Repository + ".txt")
+		}
+	}
+
+	record.Handle = handle
+	record.Timestamp = time.Now()
+	record.StartedAt = record.Timestamp
+
+	recordPath := filepath.Join(execDir, "record.json")
+	data, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshaling execution record: %w", err)
+	}
+	if err := os.WriteFile(recordPath, data, 0644); err != nil {
+		return fmt.Errorf("writing execution record: %w", err)
+	}
+
+	return nil
+}
+
+func (s *FSStore) GetExecution(ctx context.Context, handle, execID string) (*ExecutionRecord, error) {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	execPath := filepath.Join(ws.Path, ".workshed", executionsDirName, execID, "record.json")
+	data, err := os.ReadFile(execPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("execution not found: %s", execID)
+		}
+		return nil, fmt.Errorf("reading execution record: %w", err)
+	}
+
+	var record ExecutionRecord
+	if err := json.Unmarshal(data, &record); err != nil {
+		return nil, fmt.Errorf("parsing execution record: %w", err)
+	}
+
+	return &record, nil
+}
+
+func (s *FSStore) ListExecutions(ctx context.Context, handle string, opts ListExecutionsOptions) ([]ExecutionRecord, error) {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	executionsDir := filepath.Join(ws.Path, ".workshed", executionsDirName)
+	entries, err := os.ReadDir(executionsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []ExecutionRecord{}, nil
+		}
+		return nil, fmt.Errorf("reading executions directory: %w", err)
+	}
+
+	var ids []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			ids = append(ids, entry.Name())
+		}
+	}
+
+	if !opts.Reverse {
+		sort.Sort(sort.Reverse(sort.StringSlice(ids)))
+	} else {
+		sort.Strings(ids)
+	}
+
+	var records []ExecutionRecord
+	for i, id := range ids {
+		if i < opts.Offset {
+			continue
+		}
+		if opts.Limit > 0 && len(records) >= opts.Limit {
+			break
+		}
+
+		record, err := s.GetExecution(ctx, handle, id)
+		if err != nil {
+			continue
+		}
+		records = append(records, *record)
+	}
+
+	return records, nil
+}
+
+func (s *FSStore) CaptureState(ctx context.Context, handle string, opts CaptureOptions) (*Capture, error) {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.Kind == "" && opts.Description == "" && len(opts.Tags) == 0 {
+		return nil, fmt.Errorf("capture must have intent: provide --kind, --description, or --tag")
+	}
+
+	workshedDir := filepath.Join(ws.Path, ".workshed")
+	capturesDir := filepath.Join(workshedDir, capturesDirName)
+
+	if err := os.MkdirAll(capturesDir, 0755); err != nil {
+		return nil, fmt.Errorf("creating captures directory: %w", err)
+	}
+
+	id := ulid.Make()
+	captureDir := filepath.Join(capturesDir, id.String())
+
+	success := false
+	defer func() {
+		if !success {
+			_ = os.RemoveAll(captureDir)
+		}
+	}()
+
+	if err := os.MkdirAll(captureDir, 0755); err != nil {
+		return nil, fmt.Errorf("creating capture directory: %w", err)
+	}
+
+	capture := &Capture{
+		ID:        id.String(),
+		Timestamp: time.Now(),
+		Handle:    handle,
+		Name:      opts.Name,
+		Kind:      opts.Kind,
+		GitState:  make([]GitRef, 0, len(ws.Repositories)),
+		Metadata: CaptureMetadata{
+			Description: opts.Description,
+			Tags:        opts.Tags,
+			Custom:      opts.Custom,
+		},
+	}
+
+	for _, repo := range ws.Repositories {
+		repoDir := filepath.Join(ws.Path, repo.Name)
+		ref, err := s.gitState(ctx, repoDir)
+		if err != nil {
+			return nil, fmt.Errorf("getting git state for %s: %w", repo.Name, err)
+		}
+		ref.Repository = repo.Name
+		capture.GitState = append(capture.GitState, *ref)
+	}
+
+	capturePath := filepath.Join(captureDir, "capture.json")
+	data, err := json.MarshalIndent(capture, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshaling capture: %w", err)
+	}
+	if err := os.WriteFile(capturePath, data, 0644); err != nil {
+		return nil, fmt.Errorf("writing capture: %w", err)
+	}
+
+	success = true
+	return capture, nil
+}
+
+func (s *FSStore) gitState(ctx context.Context, dir string) (*GitRef, error) {
+	ref := &GitRef{}
+
+	commit, err := s.git.RevParse(ctx, dir, "HEAD")
+	if err != nil {
+		return nil, fmt.Errorf("getting commit: %w", err)
+	}
+	ref.Commit = commit
+
+	branch, _ := s.git.CurrentBranch(ctx, dir)
+	ref.Branch = branch
+
+	output, err := s.git.StatusPorcelain(ctx, dir)
+	if err != nil {
+		return nil, fmt.Errorf("getting status: %w", err)
+	}
+	ref.Status = strings.TrimSpace(output)
+	ref.Dirty = strings.TrimSpace(output) != ""
+
+	return ref, nil
+}
+
+func (s *FSStore) ApplyCapture(ctx context.Context, handle string, captureID string) error {
+	result, err := s.PreflightApply(ctx, handle, captureID)
+	if err != nil {
+		return err
+	}
+	if !result.Valid {
+		return fmt.Errorf("apply blocked by preflight errors")
+	}
+
+	capture, err := s.GetCapture(ctx, handle, captureID)
+	if err != nil {
+		return err
+	}
+
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return err
+	}
+
+	for _, ref := range capture.GitState {
+		repoDir := filepath.Join(ws.Path, ref.Repository)
+		if err := s.git.Checkout(ctx, repoDir, ref.Commit); err != nil {
+			return fmt.Errorf("checking out %s to %s: %w", ref.Repository, ref.Commit, err)
+		}
+	}
+
+	return nil
+}
+
+func (s *FSStore) PreflightApply(ctx context.Context, handle string, captureID string) (ApplyPreflightResult, error) {
+	result := ApplyPreflightResult{Valid: true}
+
+	capture, err := s.GetCapture(ctx, handle, captureID)
+	if err != nil {
+		return ApplyPreflightResult{}, err
+	}
+
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return ApplyPreflightResult{}, err
+	}
+
+	repoSet := make(map[string]bool)
+	for _, repo := range ws.Repositories {
+		repoSet[repo.Name] = true
+	}
+
+	for _, ref := range capture.GitState {
+		repoDir := filepath.Join(ws.Path, ref.Repository)
+
+		if !repoSet[ref.Repository] {
+			result.Valid = false
+			result.Errors = append(result.Errors, ApplyPreflightError{
+				Repository: ref.Repository,
+				Reason:     ReasonMissingRepository,
+				Details:    "repository defined in capture does not exist in workspace",
+			})
+			continue
+		}
+
+		gitDir := filepath.Join(repoDir, ".git")
+		if _, err := os.Stat(gitDir); err != nil {
+			result.Valid = false
+			result.Errors = append(result.Errors, ApplyPreflightError{
+				Repository: ref.Repository,
+				Reason:     ReasonRepositoryNotGit,
+				Details:    "directory is not a git repository",
+			})
+			continue
+		}
+
+		dirty, _ := s.git.StatusPorcelain(ctx, repoDir)
+		if strings.TrimSpace(dirty) != "" {
+			result.Valid = false
+			result.Errors = append(result.Errors, ApplyPreflightError{
+				Repository: ref.Repository,
+				Reason:     ReasonDirtyWorkingTree,
+				Details:    "working tree has uncommitted changes",
+			})
+		}
+	}
+
+	return result, nil
+}
+
+func (s *FSStore) GetCapture(ctx context.Context, handle, captureID string) (*Capture, error) {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	capturePath := filepath.Join(ws.Path, ".workshed", capturesDirName, captureID, "capture.json")
+	data, err := os.ReadFile(capturePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("capture not found: %s", captureID)
+		}
+		return nil, fmt.Errorf("reading capture: %w", err)
+	}
+
+	var capture Capture
+	if err := json.Unmarshal(data, &capture); err != nil {
+		return nil, fmt.Errorf("parsing capture: %w", err)
+	}
+
+	return &capture, nil
+}
+
+func (s *FSStore) ListCaptures(ctx context.Context, handle string) ([]Capture, error) {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	capturesDir := filepath.Join(ws.Path, ".workshed", capturesDirName)
+	entries, err := os.ReadDir(capturesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []Capture{}, nil
+		}
+		return nil, fmt.Errorf("reading captures directory: %w", err)
+	}
+
+	var ids []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			ids = append(ids, entry.Name())
+		}
+	}
+
+	sort.Sort(sort.Reverse(sort.StringSlice(ids)))
+
+	var captures []Capture
+	for _, id := range ids {
+		capture, err := s.GetCapture(ctx, handle, id)
+		if err != nil {
+			continue
+		}
+		captures = append(captures, *capture)
+	}
+
+	return captures, nil
+}
+
+func (s *FSStore) DeriveContext(ctx context.Context, handle string) (*WorkspaceContext, error) {
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	executions, err := s.ListExecutions(ctx, handle, ListExecutionsOptions{Limit: 1})
+	if err != nil {
+		return nil, err
+	}
+
+	captures, err := s.ListCaptures(ctx, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	repos := make([]ContextRepo, len(ws.Repositories))
+	for i, repo := range ws.Repositories {
+		repos[i] = ContextRepo{
+			Name:     repo.Name,
+			Path:     filepath.Join(ws.Path, repo.Name),
+			URL:      repo.URL,
+			RootPath: repo.Name,
+		}
+	}
+
+	var lastExecuted *time.Time
+	if len(executions) > 0 {
+		t := executions[0].Timestamp
+		lastExecuted = &t
+	}
+
+	var lastCaptured *time.Time
+	if len(captures) > 0 {
+		lastCaptured = &captures[0].Timestamp
+	}
+
+	// Note: captures are ordered newest-first (see ListCaptures)
+	contextCaptures := make([]ContextCapture, 0, len(captures))
+	for _, cap := range captures {
+		contextCaptures = append(contextCaptures, ContextCapture{
+			ID:          cap.ID,
+			Timestamp:   cap.Timestamp,
+			Name:        cap.Name,
+			Kind:        cap.Kind,
+			Description: cap.Metadata.Description,
+			Tags:        cap.Metadata.Tags,
+			RepoCount:   len(cap.GitState),
+		})
+	}
+
+	return &WorkspaceContext{
+		Version:      ContextVersion,
+		GeneratedAt:  time.Now(),
+		Handle:       handle,
+		Purpose:      ws.Purpose,
+		Repositories: repos,
+		Captures:     contextCaptures,
+		Metadata: ContextMetadata{
+			WorkshedVersion: "0.3.0",
+			ExecutionsCount: len(executions),
+			CapturesCount:   len(captures),
+			LastExecutedAt:  lastExecuted,
+			LastCapturedAt:  lastCaptured,
+		},
+	}, nil
+}
+
+func (s *FSStore) ValidateAgents(ctx context.Context, handle string, agentsPath string) (AgentsValidationResult, error) {
+	result := AgentsValidationResult{
+		Valid:       true,
+		Errors:      make([]AgentsError, 0),
+		Warnings:    make([]AgentsWarning, 0),
+		Sections:    make([]AgentsSection, 0),
+		Explanation: "",
+	}
+
+	data, err := os.ReadFile(agentsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return AgentsValidationResult{
+				Valid:       false,
+				Explanation: "AGENTS.md file not found at " + agentsPath,
+			}, nil
+		}
+		return AgentsValidationResult{}, fmt.Errorf("reading AGENTS.md: %w", err)
+	}
+
+	content := string(data)
+	lines := strings.Split(content, "\n")
+
+	sectionPattern := regexp.MustCompile(`^##\s+(.+)$`)
+	subsections := []string{"Running", "Philosophy", "Code Guidelines", "Testing Philosophy", "Design Smells to Watch For", "Final Note"}
+
+	var currentSection string
+	sectionStartLine := 0
+	sectionContent := make(map[string][]string)
+	seenSections := make(map[string]bool)
+
+	for i, line := range lines {
+		match := sectionPattern.FindStringSubmatch(line)
+		if match != nil {
+			if currentSection != "" {
+				seenSections[currentSection] = true
+				result.Sections = append(result.Sections, AgentsSection{
+					Name:     currentSection,
+					Line:     sectionStartLine + 1,
+					Valid:    true,
+					Warnings: 0,
+					Errors:   0,
+				})
+			}
+			currentSection = match[1]
+			sectionStartLine = i
+			sectionContent[currentSection] = make([]string, 0)
+		} else if currentSection != "" {
+			sectionContent[currentSection] = append(sectionContent[currentSection], strings.TrimSpace(line))
+		}
+	}
+
+	if currentSection != "" {
+		seenSections[currentSection] = true
+		result.Sections = append(result.Sections, AgentsSection{
+			Name:     currentSection,
+			Line:     sectionStartLine + 1,
+			Valid:    true,
+			Warnings: 0,
+			Errors:   0,
+		})
+	}
+
+	for _, expected := range subsections {
+		if !seenSections[expected] {
+			result.Valid = false
+			result.Errors = append(result.Errors, AgentsError{
+				Line:    0,
+				Message: "Missing required section: " + expected,
+				Field:   "structure",
+			})
+		}
+	}
+
+	sectionCount := len(result.Sections)
+	if sectionCount < 6 {
+		result.Valid = false
+		result.Explanation = fmt.Sprintf("AGENTS.md has %d sections, expected at least 6 (Running, Philosophy, Code Guidelines, Testing Philosophy, Design Smells to Watch For, Final Note)", sectionCount)
+	} else {
+		result.Explanation = fmt.Sprintf("AGENTS.md has %d sections with required sections present.", sectionCount)
+	}
+
+	return result, nil
 }

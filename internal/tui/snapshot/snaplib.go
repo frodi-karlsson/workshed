@@ -157,14 +157,84 @@ func WithListError(err error) StoreOption {
 	}
 }
 
+func WithCaptures(captures []workspace.Capture) StoreOption {
+	return func(s *mockStore) {
+		s.captures = captures
+	}
+}
+
+func WithExecutions(executions []workspace.ExecutionRecord) StoreOption {
+	return func(s *mockStore) {
+		s.executions = executions
+	}
+}
+
+func WithValidationResult(result workspace.AgentsValidationResult) StoreOption {
+	return func(s *mockStore) {
+		s.validationResult = result
+	}
+}
+
+func WithPreflightResult(result workspace.ApplyPreflightResult) StoreOption {
+	return func(s *mockStore) {
+		s.preflightResult = result
+	}
+}
+
+func WithContext(ctx *workspace.WorkspaceContext) StoreOption {
+	return func(s *mockStore) {
+		s.context = ctx
+	}
+}
+
+func WithApplyError(err error) StoreOption {
+	return func(s *mockStore) {
+		s.applyErr = err
+	}
+}
+
+func WithCaptureError(err error) StoreOption {
+	return func(s *mockStore) {
+		s.captureErr = err
+	}
+}
+
+func WithDeriveError(err error) StoreOption {
+	return func(s *mockStore) {
+		s.deriveErr = err
+	}
+}
+
+func WithValidateError(err error) StoreOption {
+	return func(s *mockStore) {
+		s.validateErr = err
+	}
+}
+
+func WithDirtyRepo(name string) StoreOption {
+	return func(s *mockStore) {
+		s.dirtyRepos = append(s.dirtyRepos, name)
+	}
+}
+
 type mockStore struct {
-	mockGit       git.Git
-	workspaces    []*workspace.Workspace
-	createErr     error
-	createDelay   time.Duration
-	listDelay     time.Duration
-	listErr       error
-	invocationCWD string
+	mockGit          git.Git
+	workspaces       []*workspace.Workspace
+	captures         []workspace.Capture
+	executions       []workspace.ExecutionRecord
+	validationResult workspace.AgentsValidationResult
+	preflightResult  workspace.ApplyPreflightResult
+	context          *workspace.WorkspaceContext
+	createErr        error
+	createDelay      time.Duration
+	listDelay        time.Duration
+	listErr          error
+	applyErr         error
+	captureErr       error
+	deriveErr        error
+	validateErr      error
+	dirtyRepos       []string
+	invocationCWD    string
 }
 
 func (s *mockStore) GetInvocationCWD() string {
@@ -244,6 +314,149 @@ func (s *mockStore) AddRepositories(ctx context.Context, handle string, repos []
 
 func (s *mockStore) RemoveRepository(ctx context.Context, handle string, repoName string) error {
 	return nil
+}
+
+func (s *mockStore) RecordExecution(ctx context.Context, handle string, record workspace.ExecutionRecord) error {
+	return nil
+}
+
+func (s *mockStore) GetExecution(ctx context.Context, handle, execID string) (*workspace.ExecutionRecord, error) {
+	return nil, nil
+}
+
+func (s *mockStore) CaptureState(ctx context.Context, handle string, opts workspace.CaptureOptions) (*workspace.Capture, error) {
+	if s.captureErr != nil {
+		err := s.captureErr
+		s.captureErr = nil
+		return nil, err
+	}
+	capture := &workspace.Capture{
+		ID:        "cap-" + handle,
+		Handle:    handle,
+		Name:      opts.Name,
+		Kind:      opts.Kind,
+		Timestamp: time.Now(),
+		GitState:  []workspace.GitRef{},
+		Metadata: workspace.CaptureMetadata{
+			Description: opts.Description,
+			Tags:        opts.Tags,
+			Custom:      opts.Custom,
+		},
+	}
+	for _, repo := range s.workspaces {
+		for _, r := range repo.Repositories {
+			isDirty := false
+			for _, dirty := range s.dirtyRepos {
+				if dirty == r.Name {
+					isDirty = true
+					break
+				}
+			}
+			capture.GitState = append(capture.GitState, workspace.GitRef{
+				Repository: r.Name,
+				Branch:     r.Ref,
+				Commit:     "abc123",
+				Dirty:      isDirty,
+				Status:     "",
+			})
+		}
+	}
+	return capture, nil
+}
+
+func (s *mockStore) ApplyCapture(ctx context.Context, handle string, captureID string) error {
+	if s.applyErr != nil {
+		err := s.applyErr
+		s.applyErr = nil
+		return err
+	}
+	return nil
+}
+
+func (s *mockStore) PreflightApply(ctx context.Context, handle string, captureID string) (workspace.ApplyPreflightResult, error) {
+	return s.preflightResult, nil
+}
+
+func (s *mockStore) GetCapture(ctx context.Context, handle, captureID string) (*workspace.Capture, error) {
+	for _, c := range s.captures {
+		if c.ID == captureID {
+			return &c, nil
+		}
+	}
+	return nil, nil
+}
+
+func (s *mockStore) ListCaptures(ctx context.Context, handle string) ([]workspace.Capture, error) {
+	return s.captures, nil
+}
+
+func (s *mockStore) DeriveContext(ctx context.Context, handle string) (*workspace.WorkspaceContext, error) {
+	if s.deriveErr != nil {
+		err := s.deriveErr
+		s.deriveErr = nil
+		return nil, err
+	}
+	if s.context != nil {
+		return s.context, nil
+	}
+	ctxVal := &workspace.WorkspaceContext{
+		Version:      1,
+		GeneratedAt:  time.Now(),
+		Handle:       handle,
+		Purpose:      "Test workspace",
+		Repositories: []workspace.ContextRepo{},
+		Captures:     []workspace.ContextCapture{},
+		Metadata: workspace.ContextMetadata{
+			WorkshedVersion: "1.0.0",
+			ExecutionsCount: len(s.executions),
+			CapturesCount:   len(s.captures),
+		},
+	}
+	for _, ws := range s.workspaces {
+		if ws.Handle == handle {
+			ctxVal.Purpose = ws.Purpose
+			for _, r := range ws.Repositories {
+				ctxVal.Repositories = append(ctxVal.Repositories, workspace.ContextRepo{
+					Name:     r.Name,
+					Path:     "/workspaces/" + handle + "/" + r.Name,
+					URL:      r.URL,
+					RootPath: "/workspaces/" + handle + "/" + r.Name,
+				})
+			}
+			break
+		}
+	}
+	for _, c := range s.captures {
+		ctxVal.Captures = append(ctxVal.Captures, workspace.ContextCapture{
+			ID:        c.ID,
+			Timestamp: c.Timestamp,
+			Name:      c.Name,
+			Kind:      c.Kind,
+			RepoCount: len(c.GitState),
+		})
+	}
+	if len(s.executions) > 0 {
+		lastExec := s.executions[len(s.executions)-1]
+		ctxVal.Metadata.LastExecutedAt = &lastExec.Timestamp
+	}
+	if len(s.captures) > 0 {
+		lastCap := s.captures[len(s.captures)-1]
+		ctxVal.Metadata.LastCapturedAt = &lastCap.Timestamp
+	}
+	return ctxVal, nil
+}
+
+func (s *mockStore) ValidateAgents(ctx context.Context, handle string, agentsPath string) (workspace.AgentsValidationResult, error) {
+	if s.validateErr != nil {
+		err := s.validateErr
+		s.validateErr = nil
+		return workspace.AgentsValidationResult{}, err
+	}
+	return s.validationResult, nil
+}
+
+func (s *mockStore) ListExecutions(ctx context.Context, handle string, opts workspace.ListExecutionsOptions) ([]workspace.ExecutionRecord, error) {
+	return s.executions, nil
 }
 
 func (s *mockStore) GetGit() git.Git {

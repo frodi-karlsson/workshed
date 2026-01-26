@@ -15,18 +15,6 @@ const (
 	StateError     State = "error"
 	StateDone      State = "done"
 	StateCancelled State = "cancelled"
-
-	StateDashboard    State = "dashboard"
-	StateContextMenu  State = "context_menu"
-	StateInspectModal State = "inspect_modal"
-	StatePathModal    State = "path_modal"
-	StateExecModal    State = "exec_modal"
-	StateExecResult   State = "exec_result"
-	StateUpdateModal  State = "update_modal"
-	StateRemoveModal  State = "remove_modal"
-	StateCreateWizard State = "create_wizard"
-	StateHelpModal    State = "help_modal"
-	StateFilterInput  State = "filter_input"
 )
 
 type StateTransition struct {
@@ -112,21 +100,6 @@ func (sm *StateManager) Transition(to State) error {
 	return ErrNoTransition
 }
 
-func (sm *StateManager) TransitionWithAction(to State, action func() error) error {
-	sm.mu.Lock()
-	oldState := sm.currentState
-	sm.currentState = to
-	sm.addHistory(to)
-	sm.mu.Unlock()
-
-	sm.notifyListeners(oldState, to)
-
-	if action != nil {
-		return action()
-	}
-	return nil
-}
-
 func (sm *StateManager) AddTransition(from, to State, action func() error) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -136,10 +109,6 @@ func (sm *StateManager) AddTransition(from, to State, action func() error) {
 		To:     to,
 		Action: action,
 	})
-}
-
-func (sm *StateManager) AddTransitionWithCallback(from, to State, action func() error) {
-	sm.AddTransition(from, to, action)
 }
 
 func (sm *StateManager) AddListener(listener StateChangeListener) {
