@@ -1,4 +1,3 @@
-
 [TestWizardView_GitDetectionFailure - 1]
 TestWizardView_GitDetectionFailure
 {
@@ -24,8 +23,15 @@ TestWizardView_GitDetectionFailure
         "TemplateVarCount": 0,
         "RepoCount": 0,
         "FinishMode": false,
-        "Loading": true,
+        "Loading": false,
         "Done": false
+      }
+    },
+    {
+      "Type": "*views.modal_ErrorView",
+      "Data": {
+        "Type": "ErrorView",
+        "Error": "at least one repository is required"
       }
     }
   ]

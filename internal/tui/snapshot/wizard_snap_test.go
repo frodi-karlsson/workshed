@@ -3,7 +3,6 @@ package snapshot_test
 import (
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/tui/snapshot"
@@ -26,7 +25,7 @@ func TestWizardView_EmptyRepoDetection(t *testing.T) {
 func TestWizardView_CreateSuccessEmptyInput(t *testing.T) {
 	scenario := snapshot.NewScenario(t,
 		[]snapshot.GitOption{snapshot.WithGitRemoteURL("git@github.com/user/workshed")},
-		[]snapshot.StoreOption{snapshot.WithCreateDelay(100 * time.Millisecond)},
+		nil,
 	)
 
 	scenario.Key("c", "Open create wizard")
@@ -88,9 +87,7 @@ func TestWizardView_CreateError(t *testing.T) {
 }
 
 func TestWizardView_CreateSuccess(t *testing.T) {
-	scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
-		snapshot.WithCreateDelay(100 * time.Millisecond),
-	})
+	scenario := snapshot.NewScenario(t, nil, nil)
 
 	scenario.Key("c", "Open create wizard")
 	scenario.Type("My project", "Enter purpose")

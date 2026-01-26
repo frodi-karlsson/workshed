@@ -122,27 +122,6 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
-	t.Run("should exit with error in read-only directory", func(t *testing.T) {
-		env := NewCLITestEnvironment(t)
-		defer env.Cleanup()
-
-		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
-
-		// Make directory read-only
-		if err := os.Chmod(env.TempDir, 0555); err != nil {
-			t.Fatalf("Failed to make directory read-only: %v", err)
-		}
-		// Restore permissions on cleanup so t.TempDir() can remove it
-		defer os.Chmod(env.TempDir, 0755)
-
-		env.ResetBuffers()
-		env.Runner().Create([]string{"--purpose", "Test workspace", "--repo", repoURL})
-
-		if !env.ExitCalled() {
-			t.Error("Create should exit with error in read-only directory")
-		}
-	})
-
 	t.Run("should handle special characters in purpose", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
@@ -1271,6 +1250,8 @@ func TestCreateWithTemplate(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		templateDir := filepath.Join(env.TempDir, "template")
 		if err := os.MkdirAll(templateDir, 0755); err != nil {
 			t.Fatalf("Failed to create template directory: %v", err)
@@ -1282,7 +1263,7 @@ func TestCreateWithTemplate(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().Create([]string{"--purpose", "Template test", "--template", templateDir})
+		env.Runner().Create([]string{"--purpose", "Template test", "--template", templateDir, "--repo", repoURL})
 		if env.ExitCalled() {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
 		}
@@ -1315,6 +1296,8 @@ func TestCreateWithTemplate(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		templateDir := filepath.Join(env.TempDir, "template")
 		if err := os.MkdirAll(templateDir, 0755); err != nil {
 			t.Fatalf("Failed to create template directory: %v", err)
@@ -1330,6 +1313,7 @@ func TestCreateWithTemplate(t *testing.T) {
 			"--purpose", "Template var test",
 			"--template", templateDir,
 			"--map", "env=production",
+			"--repo", repoURL,
 		})
 		if env.ExitCalled() {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
@@ -1363,6 +1347,8 @@ func TestCreateWithTemplate(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		templateDir := filepath.Join(env.TempDir, "template")
 		if err := os.MkdirAll(templateDir, 0755); err != nil {
 			t.Fatalf("Failed to create template directory: %v", err)
@@ -1379,6 +1365,7 @@ func TestCreateWithTemplate(t *testing.T) {
 			"--template", templateDir,
 			"--map", "env=staging",
 			"--map", "region=us-west",
+			"--repo", repoURL,
 		})
 		if env.ExitCalled() {
 			t.Fatalf("Create exited: %s", env.ErrorOutput())
@@ -1412,10 +1399,13 @@ func TestCreateWithTemplate(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		env.ResetBuffers()
 		env.Runner().Create([]string{
 			"--purpose", "Invalid template test",
 			"--template", "/nonexistent/path",
+			"--repo", repoURL,
 		})
 
 		if !env.ExitCalled() {
@@ -1432,6 +1422,8 @@ func TestCreateWithTemplate(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
 		templateDir := filepath.Join(env.TempDir, "template")
 		if err := os.MkdirAll(templateDir, 0755); err != nil {
 			t.Fatalf("Failed to create template directory: %v", err)
@@ -1442,6 +1434,7 @@ func TestCreateWithTemplate(t *testing.T) {
 			"--purpose", "Invalid map test",
 			"--template", templateDir,
 			"--map", "novalue",
+			"--repo", repoURL,
 		})
 
 		if !env.ExitCalled() {

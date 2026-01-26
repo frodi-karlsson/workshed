@@ -24,8 +24,8 @@ TestWizardView_CreateSuccess
         "TemplateVarCount": 0,
         "RepoCount": 1,
         "FinishMode": false,
-        "Loading": true,
-        "Done": false
+        "Loading": false,
+        "Done": true
       }
     }
   ]

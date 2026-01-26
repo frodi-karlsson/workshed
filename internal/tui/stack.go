@@ -125,6 +125,15 @@ func (m StackModel) Snapshot() StackSnapshot {
 	return StackSnapshot{Views: snapshots}
 }
 
+func (m StackModel) IsIdle() bool {
+	for _, view := range m.stack {
+		if view.IsLoading() {
+			return false
+		}
+	}
+	return true
+}
+
 func (m *StackModel) handleStackAction(action views.StackAction) {
 	switch a := action.(type) {
 	case views.StackPop:

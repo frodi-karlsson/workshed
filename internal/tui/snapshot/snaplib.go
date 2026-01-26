@@ -9,7 +9,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/exp/teatest"
 	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/tui"
 	"github.com/frodi/workshed/internal/workspace"
@@ -20,6 +19,61 @@ const (
 	testTermWidth  = 80
 	testTermHeight = 24
 )
+
+// SyncTestHarness provides synchronous command execution for testing Bubble Tea models
+type SyncTestHarness struct {
+	model       tui.StackModel
+	ctx         context.Context
+	t           *testing.T
+	pendingCmds []tea.Cmd
+}
+
+func NewSyncTestHarness(t *testing.T, model tui.StackModel, ctx context.Context) *SyncTestHarness {
+	return &SyncTestHarness{model: model, ctx: ctx, t: t}
+}
+
+func (h *SyncTestHarness) Send(msg tea.Msg) {
+	newModel, cmd := h.model.Update(msg)
+	h.model = newModel.(tui.StackModel)
+	if cmd != nil {
+		h.pendingCmds = append(h.pendingCmds, cmd)
+	}
+}
+
+func (h *SyncTestHarness) Pump() {
+	iterations := 0
+	for len(h.pendingCmds) > 0 && iterations < 100 {
+		iterations++
+		cmds := h.pendingCmds
+		h.pendingCmds = nil
+
+		for _, cmd := range cmds {
+			if cmd == nil {
+				continue
+			}
+
+			// Execute command with timeout to skip timer-based visual effects
+			msgChan := make(chan tea.Msg, 1)
+			go func() {
+				msgChan <- cmd()
+			}()
+
+			select {
+			case msg := <-msgChan:
+				if msg != nil {
+					h.Send(msg)
+				}
+			case <-time.After(10 * time.Millisecond):
+				// Skip slow commands (timer-based visual effects like cursor blink)
+				continue
+			}
+		}
+	}
+
+	if iterations >= 100 {
+		h.t.Fatal("Pump exceeded maximum iterations - possible infinite command loop")
+	}
+}
 
 type StepType string
 
@@ -66,7 +120,7 @@ type Scenario struct {
 	t       *testing.T
 	mockGit *git.MockGit
 	steps   []Step
-	tm      *teatest.TestModel
+	harness *SyncTestHarness
 	ctx     context.Context
 	store   *mockStore
 }
@@ -241,34 +295,30 @@ func (s *Scenario) Enter(description string) *Scenario {
 
 func (s *Scenario) Record() tui.StackSnapshot {
 	s.t.Helper()
+
 	s.ctx = context.Background()
-
 	stackModel := tui.NewStackModel(s.ctx, s.store)
-	s.tm = teatest.NewTestModel(
-		s.t,
-		stackModel,
-		teatest.WithInitialTermSize(testTermWidth, testTermHeight),
-	)
+	s.harness = NewSyncTestHarness(s.t, stackModel, s.ctx)
 
-	teatest.WaitFor(s.t, s.tm.Output(), func(bts []byte) bool {
-		return len(bts) > 0
-	}, teatest.WithDuration(2*time.Second), teatest.WithCheckInterval(10*time.Millisecond))
-
-	s.t.Log("Starting scenario replay")
+	// Initialize and set window size
+	if initCmd := s.harness.model.Init(); initCmd != nil {
+		s.harness.pendingCmds = append(s.harness.pendingCmds, initCmd)
+		s.harness.Pump()
+	}
+	s.harness.Send(tea.WindowSizeMsg{Width: testTermWidth, Height: testTermHeight})
 
 	for _, step := range s.steps {
 		s.executeStep(step)
 	}
 
-	s.t.Log("Finalizing snapshot capture")
+	// Pump any remaining commands
+	s.harness.Pump()
 
-	_ = s.tm.Quit()
-	stackModel = s.tm.FinalModel(s.t).(tui.StackModel)
-	snapshot := stackModel.Snapshot()
+	return s.harness.model.Snapshot()
+}
 
-	s.t.Log("Snapshot test completed successfully")
-
-	return snapshot
+func (s *Scenario) WaitForIdle() {
+	// No-op: commands are processed synchronously
 }
 
 func (s *Scenario) executeStep(step Step) {
@@ -280,26 +330,24 @@ func (s *Scenario) executeStep(step Step) {
 	case StepEnter:
 		s.sendEnter()
 	}
-
-	s.t.Logf("Executed step: %s", step.Description)
 }
 
 func (s *Scenario) sendKey(key string) {
 	switch key {
 	case "esc":
-		s.tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
+		s.harness.Send(tea.KeyMsg{Type: tea.KeyEsc})
 	case "enter":
-		s.tm.Send(tea.KeyMsg{Type: tea.KeyEnter})
+		s.harness.Send(tea.KeyMsg{Type: tea.KeyEnter})
 	case "up":
-		s.tm.Send(tea.KeyMsg{Type: tea.KeyUp})
+		s.harness.Send(tea.KeyMsg{Type: tea.KeyUp})
 	case "down":
-		s.tm.Send(tea.KeyMsg{Type: tea.KeyDown})
+		s.harness.Send(tea.KeyMsg{Type: tea.KeyDown})
 	case "tab":
-		s.tm.Send(tea.KeyMsg{Type: tea.KeyTab})
+		s.harness.Send(tea.KeyMsg{Type: tea.KeyTab})
 	case "ctrl+c":
-		s.tm.Send(tea.KeyMsg{Type: tea.KeyCtrlC})
+		s.harness.Send(tea.KeyMsg{Type: tea.KeyCtrlC})
 	default:
-		s.tm.Send(tea.KeyMsg{
+		s.harness.Send(tea.KeyMsg{
 			Type:  tea.KeyRunes,
 			Runes: []rune(key),
 		})
@@ -308,7 +356,7 @@ func (s *Scenario) sendKey(key string) {
 
 func (s *Scenario) sendText(text string) {
 	for _, r := range text {
-		s.tm.Send(tea.KeyMsg{
+		s.harness.Send(tea.KeyMsg{
 			Type:  tea.KeyRunes,
 			Runes: []rune{r},
 		})
@@ -316,7 +364,7 @@ func (s *Scenario) sendText(text string) {
 }
 
 func (s *Scenario) sendEnter() {
-	s.tm.Send(tea.KeyMsg{Type: tea.KeyEnter})
+	s.harness.Send(tea.KeyMsg{Type: tea.KeyEnter})
 }
 
 func Match(t *testing.T, name string, snapshot interface{}) {

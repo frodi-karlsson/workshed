@@ -176,6 +176,13 @@ func CreateLocalGitRepo(t *testing.T, name string, files map[string]string) stri
 		t.Fatalf("git init failed: %v\n%s", err, out)
 	}
 
+	// Ensure branch is named "main" regardless of git config
+	cmd = exec.Command("git", "branch", "-M", "main")
+	cmd.Dir = repoDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to rename branch: %v\n%s", err, out)
+	}
+
 	cmd = exec.Command("git", "config", "user.email", "test@example.com")
 	cmd.Dir = repoDir
 	if out, err := cmd.CombinedOutput(); err != nil {

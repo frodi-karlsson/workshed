@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 	flag "github.com/spf13/pflag"
@@ -62,16 +63,27 @@ func (r *Runner) Create(args []string) {
 	}
 
 	repoOpts := make([]workspace.RepositoryOption, 0)
-	for _, repo := range repos {
-		repo = strings.TrimSpace(repo)
-		if repo == "" {
-			continue
+
+	if len(repos) == 0 {
+		currentURL, err := git.RealGit{}.GetRemoteURL(ctx, ".")
+		if err != nil {
+			l.Error("no repository specified and not in a git repository with origin", "hint", "specify a repository with --repo url@ref")
+			r.ExitFunc(1)
+			return
 		}
-		url, ref := parseRepoFlag(repo)
-		repoOpts = append(repoOpts, workspace.RepositoryOption{
-			URL: url,
-			Ref: ref,
-		})
+		repoOpts = append(repoOpts, workspace.RepositoryOption{URL: currentURL})
+	} else {
+		for _, repo := range repos {
+			repo = strings.TrimSpace(repo)
+			if repo == "" {
+				continue
+			}
+			url, ref := parseRepoFlag(repo)
+			repoOpts = append(repoOpts, workspace.RepositoryOption{
+				URL: url,
+				Ref: ref,
+			})
+		}
 	}
 
 	opts := workspace.CreateOptions{
