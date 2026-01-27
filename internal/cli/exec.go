@@ -77,7 +77,7 @@ func (r *Runner) Exec(args []string) {
 	ctx := context.Background()
 
 	providedHandle := ""
-	if sepIdx > 0 && fs.NArg() >= 1 {
+	if sepIdx > 0 && sepIdx > fs.NFlag() {
 		providedHandle = fs.Arg(0)
 	}
 	handle := r.ResolveHandle(ctx, providedHandle, true, l)

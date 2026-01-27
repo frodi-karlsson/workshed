@@ -5,6 +5,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -460,7 +461,7 @@ func TestRemove(t *testing.T) {
 		}
 	})
 
-	t.Run("should error if stdin is not a terminal", func(t *testing.T) {
+	t.Run("should cancel if stdin is not a terminal", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
@@ -468,13 +469,13 @@ func TestRemove(t *testing.T) {
 		env.ResetBuffers()
 		env.Runner().Remove([]string{})
 
-		if !env.ExitCalled() {
-			t.Error("Remove should exit when stdin is not a terminal")
+		if env.ExitCalled() {
+			t.Error("Remove should not exit when stdin is not a terminal")
 		}
 
 		output := env.Output()
-		if !strings.Contains(output, "non-interactive") {
-			t.Errorf("Remove output should mention non-interactive, got: %s", output)
+		if !strings.Contains(output, "operation cancelled") {
+			t.Errorf("Remove output should mention operation cancelled, got: %s", output)
 		}
 	})
 
@@ -969,8 +970,10 @@ func TestReposRemove(t *testing.T) {
 			t.Fatalf("ReposRemove exited unexpectedly: %s", env.ErrorOutput())
 		}
 
-		env.AssertLastOutputRowContains(1, 0, "repo")
-		env.AssertLastOutputRowContains(1, 1, "repo-to-remove")
+		output := env.Output()
+		if !strings.Contains(output, "repository removed") {
+			t.Errorf("ReposRemove output should mention 'repository removed', got: %s", output)
+		}
 
 		retrieved, err := store.Get(ctx, ws.Handle)
 		if err != nil {
@@ -1332,6 +1335,409 @@ func TestCreateWithTemplate(t *testing.T) {
 		repoPath := filepath.Join(ws.Path, "test-repo")
 		if _, err := os.Stat(repoPath); os.IsNotExist(err) {
 			t.Error("Expected test-repo to exist")
+		}
+	})
+}
+
+func TestReposList(t *testing.T) {
+	t.Run("should list repositories in workspace", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := workspace.CreateLocalGitRepo(t, "repo-one", map[string]string{"file1.txt": "content1"})
+		repoURL2 := workspace.CreateLocalGitRepo(t, "repo-two", map[string]string{"file2.txt": "content2"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace for repos list",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+				{URL: repoURL2, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().ReposList([]string{ws.Handle})
+
+		if env.ExitCalled() {
+			t.Fatalf("ReposList exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "repo-one") {
+			t.Errorf("ReposList output should contain 'repo-one', got: %s", output)
+		}
+		if !strings.Contains(output, "repo-two") {
+			t.Errorf("ReposList output should contain 'repo-two', got: %s", output)
+		}
+	})
+
+	t.Run("should show empty message when no repositories", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose:      "Empty workspace",
+			Repositories: []workspace.RepositoryOption{},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().ReposList([]string{ws.Handle})
+
+		if env.ExitCalled() {
+			t.Fatalf("ReposList exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "no repositories") {
+			t.Errorf("ReposList output should mention 'no repositories', got: %s", output)
+		}
+	})
+
+	t.Run("should support raw format", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().ReposList([]string{ws.Handle, "--format", "raw"})
+
+		if env.ExitCalled() {
+			t.Fatalf("ReposList exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		lines := strings.Split(strings.TrimSpace(output), "\n")
+		if len(lines) != 1 || lines[0] != "test-repo" {
+			t.Errorf("Raw format should output single repo name per line, got: %s", output)
+		}
+	})
+}
+
+func TestRemoveDryRun(t *testing.T) {
+	t.Run("should show what would be removed without removing", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace for dry run",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().Remove([]string{"--dry-run", ws.Handle})
+
+		if env.ExitCalled() {
+			t.Fatalf("Remove dry-run exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "dry run") {
+			t.Errorf("Remove dry-run output should mention 'dry run', got: %s", output)
+		}
+		if !strings.Contains(output, ws.Handle) {
+			t.Errorf("Remove dry-run output should mention workspace handle, got: %s", output)
+		}
+
+		_, err = store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Error("Workspace should still exist after dry-run")
+		}
+	})
+}
+
+func TestReposRemoveDryRun(t *testing.T) {
+	t.Run("should show what would be removed without removing", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "repo-to-keep", map[string]string{"keep.txt": "keep"})
+		repoURL2 := workspace.CreateLocalGitRepo(t, "repo-to-remove", map[string]string{"remove.txt": "remove"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+				{URL: repoURL2, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.ResetBuffers()
+		env.Runner().ReposRemove([]string{ws.Handle, "--repo", "repo-to-remove", "--dry-run"})
+
+		if env.ExitCalled() {
+			t.Fatalf("ReposRemove dry-run exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "dry run") {
+			t.Errorf("ReposRemove dry-run output should mention 'dry run', got: %s", output)
+		}
+		if !strings.Contains(output, "repo-to-remove") {
+			t.Errorf("ReposRemove dry-run output should mention repo name, got: %s", output)
+		}
+
+		retrieved, err := store.Get(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("Failed to get workspace: %v", err)
+		}
+		if len(retrieved.Repositories) != 2 {
+			t.Errorf("Workspace should still have 2 repositories after dry-run, got: %d", len(retrieved.Repositories))
+		}
+	})
+}
+
+func TestListPagination(t *testing.T) {
+	t.Run("should paginate results", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		for i := 0; i < 5; i++ {
+			store, err := workspace.NewFSStore(env.TempDir)
+			if err != nil {
+				t.Fatalf("Failed to create store: %v", err)
+			}
+
+			_, err = store.Create(ctx, workspace.CreateOptions{
+				Purpose: fmt.Sprintf("Workspace %d", i),
+				Repositories: []workspace.RepositoryOption{
+					{URL: repoURL, Ref: "main"},
+				},
+			})
+			if err != nil {
+				t.Fatalf("Failed to create workspace %d: %v", i, err)
+			}
+		}
+
+		env.ResetBuffers()
+		env.Runner().List([]string{"--page-size", "2", "--page", "1"})
+
+		if env.ExitCalled() {
+			t.Fatalf("List exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		lastOutput := env.LastOutput()
+		if len(lastOutput.Rows) > 2 {
+			t.Errorf("Page 1 with page-size 2 should have at most 2 rows, got: %d", len(lastOutput.Rows))
+		}
+	})
+
+	t.Run("should show pagination info", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		for i := 0; i < 5; i++ {
+			store, err := workspace.NewFSStore(env.TempDir)
+			if err != nil {
+				t.Fatalf("Failed to create store: %v", err)
+			}
+
+			_, err = store.Create(ctx, workspace.CreateOptions{
+				Purpose: fmt.Sprintf("Workspace %d", i),
+				Repositories: []workspace.RepositoryOption{
+					{URL: repoURL, Ref: "main"},
+				},
+			})
+			if err != nil {
+				t.Fatalf("Failed to create workspace %d: %v", i, err)
+			}
+		}
+
+		env.ResetBuffers()
+		env.Runner().List([]string{"--page-size", "2"})
+
+		if env.ExitCalled() {
+			t.Fatalf("List exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "showing") {
+			t.Errorf("List output should mention 'showing' for pagination info, got: %s", output)
+		}
+	})
+}
+
+func TestCapturesFilter(t *testing.T) {
+	t.Run("should filter captures by repository name", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL1 := workspace.CreateLocalGitRepo(t, "api-repo", map[string]string{"file.txt": "content"})
+		repoURL2 := workspace.CreateLocalGitRepo(t, "web-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace for captures filter",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL1, Ref: "main"},
+				{URL: repoURL2, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.Runner().Capture([]string{ws.Handle, "--name", "first-capture"})
+		env.Runner().Capture([]string{ws.Handle, "--name", "second-capture"})
+
+		env.ResetBuffers()
+		env.Runner().Captures([]string{ws.Handle, "--filter", "api"})
+
+		if env.ExitCalled() {
+			t.Fatalf("Captures exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "first-capture") {
+			t.Errorf("Captures filter output should contain 'first-capture', got: %s", output)
+		}
+		if !strings.Contains(output, "second-capture") {
+			t.Errorf("Captures filter output should contain 'second-capture', got: %s", output)
+		}
+	})
+
+	t.Run("should filter captures by branch name", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoDir := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		if err := workspace.CreateGitBranch(repoDir, "feature-branch"); err != nil {
+			t.Fatalf("Failed to create branch: %v", err)
+		}
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoDir, Ref: "feature-branch"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.Runner().Capture([]string{ws.Handle, "--name", "test-capture"})
+
+		env.ResetBuffers()
+		env.Runner().Captures([]string{ws.Handle, "--filter", "feature"})
+
+		if env.ExitCalled() {
+			t.Fatalf("Captures exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "test-capture") {
+			t.Errorf("Captures filter by branch should contain 'test-capture', got: %s", output)
+		}
+	})
+
+	t.Run("should show no captures match message when filter doesn't match", func(t *testing.T) {
+		env := NewCLITestEnvironment(t)
+		defer env.Cleanup()
+
+		store, err := workspace.NewFSStore(env.TempDir)
+		if err != nil {
+			t.Fatalf("Failed to create store: %v", err)
+		}
+
+		ctx := context.Background()
+		repoURL := workspace.CreateLocalGitRepo(t, "test-repo", map[string]string{"file.txt": "content"})
+
+		ws, err := store.Create(ctx, workspace.CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []workspace.RepositoryOption{
+				{URL: repoURL, Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		env.Runner().Capture([]string{ws.Handle, "--name", "test-capture"})
+
+		env.ResetBuffers()
+		env.Runner().Captures([]string{ws.Handle, "--filter", "nonexistent"})
+
+		if env.ExitCalled() {
+			t.Fatalf("Captures exited unexpectedly: %s", env.ErrorOutput())
+		}
+
+		output := env.Output()
+		if !strings.Contains(output, "no captures match") {
+			t.Errorf("Captures filter with no matches should mention 'no captures match', got: %s", output)
 		}
 	})
 }

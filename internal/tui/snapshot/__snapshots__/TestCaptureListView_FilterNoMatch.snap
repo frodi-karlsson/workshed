@@ -1,6 +1,6 @@
 
-[TestCaptureDetailsView_ApplyConfirm - 1]
-TestCaptureDetailsView_ApplyConfirm
+[TestCaptureListView_FilterNoMatch - 1]
+TestCaptureListView_FilterNoMatch
 {
   "Views": [
     {
@@ -41,22 +41,29 @@ TestCaptureDetailsView_ApplyConfirm
         "CaptureCnt": 1,
         "FilteredCnt": 1,
         "Selected": 0,
-        "FilterMode": false,
-        "FilterText": ""
+        "FilterMode": true,
+        "FilterText": "n"
       }
     },
     {
-      "Type": "*views.CaptureDetailsView",
+      "Type": "*views.CaptureCreateView",
       "Data": {
-        "Type": "CaptureDetailsView",
+        "Type": "CaptureCreateView",
         "Handle": "test-ws",
-        "CaptureID": "cap-123",
-        "CaptureName": "State to apply",
-        "RepoCount": 0,
-        "PreflightOK": true,
-        "ErrorCount": 0,
-        "Confirm": true,
-        "ApplySuccess": false
+        "Name": "onexistent",
+        "Description": "",
+        "Step": 0,
+        "Done": false,
+        "CaptureID": "",
+        "RepoCount": 1,
+        "GitState": [
+          {
+            "Repository": "repo1",
+            "Branch": "",
+            "Commit": "",
+            "Dirty": false
+          }
+        ]
       }
     }
   ]

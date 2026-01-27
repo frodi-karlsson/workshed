@@ -1,6 +1,6 @@
 
-[TestCaptureDetailsView_ApplyConfirm - 1]
-TestCaptureDetailsView_ApplyConfirm
+[TestCaptureListView_WithFilter - 1]
+TestCaptureListView_WithFilter
 {
   "Views": [
     {
@@ -30,7 +30,7 @@ TestCaptureDetailsView_ApplyConfirm
         "Type": "CapturesMenuView",
         "Handle": "test-ws",
         "HasCaptures": true,
-        "CaptureCnt": 1
+        "CaptureCnt": 3
       }
     },
     {
@@ -38,25 +38,38 @@ TestCaptureDetailsView_ApplyConfirm
       "Data": {
         "Type": "CaptureListView",
         "Handle": "test-ws",
-        "CaptureCnt": 1,
-        "FilteredCnt": 1,
+        "CaptureCnt": 3,
+        "FilteredCnt": 2,
         "Selected": 0,
-        "FilterMode": false,
-        "FilterText": ""
+        "FilterMode": true,
+        "FilterText": "bac"
       }
     },
     {
-      "Type": "*views.CaptureDetailsView",
+      "Type": "*views.CaptureCreateView",
       "Data": {
-        "Type": "CaptureDetailsView",
+        "Type": "CaptureCreateView",
         "Handle": "test-ws",
-        "CaptureID": "cap-123",
-        "CaptureName": "State to apply",
-        "RepoCount": 0,
-        "PreflightOK": true,
-        "ErrorCount": 0,
-        "Confirm": true,
-        "ApplySuccess": false
+        "Name": "kend",
+        "Description": "",
+        "Step": 0,
+        "Done": false,
+        "CaptureID": "",
+        "RepoCount": 2,
+        "GitState": [
+          {
+            "Repository": "backend",
+            "Branch": "",
+            "Commit": "",
+            "Dirty": false
+          },
+          {
+            "Repository": "frontend",
+            "Branch": "",
+            "Commit": "",
+            "Dirty": false
+          }
+        ]
       }
     }
   ]

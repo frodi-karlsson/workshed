@@ -15,15 +15,18 @@ func (r *Runner) List(args []string) {
 	fs := flag.NewFlagSet("list", flag.ExitOnError)
 	purposeFilter := fs.String("purpose", "", "Filter by purpose (case-insensitive substring match)")
 	format := fs.String("format", "table", "Output format (table|json)")
+	page := fs.Int("page", 1, "Page number (1-indexed)")
+	pageSize := fs.Int("page-size", 20, "Number of items per page")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed list [--purpose <filter>] [--format <table|json>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed list [--purpose <filter>] [--page <n>] [--page-size <n>] [--format <table|json>]\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed list\n")
 		logger.SafeFprintf(r.Stderr, "  workshed list --purpose payment\n")
 		logger.SafeFprintf(r.Stderr, "  workshed list --purpose \"API\" --format json\n")
+		logger.SafeFprintf(r.Stderr, "  workshed list --page 2 --page-size 10\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -61,8 +64,41 @@ func (r *Runner) List(args []string) {
 		return
 	}
 
+	total := len(workspaces)
+	if *page < 1 {
+		*page = 1
+	}
+	if *pageSize < 1 {
+		*pageSize = 20
+	}
+
+	startIdx := (*page - 1) * *pageSize
+	endIdx := startIdx + *pageSize
+
+	if startIdx >= total {
+		if *format == "json" {
+			logger.SafeFprintln(r.Stdout, "[]")
+		} else {
+			l.Info(fmt.Sprintf("page %d is empty (total: %d items)", *page, total))
+		}
+		return
+	}
+
+	if endIdx > total {
+		endIdx = total
+	}
+
+	pagedWorkspaces := workspaces[startIdx:endIdx]
+
+	if *format == "raw" {
+		for _, ws := range pagedWorkspaces {
+			logger.SafeFprintln(r.Stdout, ws.Handle)
+		}
+		return
+	}
+
 	var rows [][]string
-	for _, ws := range workspaces {
+	for _, ws := range pagedWorkspaces {
 		repoCount := len(ws.Repositories)
 		var repoInfo string
 		if repoCount == 1 {
@@ -88,5 +124,9 @@ func (r *Runner) List(args []string) {
 
 	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
 		l.Error("failed to render output", "error", err)
+	}
+
+	if *format != "json" && total > *pageSize {
+		l.Info(fmt.Sprintf("showing %d-%d of %d workspaces (page %d of %d)", startIdx+1, endIdx, total, *page, (total+*pageSize-1)/(*pageSize)))
 	}
 }

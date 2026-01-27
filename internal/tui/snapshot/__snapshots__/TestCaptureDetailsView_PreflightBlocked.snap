@@ -39,7 +39,10 @@ TestCaptureDetailsView_PreflightBlocked
         "Type": "CaptureListView",
         "Handle": "test-ws",
         "CaptureCnt": 1,
-        "Selected": 0
+        "FilteredCnt": 1,
+        "Selected": 0,
+        "FilterMode": false,
+        "FilterText": ""
       }
     },
     {

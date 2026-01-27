@@ -17,9 +17,10 @@ func (r *Runner) Remove(args []string) {
 
 	fs := flag.NewFlagSet("remove", flag.ExitOnError)
 	yes := fs.BoolP("yes", "y", false, "Skip confirmation prompt")
+	dryRun := fs.Bool("dry-run", false, "Show what would be removed without actually removing")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed remove [<handle>] [--yes]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed remove [<handle>] [--yes] [--dry-run]\n\n")
 		logger.SafeFprintf(r.Stderr, "Delete a workspace and all its repositories.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
@@ -27,6 +28,7 @@ func (r *Runner) Remove(args []string) {
 		logger.SafeFprintf(r.Stderr, "  workshed remove\n")
 		logger.SafeFprintf(r.Stderr, "  workshed remove my-workspace\n")
 		logger.SafeFprintf(r.Stderr, "  workshed remove -y\n")
+		logger.SafeFprintf(r.Stderr, "  workshed remove --dry-run\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -34,10 +36,10 @@ func (r *Runner) Remove(args []string) {
 		r.ExitFunc(1)
 	}
 
-	if !*yes {
+	if !*yes && !*dryRun {
 		if !term.IsTerminal(os.Stdin.Fd()) {
-			l.Error("cannot prompt for confirmation in non-interactive mode", "hint", "use --yes or -y to skip confirmation")
-			r.ExitFunc(1)
+			l.Warn("stdin is not a tty, cannot prompt", "hint", "use --yes to skip confirmation")
+			l.Info("operation cancelled")
 			return
 		}
 	}
@@ -58,6 +60,14 @@ func (r *Runner) Remove(args []string) {
 	if err != nil {
 		l.Error("workspace not found", "handle", handle, "error", err)
 		r.ExitFunc(1)
+		return
+	}
+
+	if *dryRun {
+		l.Info("dry run - would remove workspace", "handle", handle, "purpose", ws.Purpose)
+		for _, repo := range ws.Repositories {
+			l.Info("  - repository", "name", repo.Name)
+		}
 		return
 	}
 
@@ -88,7 +98,5 @@ func (r *Runner) Remove(args []string) {
 		r.ExitFunc(1)
 	}
 
-	if !*yes {
-		l.Success("workspace removed", "handle", handle)
-	}
+	l.Success("workspace removed", "handle", handle)
 }

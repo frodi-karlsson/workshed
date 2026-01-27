@@ -39,7 +39,7 @@ func (i RepoMenuItem) FilterValue() string {
 func NewReposMenuView(s workspace.Store, ctx context.Context, handle string, invocationCtx workspace.InvocationContext) ReposMenuView {
 	items := []list.Item{
 		RepoMenuItem{key: "a", title: "[a] Add Repository", description: "Add a new repository"},
-		RepoMenuItem{key: "r", title: "[r] Remove Repository", description: "Remove a repository"},
+		RepoMenuItem{key: "l", title: "[l] List Repositories", description: "List and manage repositories"},
 	}
 
 	l := list.New(items, list.NewDefaultDelegate(), 30, MaxListHeight)
@@ -132,7 +132,7 @@ func (v *ReposMenuView) handleRepoAction(item RepoMenuItem) ViewResult {
 	case "a":
 		addRepoView := NewAddRepoView(v.store, v.ctx, v.handle, v.invocationCtx)
 		return ViewResult{NextView: &addRepoView}
-	case "r":
+	case "l":
 		removeRepoView := NewRemoveRepoView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: removeRepoView}
 	}

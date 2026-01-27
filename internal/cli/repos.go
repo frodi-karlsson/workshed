@@ -23,13 +23,16 @@ func (r *Runner) Repos(args []string) {
 		r.ReposAdd(args[1:])
 	case "remove":
 		r.ReposRemove(args[1:])
+	case "list":
+		r.ReposList(args[1:])
 	case "help", "-h", "--help":
 		r.ReposUsage()
 	default:
 		logger.SafeFprintf(r.Stderr, "Unknown repos subcommand: %s\n\n", subcommand)
 		logger.SafeFprintf(r.Stderr, "Use a workspace handle, or run from within a workspace directory:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed repos add [<handle>] --repo <url>\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos remove [<handle>] --repo <name>\n\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos remove [<handle>] --repo <name>\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos list [<handle>]\n\n")
 		logger.SafeFprintf(r.Stderr, "Or cd into a workspace and omit the handle:\n")
 		logger.SafeFprintf(r.Stderr, "  cd $(workshed path)\n")
 		logger.SafeFprintf(r.Stderr, "  workshed repos add --repo <url>\n\n")
@@ -43,20 +46,24 @@ func (r *Runner) ReposUsage() {
 Usage:
   workshed repos add [<handle>] --repo url[@ref]...
   workshed repos remove [<handle>] --repo <name>
+  workshed repos list [<handle>]
 
 Subcommands:
   add     Add repositories to a workspace
   remove  Remove a repository from a workspace
+  list    List repositories in a workspace
 
 Examples:
   workshed repos add --repo https://github.com/org/repo@main
 
   workshed repos remove --repo my-repo
 
+  workshed repos list
+
   # From within a workspace:
   cd $(workshed path)
   workshed repos add --repo https://github.com/org/repo@main
-`
+ `
 	logger.SafeFprintf(r.Stderr, "%s\n", msg)
 }
 
@@ -161,21 +168,107 @@ func (r *Runner) ReposAdd(args []string) {
 	}
 }
 
+func (r *Runner) ReposList(args []string) {
+	l := r.getLogger()
+
+	fs := flag.NewFlagSet("repos list", flag.ExitOnError)
+	format := fs.String("format", "table", "Output format (table|json|raw)")
+
+	fs.Usage = func() {
+		logger.SafeFprintf(r.Stderr, "Usage: workshed repos list [<handle>] [flags]\n\n")
+		logger.SafeFprintf(r.Stderr, "List repositories in a workspace.\n\n")
+		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		fs.PrintDefaults()
+		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos list\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos list my-workspace\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos list --format json\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos list --format raw\n")
+	}
+
+	if err := fs.Parse(args); err != nil {
+		l.Error("failed to parse flags", "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	if err := ValidateFormat(Format(*format), "repos"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
+		r.ExitFunc(1)
+		return
+	}
+
+	handle := r.ResolveHandle(context.Background(), fs.Arg(0), true, l)
+	if handle == "" {
+		return
+	}
+
+	s := r.getStore()
+	ctx := context.Background()
+
+	ws, err := s.Get(ctx, handle)
+	if err != nil {
+		l.Error("workspace not found", "handle", handle, "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	if len(ws.Repositories) == 0 {
+		if *format == "json" {
+			logger.SafeFprintln(r.Stdout, "[]")
+		} else {
+			l.Info("no repositories in workspace")
+		}
+		return
+	}
+
+	if *format == "raw" {
+		for _, repo := range ws.Repositories {
+			logger.SafeFprintln(r.Stdout, repo.Name)
+		}
+		return
+	}
+
+	var rows [][]string
+	for _, repo := range ws.Repositories {
+		var refInfo string
+		if repo.Ref != "" {
+			refInfo = " @ " + repo.Ref
+		}
+		rows = append(rows, []string{repo.Name, repo.URL + refInfo})
+	}
+
+	output := Output{
+		Columns: []ColumnConfig{
+			{Type: Rigid, Name: "NAME", Min: 15, Max: 30},
+			{Type: Shrinkable, Name: "URL", Min: 30, Max: 0},
+		},
+		Rows: rows,
+	}
+
+	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
+		l.Error("failed to render output", "error", err)
+	}
+}
+
 func (r *Runner) ReposRemove(args []string) {
 	l := r.getLogger()
 
 	fs := flag.NewFlagSet("repos remove", flag.ExitOnError)
 	repoName := fs.String("repo", "", "Repository name to remove")
 	format := fs.String("format", "table", "Output format (table|json)")
+	dryRun := fs.Bool("dry-run", false, "Show what would be removed without actually removing")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed repos remove [<handle>] --repo <name> [flags]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed repos remove [<handle>] --repo <name> [--dry-run] [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Remove a repository from a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed repos remove --repo my-repo\n")
 		logger.SafeFprintf(r.Stderr, "  workshed repos remove my-workspace --repo my-repo\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos remove --repo my-repo --dry-run\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -206,24 +299,16 @@ func (r *Runner) ReposRemove(args []string) {
 	s := r.getStore()
 	ctx := context.Background()
 
+	if *dryRun {
+		l.Info("dry run - would remove repository", "handle", handle, "repo", *repoName)
+		return
+	}
+
 	if err := s.RemoveRepository(ctx, handle, *repoName); err != nil {
 		l.Error("failed to remove repository", "handle", handle, "repo", *repoName, "error", err)
 		r.ExitFunc(1)
 		return
 	}
 
-	output := Output{
-		Columns: []ColumnConfig{
-			{Type: Rigid, Name: "KEY", Min: 10, Max: 20},
-			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
-		},
-		Rows: [][]string{
-			{"handle", handle},
-			{"repo", *repoName},
-		},
-	}
-
-	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
-		l.Error("failed to render output", "error", err)
-	}
+	l.Success("repository removed", "handle", handle, "repo", *repoName)
 }

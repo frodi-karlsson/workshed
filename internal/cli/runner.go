@@ -100,7 +100,7 @@ func (r *Runner) getOutputRenderer() OutputRenderer {
 }
 
 func (r *Runner) Usage() {
-	msg := `workshed v0.3.0 - Intent-scoped local workspaces
+	msg := `workshed v0.4.0 - Intent-scoped local workspaces
 
 Usage:
   workshed <command> [flags]

@@ -14,6 +14,7 @@ type LogLevel int
 const (
 	DEBUG LogLevel = iota
 	INFO
+	WARN
 	SUCCESS
 	ERROR
 )
@@ -80,6 +81,12 @@ func (l *Logger) Error(msg string, args ...interface{}) {
 func (l *Logger) Info(msg string, args ...interface{}) {
 	if l.level <= INFO {
 		l.logMessage("INFO", msg, args)
+	}
+}
+
+func (l *Logger) Warn(msg string, args ...interface{}) {
+	if l.level <= WARN {
+		l.logMessage("WARN", msg, args)
 	}
 }
 

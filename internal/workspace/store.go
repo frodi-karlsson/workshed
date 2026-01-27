@@ -1278,7 +1278,7 @@ func (s *FSStore) ExportContext(ctx context.Context, handle string) (*WorkspaceC
 		Repositories: repos,
 		Captures:     contextCaptures,
 		Metadata: ContextMetadata{
-			WorkshedVersion: "0.3.0",
+			WorkshedVersion: "0.4.0",
 			ExecutionsCount: len(executions),
 			CapturesCount:   len(captures),
 			LastExecutedAt:  lastExecuted,

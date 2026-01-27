@@ -1,4 +1,3 @@
-
 [TestCaptureListView_MultipleCaptures - 1]
 TestCaptureListView_MultipleCaptures
 {
@@ -39,7 +38,10 @@ TestCaptureListView_MultipleCaptures
         "Type": "CaptureListView",
         "Handle": "test-ws",
         "CaptureCnt": 3,
-        "Selected": 0
+        "FilteredCnt": 3,
+        "Selected": 0,
+        "FilterMode": false,
+        "FilterText": ""
       }
     }
   ]

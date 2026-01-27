@@ -20,12 +20,10 @@ type modal_InspectView struct {
 }
 
 func NewInspectView(s workspace.Store, ctx context.Context, handle string) *modal_InspectView {
-	ws, _ := s.Get(ctx, handle)
 	return &modal_InspectView{
-		store:     s,
-		ctx:       ctx,
-		handle:    handle,
-		workspace: ws,
+		store:  s,
+		ctx:    ctx,
+		handle: handle,
 	}
 }
 
@@ -35,8 +33,19 @@ func (v *modal_InspectView) SetSize(size measure.Window) {
 
 func (v *modal_InspectView) Init() tea.Cmd { return nil }
 
-func (v *modal_InspectView) OnPush()         {}
-func (v *modal_InspectView) OnResume()       {}
+func (v *modal_InspectView) OnPush() {
+	v.refreshWorkspace()
+}
+
+func (v *modal_InspectView) OnResume() {
+	v.refreshWorkspace()
+}
+
+func (v *modal_InspectView) refreshWorkspace() {
+	ws, _ := v.store.Get(v.ctx, v.handle)
+	v.workspace = ws
+}
+
 func (v *modal_InspectView) IsLoading() bool { return false }
 func (v *modal_InspectView) Cancel()         {}
 

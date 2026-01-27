@@ -51,6 +51,11 @@ func (r *Runner) Inspect(args []string) {
 		return
 	}
 
+	if *format == "raw" {
+		logger.SafeFprintln(r.Stdout, ws.Handle)
+		return
+	}
+
 	var rows [][]string
 	rows = append(rows, []string{"handle", ws.Handle})
 	rows = append(rows, []string{"purpose", ws.Purpose})

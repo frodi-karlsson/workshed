@@ -44,7 +44,7 @@ type RemoveRepoView struct {
 
 func NewRemoveRepoView(s workspace.Store, ctx context.Context, handle string) *RemoveRepoView {
 	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 40, 15)
-	l.Title = "Select repository to remove from \"" + handle + "\""
+	l.Title = "Repositories: " + handle
 	l.SetShowTitle(true)
 	l.SetShowStatusBar(false)
 	l.SetShowHelp(false)
@@ -114,9 +114,9 @@ func (v *RemoveRepoView) KeyBindings() []KeyBinding {
 		[]KeyBinding{
 			{Key: "up", Help: "[↑] Navigate", Action: nil},
 			{Key: "down", Help: "[↓] Navigate", Action: nil},
-			{Key: "enter", Help: "[Enter] Select", Action: v.selectToRemove},
+			{Key: "d", Help: "[d] Delete", Action: v.selectToRemove},
 		},
-		GetDismissKeyBindings(v.goBack, "Cancel")...,
+		GetDismissKeyBindings(v.goBack, "Back")...,
 	)
 }
 
@@ -147,6 +147,12 @@ func (v *RemoveRepoView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 		return ViewResult{Action: StackPop{}}, nil
 	}
 	if km, ok := msg.(tea.KeyMsg); ok {
+		if km.Type == tea.KeyRunes && len(km.Runes) == 1 {
+			key := string(km.Runes[0])
+			if key == "d" && len(v.list.Items()) > 0 {
+				return v.selectToRemove()
+			}
+		}
 		if result, _, handled := HandleKey(v.KeyBindings(), km); handled {
 			return result, nil
 		}
@@ -173,7 +179,7 @@ func (v *RemoveRepoView) View() string {
 				lipgloss.NewStyle().
 					Foreground(components.ColorVeryMuted).
 					MarginTop(1).
-					Render("Press [Esc] to go back"),
+					Render("[Esc] Back"),
 			),
 		)
 	}

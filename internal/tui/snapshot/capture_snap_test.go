@@ -329,3 +329,130 @@ func TestCapturesMenuView_WithCaptures(t *testing.T) {
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
 }
+
+func TestCaptureListView_WithFilter(t *testing.T) {
+	now := time.Now()
+	captures := []workspace.Capture{
+		{
+			ID:        "cap-1",
+			Timestamp: now,
+			Handle:    "test-ws",
+			Name:      "Backend refactor",
+			Kind:      workspace.CaptureKindManual,
+			GitState:  []workspace.GitRef{{Repository: "backend", Branch: "main", Commit: "abc123", Dirty: false}},
+		},
+		{
+			ID:        "cap-2",
+			Timestamp: now.Add(-1 * time.Hour),
+			Handle:    "test-ws",
+			Name:      "Frontend changes",
+			Kind:      workspace.CaptureKindManual,
+			GitState:  []workspace.GitRef{{Repository: "frontend", Branch: "develop", Commit: "def456", Dirty: false}},
+		},
+		{
+			ID:        "cap-3",
+			Timestamp: now.Add(-2 * time.Hour),
+			Handle:    "test-ws",
+			Name:      "Backend initial",
+			Kind:      workspace.CaptureKindManual,
+			GitState:  []workspace.GitRef{{Repository: "backend", Branch: "feature", Commit: "ghi789", Dirty: false}},
+		},
+	}
+	scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+		snapshot.WithWorkspaces([]*workspace.Workspace{
+			{
+				Handle:    "test-ws",
+				Purpose:   "Test workspace",
+				CreatedAt: now.Add(-24 * time.Hour),
+				Repositories: []workspace.Repository{
+					{Name: "backend", URL: "https://github.com/org/backend"},
+					{Name: "frontend", URL: "https://github.com/org/frontend"},
+				},
+			},
+		}),
+		snapshot.WithCaptures(captures),
+	})
+	scenario.Enter("Open resource menu")
+	scenario.Key("c", "Open captures menu")
+	scenario.Key("l", "Open captures list")
+	scenario.Key("/", "Enter filter mode")
+	scenario.Type("backend", "Filter by backend")
+	output := scenario.Record()
+	snapshot.Match(t, t.Name(), output)
+}
+
+func TestCaptureListView_FilterByBranch(t *testing.T) {
+	now := time.Now()
+	captures := []workspace.Capture{
+		{
+			ID:        "cap-1",
+			Timestamp: now,
+			Handle:    "test-ws",
+			Name:      "Main branch capture",
+			Kind:      workspace.CaptureKindManual,
+			GitState:  []workspace.GitRef{{Repository: "repo", Branch: "main", Commit: "abc123", Dirty: false}},
+		},
+		{
+			ID:        "cap-2",
+			Timestamp: now.Add(-1 * time.Hour),
+			Handle:    "test-ws",
+			Name:      "Dev branch capture",
+			Kind:      workspace.CaptureKindManual,
+			GitState:  []workspace.GitRef{{Repository: "repo", Branch: "develop", Commit: "def456", Dirty: false}},
+		},
+	}
+	scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+		snapshot.WithWorkspaces([]*workspace.Workspace{
+			{
+				Handle:    "test-ws",
+				Purpose:   "Test workspace",
+				CreatedAt: now.Add(-24 * time.Hour),
+				Repositories: []workspace.Repository{
+					{Name: "repo", URL: "https://github.com/org/repo"},
+				},
+			},
+		}),
+		snapshot.WithCaptures(captures),
+	})
+	scenario.Enter("Open resource menu")
+	scenario.Key("c", "Open captures menu")
+	scenario.Key("l", "Open captures list")
+	scenario.Key("/", "Enter filter mode")
+	scenario.Type("main", "Filter by main branch")
+	output := scenario.Record()
+	snapshot.Match(t, t.Name(), output)
+}
+
+func TestCaptureListView_FilterNoMatch(t *testing.T) {
+	now := time.Now()
+	captures := []workspace.Capture{
+		{
+			ID:        "cap-1",
+			Timestamp: now,
+			Handle:    "test-ws",
+			Name:      "Some capture",
+			Kind:      workspace.CaptureKindManual,
+			GitState:  []workspace.GitRef{{Repository: "repo1", Branch: "main", Commit: "abc123", Dirty: false}},
+		},
+	}
+	scenario := snapshot.NewScenario(t, nil, []snapshot.StoreOption{
+		snapshot.WithWorkspaces([]*workspace.Workspace{
+			{
+				Handle:    "test-ws",
+				Purpose:   "Test workspace",
+				CreatedAt: now.Add(-24 * time.Hour),
+				Repositories: []workspace.Repository{
+					{Name: "repo1", URL: "https://github.com/org/repo1"},
+				},
+			},
+		}),
+		snapshot.WithCaptures(captures),
+	})
+	scenario.Enter("Open resource menu")
+	scenario.Key("c", "Open captures menu")
+	scenario.Key("l", "Open captures list")
+	scenario.Key("/", "Enter filter mode")
+	scenario.Type("nonexistent", "Filter with no matches")
+	output := scenario.Record()
+	snapshot.Match(t, t.Name(), output)
+}

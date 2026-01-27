@@ -3,8 +3,10 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/frodi/workshed/internal/logger"
+	"github.com/frodi/workshed/internal/workspace"
 	flag "github.com/spf13/pflag"
 )
 
@@ -14,15 +16,17 @@ func (r *Runner) Captures(args []string) {
 	fs := flag.NewFlagSet("captures", flag.ExitOnError)
 	format := fs.String("format", "table", "Output format (table|json)")
 	reverse := fs.Bool("reverse", false, "Reverse sort order (oldest first)")
+	filter := fs.String("filter", "", "Filter captures by repository name or branch (case-insensitive substring match)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed captures [<handle>]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed captures [<handle>] [--filter <repo|branch>] [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "List captures for a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed captures\n")
 		logger.SafeFprintf(r.Stderr, "  workshed captures my-workspace\n")
+		logger.SafeFprintf(r.Stderr, "  workshed captures --filter api\n")
 		logger.SafeFprintf(r.Stderr, "  workshed captures --format json\n")
 		logger.SafeFprintf(r.Stderr, "  workshed captures --reverse\n")
 	}
@@ -58,11 +62,51 @@ func (r *Runner) Captures(args []string) {
 		return
 	}
 
-	displayCaptures := captures
-	if *reverse {
-		for i, j := 0, len(captures)-1; i < j; i, j = i+1, j-1 {
-			displayCaptures[i], displayCaptures[j] = captures[j], captures[i]
+	var filteredCaptures []workspace.Capture
+	if *filter != "" {
+		filterLower := strings.ToLower(*filter)
+		for _, cap := range captures {
+			match := false
+			if strings.Contains(strings.ToLower(cap.Name), filterLower) {
+				match = true
+			}
+			for _, gitRef := range cap.GitState {
+				if strings.Contains(strings.ToLower(gitRef.Repository), filterLower) {
+					match = true
+				}
+				if strings.Contains(strings.ToLower(gitRef.Branch), filterLower) {
+					match = true
+				}
+			}
+			if match {
+				filteredCaptures = append(filteredCaptures, cap)
+			}
 		}
+	} else {
+		filteredCaptures = captures
+	}
+
+	if len(filteredCaptures) == 0 {
+		if *format == "json" {
+			logger.SafeFprintln(r.Stdout, "[]")
+		} else {
+			l.Info("no captures match filter: " + *filter)
+		}
+		return
+	}
+
+	displayCaptures := filteredCaptures
+	if *reverse {
+		for i, j := 0, len(displayCaptures)-1; i < j; i, j = i+1, j-1 {
+			displayCaptures[i], displayCaptures[j] = displayCaptures[j], displayCaptures[i]
+		}
+	}
+
+	if *format == "raw" {
+		for _, cap := range displayCaptures {
+			logger.SafeFprintln(r.Stdout, cap.ID)
+		}
+		return
 	}
 
 	var rows [][]string

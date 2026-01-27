@@ -1,4 +1,3 @@
-
 [TestCaptureDetailsView_Success - 1]
 TestCaptureDetailsView_Success
 {
@@ -39,7 +38,10 @@ TestCaptureDetailsView_Success
         "Type": "CaptureListView",
         "Handle": "test-ws",
         "CaptureCnt": 1,
-        "Selected": 0
+        "FilteredCnt": 1,
+        "Selected": 0,
+        "FilterMode": false,
+        "FilterText": ""
       }
     },
     {

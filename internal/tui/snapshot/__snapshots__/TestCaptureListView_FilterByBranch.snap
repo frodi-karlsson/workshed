@@ -1,6 +1,6 @@
 
-[TestCaptureDetailsView_ApplyConfirm - 1]
-TestCaptureDetailsView_ApplyConfirm
+[TestCaptureListView_FilterByBranch - 1]
+TestCaptureListView_FilterByBranch
 {
   "Views": [
     {
@@ -30,7 +30,7 @@ TestCaptureDetailsView_ApplyConfirm
         "Type": "CapturesMenuView",
         "Handle": "test-ws",
         "HasCaptures": true,
-        "CaptureCnt": 1
+        "CaptureCnt": 2
       }
     },
     {
@@ -38,25 +38,32 @@ TestCaptureDetailsView_ApplyConfirm
       "Data": {
         "Type": "CaptureListView",
         "Handle": "test-ws",
-        "CaptureCnt": 1,
+        "CaptureCnt": 2,
         "FilteredCnt": 1,
         "Selected": 0,
-        "FilterMode": false,
-        "FilterText": ""
+        "FilterMode": true,
+        "FilterText": "main"
       }
     },
     {
-      "Type": "*views.CaptureDetailsView",
+      "Type": "*views.CaptureCreateView",
       "Data": {
-        "Type": "CaptureDetailsView",
+        "Type": "CaptureCreateView",
         "Handle": "test-ws",
-        "CaptureID": "cap-123",
-        "CaptureName": "State to apply",
-        "RepoCount": 0,
-        "PreflightOK": true,
-        "ErrorCount": 0,
-        "Confirm": true,
-        "ApplySuccess": false
+        "Name": "",
+        "Description": "",
+        "Step": 0,
+        "Done": false,
+        "CaptureID": "",
+        "RepoCount": 1,
+        "GitState": [
+          {
+            "Repository": "repo",
+            "Branch": "",
+            "Commit": "",
+            "Dirty": false
+          }
+        ]
       }
     }
   ]

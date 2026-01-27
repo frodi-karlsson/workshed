@@ -68,6 +68,7 @@ workshed capture --name "Starting point" --description "Initial workspace state"
 # Add/remove repositories
 workshed repos add my-workspace --repo https://github.com/org/new-repo@main
 workshed repos remove my-workspace --repo new-repo
+workshed repos remove my-workspace --repo new-repo --dry-run  # Preview removal
 
 # Output formats: --format table|json (default varies by command)
 workshed list --format json
@@ -80,6 +81,7 @@ workshed inspect
 workshed path
 workshed update --purpose "New focus"
 workshed remove
+workshed remove --dry-run  # Preview deletion
 ```
 
 ---
@@ -231,16 +233,17 @@ workshed captures
 |---------|-------------|
 | `workshed` | Open interactive dashboard |
 | `workshed create` | Create a new workspace |
-| `workshed list` | List workspaces, filter by purpose |
+| `workshed list` | List workspaces, filter by purpose, paginate with --page and --page-size |
 | `workshed inspect` | Show workspace details |
 | `workshed path` | Print workspace path |
 | `workshed exec -- <cmd>` | Run command in repositories |
 | `workshed capture` | Record a descriptive snapshot of git state |
-| `workshed captures` | List captures for a workspace |
+| `workshed captures` | List captures for a workspace, filter by repository or branch with --filter |
 | `workshed apply` | Attempt to restore git state from a capture |
 | `workshed export` | Export workspace configuration |
 | `workshed import` | Create workspace from exported JSON |
 | `workshed health` | Check workspace health |
+| `workshed repos list` | List repositories in a workspace |
 | `workshed repos add` | Add repository to workspace |
 | `workshed repos remove` | Remove repository from workspace |
 | `workshed update` | Update workspace purpose |
@@ -262,13 +265,14 @@ Most commands support `--format table|json` for structured output:
 
 | Command | Default | Notes |
 |---------|---------|-------|
-| `list` | table | Lists workspaces |
-| `captures` | table | Lists captures |
+| `list` | table | Lists workspaces; supports table, json, raw |
+| `captures` | table | Lists captures; supports table, json, raw |
 | `capture` | table | Shows capture details |
 | `apply` | table | Shows applied capture |
 | `create` | table | Shows created workspace info |
-| `inspect` | table | Shows workspace details |
-| `path` | table | Shows workspace path |
+| `inspect` | table | Shows workspace details; supports table, json, raw |
+| `path` | raw | Shows workspace path; supports raw, table, json |
+| `repos list` | table | Lists repositories; supports table, json, raw |
 | `repos add` | table | Shows added repositories |
 | `repos remove` | table | Shows removed repository |
 | `update` | table | Shows updated purpose |
