@@ -27,8 +27,7 @@ type currentRepoResultMsg struct {
 }
 
 type workspaceCreateResultMsg struct {
-	ws  *workspace.Workspace
-	err error
+	wizardResult
 }
 
 type WizardView struct {
@@ -121,9 +120,9 @@ func createWorkspaceCmd(ctx context.Context, s workspace.Store, purpose string, 
 			Repositories: repos,
 		})
 		if err != nil {
-			return workspaceCreateResultMsg{err: err}
+			return workspaceCreateResultMsg{wizardResult{err: err}}
 		}
-		return workspaceCreateResultMsg{ws: ws}
+		return workspaceCreateResultMsg{wizardResult{ws: ws}}
 	}
 }
 
@@ -422,4 +421,9 @@ func (v *WizardView) Snapshot() interface{} {
 		Loading:          v.loadingType != "",
 		Done:             v.done,
 	}
+}
+
+type wizardResult struct {
+	ws  *workspace.Workspace
+	err error
 }

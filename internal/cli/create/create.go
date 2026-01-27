@@ -38,22 +38,15 @@ Examples:
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			r := cli.NewRunner("")
+			ctx := context.Background()
 
 			isInteractive := term.IsTerminal(int(os.Stdin.Fd()))
 
 			if purpose == "" {
 				if isInteractive {
-					fmt.Print("Workspace purpose: ")
-					var err error
-					purpose, err = cli.ReadLine(r.Stdin)
-					if err != nil {
-						return fmt.Errorf("reading purpose: %w", err)
-					}
-					purpose = strings.TrimSpace(purpose)
+					return fmt.Errorf("missing required flag: --purpose")
 				}
-				if purpose == "" {
-					return fmt.Errorf("missing required flag: --purpose (or run interactively)")
-				}
+				return fmt.Errorf("missing required flag: --purpose")
 			}
 
 			repos = append(repos, reposAlias...)
@@ -135,7 +128,6 @@ Examples:
 				InvocationCWD: r.GetInvocationCWD(),
 			}
 
-			ctx := context.Background()
 			createCtx, cancel := context.WithTimeout(ctx, defaultCloneTimeout)
 			defer cancel()
 
@@ -222,8 +214,22 @@ func validateRepoFlag(repo string) error {
 		return nil
 	}
 
+	if strings.HasPrefix(url, "git://") {
+		if url == "git://" {
+			return fmt.Errorf("incomplete URL: missing host")
+		}
+		return nil
+	}
+
+	if strings.HasPrefix(url, "ssh://") {
+		if url == "ssh://" || url == "ssh:///" {
+			return fmt.Errorf("incomplete SSH URL: missing host")
+		}
+		return nil
+	}
+
 	if strings.Contains(url, "://") {
-		return fmt.Errorf("unsupported URL scheme: use https://, git@, or local path")
+		return fmt.Errorf("unsupported URL scheme: use https://, git@, git://, ssh://, or local path")
 	}
 
 	if !strings.Contains(url, "/") && !strings.Contains(url, "\\") {

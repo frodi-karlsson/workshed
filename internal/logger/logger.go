@@ -38,13 +38,6 @@ type Logger struct {
 
 type LoggerOption func(*Logger)
 
-func WithTestOutput(writer io.Writer) LoggerOption {
-	return func(l *Logger) {
-		l.writer = writer
-		l.log = log.New(writer, "", 0)
-	}
-}
-
 func NewLogger(level LogLevel, command string, opts ...LoggerOption) *Logger {
 	format := HUMAN
 	if envFormat := os.Getenv("WORKSHED_LOG_FORMAT"); envFormat != "" {
@@ -192,16 +185,4 @@ func UncheckedFprintf(w interface {
 	Write(p []byte) (n int, err error)
 }, format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(w, format, args...)
-}
-
-// UncheckedFprintln writes to a writer without checking for errors.
-//
-// This function intentionally discards write errors. It is appropriate for
-// non-critical output such as help text, usage messages, and hints where
-// write failures are considered terminal conditions (e.g., broken pipe).
-// Use fmt.Fprintln directly if you need to handle write errors.
-func UncheckedFprintln(w interface {
-	Write(p []byte) (n int, err error)
-}, args ...interface{}) {
-	_, _ = fmt.Fprintln(w, args...)
 }

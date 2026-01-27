@@ -158,6 +158,10 @@ func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, valid
 			s := r.getStore()
 			_, err := s.Get(ctx, providedHandle)
 			if err != nil {
+				ws, discErr := s.FindWorkspace(ctx, ".")
+				if discErr == nil {
+					return ws.Handle, nil
+				}
 				return "", &WorkspaceNotFoundError{Handle: providedHandle}
 			}
 		}
@@ -170,10 +174,6 @@ func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, valid
 		return "", &WorkspaceNotFoundError{Context: "run from workspace directory or use -- <handle>"}
 	}
 	return ws.Handle, nil
-}
-
-func IsCaptureID(s string) bool {
-	return len(s) >= 26 && !strings.Contains(s, " ")
 }
 
 func PreflightErrorHint(reason string) string {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	osexec "os/exec"
 	"time"
 
 	"github.com/frodi/workshed/internal/cli"
@@ -65,7 +66,12 @@ Examples:
 			}
 
 			if len(command) == 0 {
-				return fmt.Errorf("missing command to execute")
+				firstArg := args[0]
+				if _, err := osexec.LookPath(firstArg); err == nil {
+					command = []string{firstArg}
+				} else {
+					return fmt.Errorf("missing command to execute")
+				}
 			}
 
 			format := cmd.Flags().Lookup("format").Value.String()

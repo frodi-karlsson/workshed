@@ -1,8 +1,12 @@
 package unit
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/frodi/workshed/internal/cli"
 	"github.com/frodi/workshed/internal/cli/apply"
 	"github.com/frodi/workshed/internal/cli/capture"
 	"github.com/frodi/workshed/internal/cli/captures"
@@ -17,6 +21,7 @@ import (
 	"github.com/frodi/workshed/internal/cli/remove"
 	"github.com/frodi/workshed/internal/cli/repos"
 	"github.com/frodi/workshed/internal/cli/update"
+	"github.com/frodi/workshed/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -280,4 +285,192 @@ func TestLongFormFlagsExist(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestResolveHandle(t *testing.T) {
+	t.Run("valid handle returns as-is", func(t *testing.T) {
+		root := t.TempDir()
+		wsDir := filepath.Join(root, "myworkspace")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatalf("MkdirAll failed: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(wsDir, ".workshed.json"), []byte(`{"handle":"myworkspace","purpose":"test"}`), 0644); err != nil {
+			t.Fatalf("WriteFile failed: %v", err)
+		}
+
+		origRoot := os.Getenv("WORKSHED_ROOT")
+		if err := os.Setenv("WORKSHED_ROOT", root); err != nil {
+			t.Fatalf("Setenv failed: %v", err)
+		}
+		defer func() {
+			if origRoot != "" {
+				if err := os.Setenv("WORKSHED_ROOT", origRoot); err != nil {
+					t.Errorf("Setenv failed: %v", err)
+				}
+			} else {
+				_ = os.Unsetenv("WORKSHED_ROOT")
+			}
+		}()
+
+		store, err := workspace.NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		r := cli.NewRunner("")
+		r.Store = store
+
+		got, err := r.ResolveHandle(context.Background(), "myworkspace", true, r.GetLogger())
+		if err != nil {
+			t.Errorf("ResolveHandle(%q) error = %v", "myworkspace", err)
+		}
+		if got != "myworkspace" {
+			t.Errorf("ResolveHandle(%q) = %q, want %q", "myworkspace", got, "myworkspace")
+		}
+	})
+
+	t.Run("invalid handle falls back to workspace discovery", func(t *testing.T) {
+		root := t.TempDir()
+		wsDir := filepath.Join(root, "testws")
+		if err := os.MkdirAll(wsDir, 0755); err != nil {
+			t.Fatalf("MkdirAll failed: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(wsDir, ".workshed.json"), []byte(`{"handle":"testws","purpose":"test"}`), 0644); err != nil {
+			t.Fatalf("WriteFile failed: %v", err)
+		}
+
+		origRoot := os.Getenv("WORKSHED_ROOT")
+		if err := os.Setenv("WORKSHED_ROOT", root); err != nil {
+			t.Fatalf("Setenv failed: %v", err)
+		}
+		defer func() {
+			if origRoot != "" {
+				if err := os.Setenv("WORKSHED_ROOT", origRoot); err != nil {
+					t.Errorf("Setenv failed: %v", err)
+				}
+			} else {
+				_ = os.Unsetenv("WORKSHED_ROOT")
+			}
+		}()
+
+		store, err := workspace.NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		r := cli.NewRunner("")
+		r.Store = store
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Getwd failed: %v", err)
+		}
+		if err := os.Chdir(cwd); err != nil {
+			t.Errorf("Chdir failed: %v", err)
+		}
+		if err := os.Chdir(wsDir); err != nil {
+			t.Fatalf("Chdir failed: %v", err)
+		}
+
+		got, err := r.ResolveHandle(context.Background(), "pwd", true, r.GetLogger())
+		if err != nil {
+			t.Errorf("ResolveHandle(%q) error = %v", "pwd", err)
+		}
+		if got != "testws" {
+			t.Errorf("ResolveHandle(%q) = %q, want %q", "pwd", got, "testws")
+		}
+	})
+
+	t.Run("invalid handle with no workspace returns error", func(t *testing.T) {
+		root := t.TempDir()
+		origRoot := os.Getenv("WORKSHED_ROOT")
+		if err := os.Setenv("WORKSHED_ROOT", root); err != nil {
+			t.Fatalf("Setenv failed: %v", err)
+		}
+		defer func() {
+			if origRoot != "" {
+				if err := os.Setenv("WORKSHED_ROOT", origRoot); err != nil {
+					t.Errorf("Setenv failed: %v", err)
+				}
+			} else {
+				_ = os.Unsetenv("WORKSHED_ROOT")
+			}
+		}()
+
+		store, err := workspace.NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		r := cli.NewRunner("")
+		r.Store = store
+
+		got, err := r.ResolveHandle(context.Background(), "nonexistent", true, r.GetLogger())
+		if err == nil {
+			t.Errorf("ResolveHandle(%q) = %q, want error", "nonexistent", got)
+		}
+	})
+
+	t.Run("validate=false returns handle unchanged", func(t *testing.T) {
+		root := t.TempDir()
+		origRoot := os.Getenv("WORKSHED_ROOT")
+		if err := os.Setenv("WORKSHED_ROOT", root); err != nil {
+			t.Fatalf("Setenv failed: %v", err)
+		}
+		defer func() {
+			if origRoot != "" {
+				if err := os.Setenv("WORKSHED_ROOT", origRoot); err != nil {
+					t.Errorf("Setenv failed: %v", err)
+				}
+			} else {
+				_ = os.Unsetenv("WORKSHED_ROOT")
+			}
+		}()
+
+		store, err := workspace.NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		r := cli.NewRunner("")
+		r.Store = store
+
+		got, err := r.ResolveHandle(context.Background(), "any-handle", false, r.GetLogger())
+		if err != nil {
+			t.Errorf("ResolveHandle with validate=false error = %v", err)
+		}
+		if got != "any-handle" {
+			t.Errorf("ResolveHandle with validate=false = %q, want %q", got, "any-handle")
+		}
+	})
+
+	t.Run("empty handle with no workspace returns error", func(t *testing.T) {
+		root := t.TempDir()
+		origRoot := os.Getenv("WORKSHED_ROOT")
+		if err := os.Setenv("WORKSHED_ROOT", root); err != nil {
+			t.Fatalf("Setenv failed: %v", err)
+		}
+		defer func() {
+			if origRoot != "" {
+				if err := os.Setenv("WORKSHED_ROOT", origRoot); err != nil {
+					t.Errorf("Setenv failed: %v", err)
+				}
+			} else {
+				_ = os.Unsetenv("WORKSHED_ROOT")
+			}
+		}()
+
+		store, err := workspace.NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		r := cli.NewRunner("")
+		r.Store = store
+
+		got, err := r.ResolveHandle(context.Background(), "", true, r.GetLogger())
+		if err == nil {
+			t.Errorf("ResolveHandle(%q) = %q, want error", "", got)
+		}
+	})
 }

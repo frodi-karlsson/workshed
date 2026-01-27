@@ -16,10 +16,6 @@ type KeyBinding struct {
 	Disabled bool
 }
 
-type KeyBinder interface {
-	KeyBindings() []KeyBinding
-}
-
 func matchesKey(msg tea.KeyMsg, key string) bool {
 	switch key {
 	case "enter":
@@ -123,18 +119,6 @@ func HandleKey(bindings []KeyBinding, msg tea.KeyMsg) (ViewResult, tea.Cmd, bool
 		}
 	}
 	return ViewResult{}, nil, false
-}
-
-func BindingsHelpText(bindings []KeyBinding, condition func() bool, enabledText, disabledText string) string {
-	for _, b := range bindings {
-		if b.Disabled {
-			return disabledText
-		}
-		if condition != nil && !condition() {
-			return disabledText
-		}
-	}
-	return enabledText
 }
 
 func GetDismissKeyBindings(dismiss func() (ViewResult, tea.Cmd), description string) []KeyBinding {

@@ -2,6 +2,7 @@ package clitest
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -94,6 +95,36 @@ func TestExecCommandNoWorkspace(t *testing.T) {
 		}
 		if !strings.Contains(env.ErrorOutput(), "workspace") && !strings.Contains(env.ErrorOutput(), "missing command") {
 			t.Errorf("exec should mention workspace or command, stderr: %s", env.ErrorOutput())
+		}
+	})
+}
+
+func TestExecCommandFromWorkspaceDir(t *testing.T) {
+	env := NewCLIEnv(t)
+	defer env.Cleanup()
+
+	ws := env.CreateWorkspace("test", nil)
+
+	t.Run("command without handle from workspace directory", func(t *testing.T) {
+		cwd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Getwd failed: %v", err)
+		}
+		defer func() {
+			if err := os.Chdir(cwd); err != nil {
+				t.Errorf("Chdir back failed: %v", err)
+			}
+		}()
+		if err := os.Chdir(ws.Path); err != nil {
+			t.Fatalf("Chdir failed: %v", err)
+		}
+
+		err = env.Run(exec.Command(), []string{"pwd"})
+		if err != nil {
+			t.Errorf("exec pwd from workspace dir should work: %v", err)
+		}
+		if strings.Contains(env.ErrorOutput(), "missing command") {
+			t.Errorf("exec should not produce missing command error, stderr: %s", env.ErrorOutput())
 		}
 	})
 }
