@@ -1,11 +1,11 @@
-package main
+package unit
 
 import (
 	"testing"
 
-	"github.com/frodi/workshed/cmd/workshed/captures"
-	"github.com/frodi/workshed/cmd/workshed/export"
 	"github.com/frodi/workshed/internal/cli"
+	"github.com/frodi/workshed/internal/cli/captures"
+	"github.com/frodi/workshed/internal/cli/export"
 )
 
 func TestExtractHandleFromArgs(t *testing.T) {

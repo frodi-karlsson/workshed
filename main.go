@@ -4,22 +4,22 @@ import (
 	"context"
 	"os"
 
-	"github.com/frodi/workshed/cmd/workshed/apply"
-	"github.com/frodi/workshed/cmd/workshed/capture"
-	"github.com/frodi/workshed/cmd/workshed/captures"
-	"github.com/frodi/workshed/cmd/workshed/completion"
-	"github.com/frodi/workshed/cmd/workshed/create"
-	"github.com/frodi/workshed/cmd/workshed/exec"
-	"github.com/frodi/workshed/cmd/workshed/export"
-	"github.com/frodi/workshed/cmd/workshed/health"
-	"github.com/frodi/workshed/cmd/workshed/importcmd"
-	"github.com/frodi/workshed/cmd/workshed/inspect"
-	"github.com/frodi/workshed/cmd/workshed/list"
-	"github.com/frodi/workshed/cmd/workshed/path"
-	"github.com/frodi/workshed/cmd/workshed/remove"
-	"github.com/frodi/workshed/cmd/workshed/repos"
-	"github.com/frodi/workshed/cmd/workshed/update"
 	"github.com/frodi/workshed/internal/cli"
+	"github.com/frodi/workshed/internal/cli/apply"
+	"github.com/frodi/workshed/internal/cli/capture"
+	"github.com/frodi/workshed/internal/cli/captures"
+	"github.com/frodi/workshed/internal/cli/completion"
+	"github.com/frodi/workshed/internal/cli/create"
+	"github.com/frodi/workshed/internal/cli/exec"
+	"github.com/frodi/workshed/internal/cli/export"
+	"github.com/frodi/workshed/internal/cli/health"
+	"github.com/frodi/workshed/internal/cli/importcmd"
+	"github.com/frodi/workshed/internal/cli/inspect"
+	"github.com/frodi/workshed/internal/cli/list"
+	"github.com/frodi/workshed/internal/cli/path"
+	"github.com/frodi/workshed/internal/cli/remove"
+	"github.com/frodi/workshed/internal/cli/repos"
+	"github.com/frodi/workshed/internal/cli/update"
 	"github.com/frodi/workshed/internal/tui"
 	"github.com/spf13/cobra"
 )
@@ -64,8 +64,7 @@ Examples:
 	root.AddCommand(update.Command())
 	root.AddCommand(health.Command())
 
-	completion.SetRootCommand(root)
-	root.AddCommand(completion.Command())
+	root.AddCommand(completion.NewCommand(root))
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

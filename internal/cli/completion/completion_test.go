@@ -9,7 +9,8 @@ import (
 )
 
 func TestCommandFlags(t *testing.T) {
-	cmd := Command()
+	root := &cobra.Command{Use: "test"}
+	cmd := NewCommand(root)
 
 	flags := []string{"shell"}
 	for _, flagName := range flags {
@@ -21,7 +22,8 @@ func TestCommandFlags(t *testing.T) {
 }
 
 func TestShellFlagDefaultsToBash(t *testing.T) {
-	cmd := Command()
+	root := &cobra.Command{Use: "test"}
+	cmd := NewCommand(root)
 
 	shellFlag := cmd.Flags().Lookup("shell")
 	if shellFlag == nil {
@@ -34,7 +36,8 @@ func TestShellFlagDefaultsToBash(t *testing.T) {
 }
 
 func TestArgsRequiresNoArgs(t *testing.T) {
-	cmd := Command()
+	root := &cobra.Command{Use: "test"}
+	cmd := NewCommand(root)
 
 	if cmd.Args == nil {
 		t.Error("Args should be set")
@@ -46,7 +49,8 @@ func TestArgsRequiresNoArgs(t *testing.T) {
 }
 
 func TestCommandUseFormat(t *testing.T) {
-	cmd := Command()
+	root := &cobra.Command{Use: "test"}
+	cmd := NewCommand(root)
 
 	if cmd.Use != "completion" {
 		t.Errorf("expected Use 'completion', got: %s", cmd.Use)
@@ -57,23 +61,16 @@ func TestCommandUseFormat(t *testing.T) {
 }
 
 func TestExampleShowsBashCompletion(t *testing.T) {
-	cmd := Command()
+	root := &cobra.Command{Use: "test"}
+	cmd := NewCommand(root)
 
 	if cmd.Long != "" || cmd.Example != "" {
 		t.Log("Command has description or example")
 	}
 }
 
-func TestSetRootCommand(t *testing.T) {
-	cmd := &cobra.Command{Use: "test"}
-	SetRootCommand(cmd)
-	if rootCmd != cmd {
-		t.Error("SetRootCommand should set rootCmd")
-	}
-}
-
 func TestUnsupportedShellError(t *testing.T) {
-	SetRootCommand(nil)
+	root := &cobra.Command{Use: "test"}
 
 	tmpFile := filepath.Join(t.TempDir(), "test.txt")
 	f, err := os.Create(tmpFile)
@@ -82,7 +79,7 @@ func TestUnsupportedShellError(t *testing.T) {
 	}
 	defer func() { _ = f.Close() }()
 
-	err = generateCompletion("unsupported", f)
+	err = generateCompletion(root, "unsupported", f)
 	if err == nil {
 		t.Error("expected error for unsupported shell")
 	}
@@ -92,10 +89,7 @@ func TestUnsupportedShellError(t *testing.T) {
 }
 
 func TestShellCompletionWithRealRoot(t *testing.T) {
-	SetRootCommand(nil)
-
 	root := &cobra.Command{Use: "workshed"}
-	SetRootCommand(root)
 
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "completion.sh")
@@ -105,7 +99,7 @@ func TestShellCompletionWithRealRoot(t *testing.T) {
 	}
 	defer func() { _ = f.Close() }()
 
-	err = generateCompletion("bash", f)
+	err = generateCompletion(root, "bash", f)
 	if err != nil {
 		t.Errorf("expected no error for bash, got: %v", err)
 	}

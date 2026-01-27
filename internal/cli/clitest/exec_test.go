@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/frodi/workshed/cmd/workshed/exec"
+	"github.com/frodi/workshed/internal/cli/exec"
 )
 
 func TestExecCommand(t *testing.T) {

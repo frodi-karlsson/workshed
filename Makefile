@@ -2,7 +2,7 @@
 
 build:
 	@mkdir -p bin
-	go build -o bin/workshed ./cmd/workshed
+	go build -o bin/workshed ./
 
 test:
 	go test -v ./... $(TESTARGS)
@@ -64,7 +64,7 @@ help:
 	@echo "  help           Show this help message"
 
 install:
-	go install ./cmd/workshed
+	go install ./
 
 clean:
 	rm -rf bin

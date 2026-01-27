@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Command() *cobra.Command {
+func NewCommand(root *cobra.Command) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "completion",
 		Short: "Generate shell completion",
@@ -19,7 +19,7 @@ Examples:
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shell, _ := cmd.Flags().GetString("shell")
-			return generateCompletion(shell, os.Stdout)
+			return generateCompletion(root, shell, os.Stdout)
 		},
 	}
 
@@ -28,21 +28,15 @@ Examples:
 	return cmd
 }
 
-func generateCompletion(shell string, out *os.File) error {
+func generateCompletion(root *cobra.Command, shell string, out *os.File) error {
 	switch shell {
 	case "bash":
-		return rootCmd.GenBashCompletion(out)
+		return root.GenBashCompletion(out)
 	case "zsh":
-		return rootCmd.GenZshCompletion(out)
+		return root.GenZshCompletion(out)
 	case "fish":
-		return rootCmd.GenFishCompletion(out, true)
+		return root.GenFishCompletion(out, true)
 	default:
 		return fmt.Errorf("unsupported shell: %q (supported: bash, zsh, fish)", shell)
 	}
-}
-
-var rootCmd *cobra.Command
-
-func SetRootCommand(cmd *cobra.Command) {
-	rootCmd = cmd
 }

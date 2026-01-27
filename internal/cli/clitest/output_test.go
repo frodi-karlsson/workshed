@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/frodi/workshed/cmd/workshed/capture"
-	"github.com/frodi/workshed/cmd/workshed/captures"
-	"github.com/frodi/workshed/cmd/workshed/export"
-	"github.com/frodi/workshed/cmd/workshed/list"
-	"github.com/frodi/workshed/cmd/workshed/path"
+	"github.com/frodi/workshed/internal/cli/capture"
+	"github.com/frodi/workshed/internal/cli/captures"
+	"github.com/frodi/workshed/internal/cli/export"
+	"github.com/frodi/workshed/internal/cli/list"
+	"github.com/frodi/workshed/internal/cli/path"
 )
 
 func TestCapturesOutputFormats(t *testing.T) {
@@ -85,13 +85,18 @@ func TestExportOutputFormats(t *testing.T) {
 	})
 
 	t.Run("export compact excludes captures", func(t *testing.T) {
-		if err := env.Run(export.Command(), []string{ws.Handle, "--compact"}); err != nil {
+		if err := env.Run(export.Command(), []string{ws.Handle, "--compact", "--format", "json"}); err != nil {
 			t.Errorf("Run failed: %v", err)
 		}
 		output := env.Output()
 		var data map[string]interface{}
 		if err := json.Unmarshal([]byte(output), &data); err != nil {
-			t.Errorf("Unmarshal failed: %v", err)
+			t.Errorf("Unmarshal failed: %v, output: %s", err, output)
+		}
+		if captures, ok := data["captures"]; ok {
+			if captures != nil {
+				t.Errorf("compact export should exclude captures, got: %v", captures)
+			}
 		}
 	})
 }
