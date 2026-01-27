@@ -28,14 +28,14 @@ func (r *Runner) Repos(args []string) {
 	case "help", "-h", "--help":
 		r.ReposUsage()
 	default:
-		logger.SafeFprintf(r.Stderr, "Unknown repos subcommand: %s\n\n", subcommand)
-		logger.SafeFprintf(r.Stderr, "Use a workspace handle, or run from within a workspace directory:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos add [<handle>] --repo <url>\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos remove [<handle>] --repo <name>\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos list [<handle>]\n\n")
-		logger.SafeFprintf(r.Stderr, "Or cd into a workspace and omit the handle:\n")
-		logger.SafeFprintf(r.Stderr, "  cd $(workshed path)\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos add --repo <url>\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Unknown repos subcommand: %s\n\n", subcommand)
+		logger.UncheckedFprintf(r.Stderr, "Use a workspace handle, or run from within a workspace directory:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos add [<handle>] --repo <url>\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos remove [<handle>] --repo <name>\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos list [<handle>]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Or cd into a workspace and omit the handle:\n")
+		logger.UncheckedFprintf(r.Stderr, "  cd $(workshed path)\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos add --repo <url>\n\n")
 		r.ExitFunc(1)
 	}
 }
@@ -64,7 +64,7 @@ Examples:
   cd $(workshed path)
   workshed repos add --repo https://github.com/org/repo@main
  `
-	logger.SafeFprintf(r.Stderr, "%s\n", msg)
+	logger.UncheckedFprintf(r.Stderr, "%s\n", msg)
 }
 
 func (r *Runner) ReposAdd(args []string) {
@@ -78,14 +78,14 @@ func (r *Runner) ReposAdd(args []string) {
 	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed repos add [<handle>] --repo url[@ref]... [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Add repositories to a workspace.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed repos add [<handle>] --repo url[@ref]... [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Add repositories to a workspace.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos add --repo github.com/org/new-repo@main\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos add -r github.com/org/repo1 -r github.com/org/repo2\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos add my-workspace --repo ./local-lib\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos add --repo github.com/org/new-repo@main\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos add -r github.com/org/repo1 -r github.com/org/repo2\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos add my-workspace --repo ./local-lib\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -143,6 +143,13 @@ func (r *Runner) ReposAdd(args []string) {
 		return
 	}
 
+	if *format == "raw" {
+		for _, opt := range repoOpts {
+			logger.UncheckedFprintln(r.Stdout, opt.URL)
+		}
+		return
+	}
+
 	var rows [][]string
 	rows = append(rows, []string{"handle", handle})
 	for _, opt := range repoOpts {
@@ -175,15 +182,15 @@ func (r *Runner) ReposList(args []string) {
 	format := fs.String("format", "table", "Output format (table|json|raw)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed repos list [<handle>] [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "List repositories in a workspace.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed repos list [<handle>] [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "List repositories in a workspace.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos list\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos list my-workspace\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos list --format json\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos list --format raw\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos list\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos list my-workspace\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos list --format json\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos list --format raw\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -216,7 +223,7 @@ func (r *Runner) ReposList(args []string) {
 
 	if len(ws.Repositories) == 0 {
 		if *format == "json" {
-			logger.SafeFprintln(r.Stdout, "[]")
+			logger.UncheckedFprintln(r.Stdout, "[]")
 		} else {
 			l.Info("no repositories in workspace")
 		}
@@ -225,7 +232,7 @@ func (r *Runner) ReposList(args []string) {
 
 	if *format == "raw" {
 		for _, repo := range ws.Repositories {
-			logger.SafeFprintln(r.Stdout, repo.Name)
+			logger.UncheckedFprintln(r.Stdout, repo.Name)
 		}
 		return
 	}
@@ -261,14 +268,14 @@ func (r *Runner) ReposRemove(args []string) {
 	dryRun := fs.Bool("dry-run", false, "Show what would be removed without actually removing")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed repos remove [<handle>] --repo <name> [--dry-run] [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Remove a repository from a workspace.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed repos remove [<handle>] --repo <name> [--dry-run] [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Remove a repository from a workspace.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos remove --repo my-repo\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos remove my-workspace --repo my-repo\n")
-		logger.SafeFprintf(r.Stderr, "  workshed repos remove --repo my-repo --dry-run\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos remove --repo my-repo\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos remove my-workspace --repo my-repo\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed repos remove --repo my-repo --dry-run\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -307,6 +314,11 @@ func (r *Runner) ReposRemove(args []string) {
 	if err := s.RemoveRepository(ctx, handle, *repoName); err != nil {
 		l.Error("failed to remove repository", "handle", handle, "repo", *repoName, "error", err)
 		r.ExitFunc(1)
+		return
+	}
+
+	if *format == "raw" {
+		logger.UncheckedFprintln(r.Stdout, *repoName)
 		return
 	}
 

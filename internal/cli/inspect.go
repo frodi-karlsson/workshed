@@ -14,13 +14,13 @@ func (r *Runner) Inspect(args []string) {
 	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed inspect [<handle>] [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Show workspace details including repositories and creation time.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed inspect [<handle>] [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Show workspace details including repositories and creation time.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed inspect\n")
-		logger.SafeFprintf(r.Stderr, "  workshed inspect aquatic-fish-motion\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed inspect\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed inspect aquatic-fish-motion\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -52,7 +52,7 @@ func (r *Runner) Inspect(args []string) {
 	}
 
 	if *format == "raw" {
-		logger.SafeFprintln(r.Stdout, ws.Handle)
+		logger.UncheckedFprintln(r.Stdout, ws.Handle)
 		return
 	}
 

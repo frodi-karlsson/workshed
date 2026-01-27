@@ -157,11 +157,11 @@ workshed remove -y
 # Generate shell completion
 workshed completion --shell bash >> ~/.bash_completion
 `
-	logger.SafeFprintf(r.Stderr, "%s\n", msg)
+	logger.UncheckedFprintf(r.Stderr, "%s\n", msg)
 }
 
 func (r *Runner) Version() {
-	logger.SafeFprintf(r.Stdout, "%s\n", version)
+	logger.UncheckedFprintf(r.Stdout, "%s\n", version)
 }
 
 func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, validate bool, l *logger.Logger) string {
@@ -171,10 +171,10 @@ func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, valid
 			_, err := s.Get(ctx, providedHandle)
 			if err != nil {
 				l.Error("workspace not found", "handle", providedHandle, "error", err)
-				logger.SafeFprintf(r.Stderr, "\nHint: Workshed uses 'workshed <command> [<handle>]' syntax.\n")
-				logger.SafeFprintf(r.Stderr, "  Example: workshed exec -- go test\n")
-				logger.SafeFprintf(r.Stderr, "  Or with a handle: workshed exec my-workspace -- go test\n")
-				logger.SafeFprintf(r.Stderr, "  Run 'cd $(workshed path)' to use workspaces without handles.\n")
+				logger.UncheckedFprintf(r.Stderr, "\nHint: Workshed uses 'workshed <command> [<handle>]' syntax.\n")
+				logger.UncheckedFprintf(r.Stderr, "  Example: workshed exec -- go test\n")
+				logger.UncheckedFprintf(r.Stderr, "  Or with a handle: workshed exec my-workspace -- go test\n")
+				logger.UncheckedFprintf(r.Stderr, "  Run 'cd $(workshed path)' to use workspaces without handles.\n")
 				r.ExitFunc(1)
 				return ""
 			}

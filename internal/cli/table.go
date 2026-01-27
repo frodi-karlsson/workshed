@@ -240,7 +240,7 @@ func ValidFormatsForCommand(cmd string) []string {
 		return []string{"stream", "json"}
 	case "path":
 		return []string{"raw", "table", "json"}
-	case "list", "inspect", "captures", "repos":
+	case "list", "inspect", "captures", "repos", "create":
 		return []string{"table", "json", "raw"}
 	default:
 		return []string{"table", "json"}

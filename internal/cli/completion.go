@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"os"
-
 	"github.com/frodi/workshed/internal/logger"
 	flag "github.com/spf13/pflag"
 )
@@ -12,13 +10,13 @@ func (r *Runner) Completion(args []string) {
 	shell := fs.String("shell", "bash", "Shell type (bash|zsh|fish)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed completion --shell <shell>\n\n")
-		logger.SafeFprintf(r.Stderr, "Generate shell completion scripts.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed completion --shell <shell>\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Generate shell completion scripts.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed completion --shell bash >> ~/.bash_completion\n")
-		logger.SafeFprintf(r.Stderr, "  workshed completion --shell zsh > ~/.zsh/completion/_workshed\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed completion --shell bash >> ~/.bash_completion\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed completion --shell zsh > ~/.zsh/completion/_workshed\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -34,13 +32,13 @@ func (r *Runner) Completion(args []string) {
 	case "fish":
 		r.generateFishCompletion()
 	default:
-		logger.SafeFprintf(r.Stderr, "Unsupported shell: %s (supported: bash, zsh, fish)\n", *shell)
+		logger.UncheckedFprintf(r.Stderr, "Unsupported shell: %s (supported: bash, zsh, fish)\n", *shell)
 		r.ExitFunc(1)
 	}
 }
 
 func (r *Runner) generateBashCompletion() {
-	logger.SafeFprintf(r.Stdout, `# workshed bash completion
+	logger.UncheckedFprintf(r.Stdout, `# workshed bash completion
 _workshed_completions() {
     local cur prev opts
     COMPREPLY=()
@@ -73,7 +71,7 @@ complete -F _workshed_completions workshed
 }
 
 func (r *Runner) generateZshCompletion() {
-	logger.SafeFprintf(r.Stdout, `#compdef workshed
+	logger.UncheckedFprintf(r.Stdout, `#compdef workshed
 
 local -a commands opts
 commands=(
@@ -128,7 +126,7 @@ _workshed
 }
 
 func (r *Runner) generateFishCompletion() {
-	logger.SafeFprintf(r.Stdout, `# workshed fish completion
+	logger.UncheckedFprintf(r.Stdout, `# workshed fish completion
 complete -c workshed -f -a "(workshed list --format raw 2>/dev/null)"
 
 complete -c workshed -n "__fish_use_subcommand" -a create -d "Create a new workspace"
@@ -156,8 +154,4 @@ complete -c workshed -l repo -d "Repository URL"
 complete -c workshed -l repos -d "Repository URLs"
 complete -c workshed -s y -l yes -d "Skip confirmation"
 `)
-}
-
-func init() {
-	_ = os.Setenv("WORKSHED_LOG_FORMAT", "raw")
 }

@@ -20,15 +20,15 @@ func (r *Runner) Remove(args []string) {
 	dryRun := fs.Bool("dry-run", false, "Show what would be removed without actually removing")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed remove [<handle>] [--yes] [--dry-run]\n\n")
-		logger.SafeFprintf(r.Stderr, "Delete a workspace and all its repositories.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed remove [<handle>] [--yes] [--dry-run]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Delete a workspace and all its repositories.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed remove\n")
-		logger.SafeFprintf(r.Stderr, "  workshed remove my-workspace\n")
-		logger.SafeFprintf(r.Stderr, "  workshed remove -y\n")
-		logger.SafeFprintf(r.Stderr, "  workshed remove --dry-run\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed remove\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed remove my-workspace\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed remove -y\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed remove --dry-run\n")
 	}
 
 	if err := fs.Parse(args); err != nil {

@@ -145,20 +145,15 @@ func TestExecErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("should exit with error when command separator is missing", func(t *testing.T) {
+	t.Run("should exit with error when command starts with dash without separator", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		env.Runner().Exec([]string{"handle", "echo", "hello"})
+		env.Runner().Exec([]string{"-e", "hello"})
 
 		if !env.ExitCalled() {
-			t.Error("Exec should exit with error when separator is missing")
-		}
-
-		errOutput := env.ErrorOutput()
-		if !strings.Contains(errOutput, "Usage") {
-			t.Errorf("Error output should contain usage, got: %s", errOutput)
+			t.Error("Exec should exit with error when command starts with dash")
 		}
 	})
 

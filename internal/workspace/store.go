@@ -327,17 +327,23 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 	}
 
 	success := false
+	var cleanupErr error
 	defer func() {
 		if !success {
 			for _, repo := range clonedRepos {
 				repoDir := filepath.Join(ws.Path, repo.Name)
-				_ = os.RemoveAll(repoDir)
+				if err := os.RemoveAll(repoDir); err != nil {
+					cleanupErr = fmt.Errorf("cleanup of %s failed: %w", repoDir, err)
+				}
 			}
 		}
 	}()
 
 	for _, repo := range clonedRepos {
 		if err := s.cloneRepo(ctx, repo, ws.Path, invocationCWD); err != nil {
+			if cleanupErr != nil {
+				return fmt.Errorf("failed to clone %s: %w; %v", repo.Name, err, cleanupErr)
+			}
 			return fmt.Errorf("failed to clone %s: %w", repo.Name, err)
 		}
 	}
@@ -345,6 +351,9 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 	ws.Repositories = append(ws.Repositories, clonedRepos...)
 
 	if err := s.writeMetadataToDir(ws, ws.Path); err != nil {
+		if cleanupErr != nil {
+			return fmt.Errorf("updating metadata: %w; %v", err, cleanupErr)
+		}
 		return fmt.Errorf("updating metadata: %w", err)
 	}
 
@@ -1003,13 +1012,19 @@ func (s *FSStore) CaptureState(ctx context.Context, handle string, opts CaptureO
 	captureDir := filepath.Join(capturesDir, id.String())
 
 	success := false
+	var cleanupErr error
 	defer func() {
 		if !success {
-			_ = os.RemoveAll(captureDir)
+			if err := os.RemoveAll(captureDir); err != nil {
+				cleanupErr = fmt.Errorf("cleanup of capture directory %s failed: %w", captureDir, err)
+			}
 		}
 	}()
 
 	if err := os.MkdirAll(captureDir, 0755); err != nil {
+		if cleanupErr != nil {
+			return nil, fmt.Errorf("creating capture directory: %w; %v", err, cleanupErr)
+		}
 		return nil, fmt.Errorf("creating capture directory: %w", err)
 	}
 

@@ -22,14 +22,14 @@ func (r *Runner) Import(args []string) {
 	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed import <file.json> [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Create a workspace from an exported JSON file.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed import <file.json> [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Create a workspace from an exported JSON file.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed import workspace.json\n")
-		logger.SafeFprintf(r.Stderr, "  workshed import workspace.json --preserve-handle\n")
-		logger.SafeFprintf(r.Stderr, "  cat workspace.json | workshed import -\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed import workspace.json\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed import workspace.json --preserve-handle\n")
+		logger.UncheckedFprintf(r.Stderr, "  cat workspace.json | workshed import -\n")
 	}
 
 	if err := fs.Parse(args); err != nil {

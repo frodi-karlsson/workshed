@@ -21,14 +21,14 @@ func (r *Runner) Capture(args []string) {
 	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed capture [<handle>] --name <name> [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Create a durable capture of git state for all repositories in a workspace.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed capture [<handle>] --name <name> [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Create a durable capture of git state for all repositories in a workspace.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed capture --name \"Before refactor\"\n")
-		logger.SafeFprintf(r.Stderr, "  workshed capture --name \"Checkpoint 1\" --description \"API changes\"\n")
-		logger.SafeFprintf(r.Stderr, "  workshed capture --name \"Starting point\" --tag test\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed capture --name \"Before refactor\"\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed capture --name \"Checkpoint 1\" --description \"API changes\"\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed capture --name \"Starting point\" --tag test\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -75,7 +75,7 @@ func (r *Runner) Capture(args []string) {
 	effectiveFormat := Format(*format)
 	if effectiveFormat == FormatJSON {
 		data, _ := json.MarshalIndent(capture, "", "  ")
-		logger.SafeFprintln(r.Stdout, string(data))
+		logger.UncheckedFprintln(r.Stdout, string(data))
 		return
 	}
 

@@ -19,14 +19,14 @@ func (r *Runner) List(args []string) {
 	pageSize := fs.Int("page-size", 20, "Number of items per page")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed list [--purpose <filter>] [--page <n>] [--page-size <n>] [--format <table|json>]\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed list [--purpose <filter>] [--page <n>] [--page-size <n>] [--format <table|json>]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed list\n")
-		logger.SafeFprintf(r.Stderr, "  workshed list --purpose payment\n")
-		logger.SafeFprintf(r.Stderr, "  workshed list --purpose \"API\" --format json\n")
-		logger.SafeFprintf(r.Stderr, "  workshed list --page 2 --page-size 10\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed list\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed list --purpose payment\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed list --purpose \"API\" --format json\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed list --page 2 --page-size 10\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -57,7 +57,7 @@ func (r *Runner) List(args []string) {
 
 	if len(workspaces) == 0 {
 		if *format == "json" {
-			logger.SafeFprintln(r.Stdout, "[]")
+			logger.UncheckedFprintln(r.Stdout, "[]")
 		} else {
 			l.Info("no workspaces found")
 		}
@@ -77,7 +77,7 @@ func (r *Runner) List(args []string) {
 
 	if startIdx >= total {
 		if *format == "json" {
-			logger.SafeFprintln(r.Stdout, "[]")
+			logger.UncheckedFprintln(r.Stdout, "[]")
 		} else {
 			l.Info(fmt.Sprintf("page %d is empty (total: %d items)", *page, total))
 		}
@@ -92,7 +92,7 @@ func (r *Runner) List(args []string) {
 
 	if *format == "raw" {
 		for _, ws := range pagedWorkspaces {
-			logger.SafeFprintln(r.Stdout, ws.Handle)
+			logger.UncheckedFprintln(r.Stdout, ws.Handle)
 		}
 		return
 	}

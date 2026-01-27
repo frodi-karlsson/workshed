@@ -19,14 +19,14 @@ func (r *Runner) Export(args []string) {
 	format := fs.String("format", "", "Output format (table|json), defaults based on --output extension")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed export [<handle>] [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Export workspace configuration including purpose and repositories.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed export [<handle>] [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Export workspace configuration including purpose and repositories.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed export\n")
-		logger.SafeFprintf(r.Stderr, "  workshed export --format json | jq '.captures'\n")
-		logger.SafeFprintf(r.Stderr, "  workshed export --output /tmp/context.json\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed export\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed export --format json | jq '.captures'\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed export --output /tmp/context.json\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -87,7 +87,7 @@ func (r *Runner) Export(args []string) {
 	}
 
 	if effectiveFormat == FormatJSON {
-		logger.SafeFprintln(r.Stdout, string(data))
+		logger.UncheckedFprintln(r.Stdout, string(data))
 	} else {
 		output := Output{
 			Columns: []ColumnConfig{

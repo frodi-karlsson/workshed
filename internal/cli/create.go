@@ -31,14 +31,14 @@ func (r *Runner) Create(args []string) {
 	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed create --purpose <purpose> [--repo url@ref]... [--template <dir>] [--map key=value]... [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed create --purpose <purpose> [--repo url@ref]... [--template <dir>] [--map key=value]... [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed create --purpose \"Debug payment timeout\" --repo github.com/org/api@main\n")
-		logger.SafeFprintf(r.Stderr, "  workshed create -r github.com/org/frontend@feature -r github.com/org/backend@feature\n")
-		logger.SafeFprintf(r.Stderr, "  workshed create --purpose \"New feature\" --template ~/templates/react-app --map name=myapp\n")
-		logger.SafeFprintf(r.Stderr, "  workshed create --purpose \"Local exploration\"\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed create --purpose \"Debug payment timeout\" --repo github.com/org/api@main\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed create -r github.com/org/frontend@feature -r github.com/org/backend@feature\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed create --purpose \"New feature\" --template ~/templates/react-app --map name=myapp\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed create --purpose \"Local exploration\"\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -140,6 +140,11 @@ func (r *Runner) Create(args []string) {
 			{Type: Rigid, Name: "VALUE", Min: 20, Max: 0},
 		},
 		Rows: rows,
+	}
+
+	if *format == "raw" {
+		logger.UncheckedFprintln(r.Stdout, ws.Handle)
+		return
 	}
 
 	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {

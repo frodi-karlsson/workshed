@@ -22,15 +22,15 @@ func (r *Runner) Apply(args []string) {
 	nameFlag := fs.String("name", "", "Capture name to apply (alternative to providing capture ID)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed apply [<handle>] <capture-id>\n")
-		logger.SafeFprintf(r.Stderr, "       workshed apply [<handle>] --name <capture-name>\n\n")
-		logger.SafeFprintf(r.Stderr, "Apply a captured git state to all repositories in a workspace.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed apply [<handle>] <capture-id>\n")
+		logger.UncheckedFprintf(r.Stderr, "       workshed apply [<handle>] --name <capture-name>\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Apply a captured git state to all repositories in a workspace.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed apply 01HVABCDEFG\n")
-		logger.SafeFprintf(r.Stderr, "  workshed apply --name \"Before refactor\"\n")
-		logger.SafeFprintf(r.Stderr, "  workshed apply my-workspace --name \"Starting point\"\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed apply 01HVABCDEFG\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed apply --name \"Before refactor\"\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed apply my-workspace --name \"Starting point\"\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -103,16 +103,16 @@ func (r *Runner) Apply(args []string) {
 	}
 
 	if !preflight.Valid {
-		logger.SafeFprintf(r.Stderr, "ERROR: apply blocked by preflight errors\n\n")
-		logger.SafeFprintf(r.Stderr, "Problems found:\n")
+		logger.UncheckedFprintf(r.Stderr, "ERROR: apply blocked by preflight errors\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Problems found:\n")
 		for _, e := range preflight.Errors {
 			hint := preflightErrorHint(e.Reason)
-			logger.SafeFprintf(r.Stderr, "  - %s: %s\n", e.Repository, e.Details)
+			logger.UncheckedFprintf(r.Stderr, "  - %s: %s\n", e.Repository, e.Details)
 			if hint != "" {
-				logger.SafeFprintf(r.Stderr, "    Hint: %s\n", hint)
+				logger.UncheckedFprintf(r.Stderr, "    Hint: %s\n", hint)
 			}
 		}
-		logger.SafeFprintf(r.Stderr, "\n")
+		logger.UncheckedFprintf(r.Stderr, "\n")
 		l.Error("preflight validation failed", "handle", handle, "capture", captureID, "error_count", len(preflight.Errors))
 		r.ExitFunc(1)
 		return
@@ -127,7 +127,7 @@ func (r *Runner) Apply(args []string) {
 	effectiveFormat := Format(*format)
 	if effectiveFormat == FormatJSON {
 		data, _ := json.MarshalIndent(capture, "", "  ")
-		logger.SafeFprintln(r.Stdout, string(data))
+		logger.UncheckedFprintln(r.Stdout, string(data))
 		return
 	}
 

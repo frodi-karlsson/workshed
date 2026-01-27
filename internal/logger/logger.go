@@ -182,15 +182,25 @@ func (l *Logger) logRaw(level, msg string, args []interface{}) {
 	}
 }
 
-// SafeFprintf safely writes to a writer, handling errors
-func SafeFprintf(w interface {
+// UncheckedFprintf writes to a writer without checking for errors.
+//
+// This function intentionally discards write errors. It is appropriate for
+// non-critical output such as help text, usage messages, and hints where
+// write failures are considered terminal conditions (e.g., broken pipe).
+// Use fmt.Fprintf directly if you need to handle write errors.
+func UncheckedFprintf(w interface {
 	Write(p []byte) (n int, err error)
 }, format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(w, format, args...)
 }
 
-// SafeFprintln safely writes to a writer, handling errors
-func SafeFprintln(w interface {
+// UncheckedFprintln writes to a writer without checking for errors.
+//
+// This function intentionally discards write errors. It is appropriate for
+// non-critical output such as help text, usage messages, and hints where
+// write failures are considered terminal conditions (e.g., broken pipe).
+// Use fmt.Fprintln directly if you need to handle write errors.
+func UncheckedFprintln(w interface {
 	Write(p []byte) (n int, err error)
 }, args ...interface{}) {
 	_, _ = fmt.Fprintln(w, args...)

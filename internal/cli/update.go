@@ -15,13 +15,13 @@ func (r *Runner) Update(args []string) {
 	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed update --purpose <purpose> [<handle>] [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Update the purpose of a workspace.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed update --purpose <purpose> [<handle>] [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Update the purpose of a workspace.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed update --purpose \"New focus area\"\n")
-		logger.SafeFprintf(r.Stderr, "  workshed update --purpose \"Completed\" my-workspace\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed update --purpose \"New focus area\"\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed update --purpose \"Completed\" my-workspace\n")
 	}
 
 	if err := fs.Parse(args); err != nil {

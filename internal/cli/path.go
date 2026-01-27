@@ -14,16 +14,16 @@ func (r *Runner) Path(args []string) {
 	format := fs.String("format", "raw", "Output format (raw|table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed path [<handle>] [flags]\n\n")
-		logger.SafeFprintf(r.Stderr, "Print the workspace directory path.\n\n")
-		logger.SafeFprintf(r.Stderr, "Flags:\n")
+		logger.UncheckedFprintf(r.Stderr, "Usage: workshed path [<handle>] [flags]\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Print the workspace directory path.\n\n")
+		logger.UncheckedFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
-		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed path\n")
-		logger.SafeFprintf(r.Stderr, "  workshed path my-workspace\n")
-		logger.SafeFprintf(r.Stderr, "  cd $(workshed path)\n")
-		logger.SafeFprintf(r.Stderr, "  ls $(workshed path)\n")
-		logger.SafeFprintf(r.Stderr, "  workshed path --format table\n")
+		logger.UncheckedFprintf(r.Stderr, "\nExamples:\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed path\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed path my-workspace\n")
+		logger.UncheckedFprintf(r.Stderr, "  cd $(workshed path)\n")
+		logger.UncheckedFprintf(r.Stderr, "  ls $(workshed path)\n")
+		logger.UncheckedFprintf(r.Stderr, "  workshed path --format table\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -55,7 +55,7 @@ func (r *Runner) Path(args []string) {
 	}
 
 	if *format == "raw" {
-		logger.SafeFprintln(r.Stdout, path)
+		logger.UncheckedFprintln(r.Stdout, path)
 		return
 	}
 

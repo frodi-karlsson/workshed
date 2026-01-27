@@ -58,58 +58,65 @@ type Git interface {
 func ClassifyError(operation string, err error, output []byte) error {
 	outputStr := string(output)
 	var hint string
+	var suggestion string
 
 	switch {
 	case strings.Contains(outputStr, "Repository not found") ||
 		strings.Contains(outputStr, "repository not found") ||
-		strings.Contains(outputStr, "not found"):
+		strings.Contains(outputStr, "not found") ||
+		strings.Contains(outputStr, "could not resolve") ||
+		strings.Contains(outputStr, "404"):
 		hint = "repository not found"
+		suggestion = "Check that the repository URL is correct and the repository exists."
 	case strings.Contains(outputStr, "Authentication failed") ||
 		strings.Contains(outputStr, "Permission denied") ||
 		strings.Contains(outputStr, "could not read Username") ||
-		strings.Contains(outputStr, "fatal: Could not read from remote repository"):
+		strings.Contains(outputStr, "fatal: Could not read from remote repository") ||
+		strings.Contains(outputStr, "no such identity") ||
+		strings.Contains(outputStr, "identity"):
 		hint = "authentication failed"
+		suggestion = "Ensure SSH keys are configured (ssh-add -l) or use HTTPS with a valid token."
 	case strings.Contains(outputStr, "Could not resolve host") ||
 		strings.Contains(outputStr, "unable to access") ||
 		strings.Contains(outputStr, "network") ||
 		strings.Contains(outputStr, "Connection") ||
-		strings.Contains(outputStr, "timeout"):
+		strings.Contains(outputStr, "timeout") ||
+		strings.Contains(outputStr, "Connection refused"):
 		hint = "network error"
+		suggestion = "Check your internet connection and firewall settings."
 	case strings.Contains(outputStr, "pathspec") && strings.Contains(outputStr, "did not match") ||
-		strings.Contains(outputStr, "reference is not a tree"):
+		strings.Contains(outputStr, "reference is not a tree") ||
+		strings.Contains(outputStr, "could not find") ||
+		strings.Contains(outputStr, "remote branch") && strings.Contains(outputStr, "not found"):
 		hint = "ref not found"
+		suggestion = "Check that the branch or tag exists in the repository."
 	}
 
-	if hint != "" {
-		return classify(operation, hint, outputStr)
-	}
-
-	return classify(operation, "failed", err.Error())
+	return classify(operation, hint, suggestion, outputStr)
 }
 
-func classify(operation, hint, details string) error {
+func classify(operation, hint, suggestion, details string) error {
 	return &GitError{
-		Operation: operation,
-		Hint:      hint,
-		Details:   details,
+		Operation:  operation,
+		Hint:       hint,
+		Suggestion: suggestion,
+		Details:    details,
 	}
 }
 
-// GitError represents a git operation failure with structured error information.
-// Use ClassifyError to create instances from git command output.
 type GitError struct {
-	// Operation identifies which git operation failed.
-	Operation string
-
-	// Hint provides a user-friendly error category.
-	Hint string
-
-	// Details contains the original error output.
-	Details string
+	Operation  string
+	Hint       string
+	Suggestion string
+	Details    string
 }
 
 func (e *GitError) Error() string {
-	return gitErrorString(e.Operation, e.Hint, e.Details)
+	result := gitErrorString(e.Operation, e.Hint, e.Details)
+	if e.Suggestion != "" {
+		result += "\nSuggestion: " + e.Suggestion
+	}
+	return result
 }
 
 func (e *GitError) Unwrap() error {
