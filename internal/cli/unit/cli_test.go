@@ -82,7 +82,7 @@ func TestVersionFlag(t *testing.T) {
 	var buf bytes.Buffer
 	root := &cobra.Command{
 		Use:     "workshed",
-		Version: "0.5.0",
+		Version: "0.5.1",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.Println("Version: " + cmd.Version)
 			return nil
@@ -97,7 +97,7 @@ func TestVersionFlag(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !bytes.Contains(buf.Bytes(), []byte("0.5.0")) {
+	if !bytes.Contains(buf.Bytes(), []byte("0.5.1")) {
 		t.Errorf("Version output should contain version, got: %s", output)
 	}
 }
