@@ -3,7 +3,6 @@ package views
 import (
 	"context"
 
-	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/tui/components"
@@ -37,7 +36,7 @@ func (v *modal_PathView) SetSize(size measure.Window) {
 
 func (v *modal_PathView) Init() tea.Cmd {
 	if v.workspace != nil {
-		err := clipboard.WriteAll(v.workspace.Path)
+		err := v.store.GetClipboard().WriteAll(v.workspace.Path)
 		v.clipboardErr = err
 		v.copied = err == nil
 	}

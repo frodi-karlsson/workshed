@@ -43,6 +43,7 @@ func TestExportView_View(t *testing.T) {
 					},
 				},
 			}),
+			snapshot.WithClipboardErr(nil),
 		})
 		scenario.Enter("Open resource menu")
 		scenario.Key("x", "Navigate to export view")

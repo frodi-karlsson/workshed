@@ -13,11 +13,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/frodi/workshed/internal/fs"
 	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/handle"
 	"github.com/oklog/ulid/v2"
 )
+
+type defaultClipboard struct{}
+
+func (defaultClipboard) WriteAll(s string) error {
+	return clipboard.WriteAll(s)
+}
 
 const metadataFileName = ".workshed.json"
 const executionsDirName = "executions"
@@ -1285,6 +1292,10 @@ func (s *FSStore) ExportContext(ctx context.Context, handle string) (*WorkspaceC
 			LastCapturedAt:  lastCaptured,
 		},
 	}, nil
+}
+
+func (s *FSStore) GetClipboard() interface{ WriteAll(string) error } {
+	return defaultClipboard{}
 }
 
 func (s *FSStore) ImportContext(ctx context.Context, opts ImportOptions) (*Workspace, error) {

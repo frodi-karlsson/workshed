@@ -143,4 +143,6 @@ type Store interface {
 
 	// Import creates a workspace from an exported context.
 	ImportContext(ctx context.Context, opts ImportOptions) (*Workspace, error)
+
+	GetClipboard() interface{ WriteAll(string) error }
 }

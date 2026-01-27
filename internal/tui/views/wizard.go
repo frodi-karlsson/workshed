@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -228,7 +227,7 @@ func (v *WizardView) openTemplate() (ViewResult, tea.Cmd) {
 func (v *WizardView) copyPath() (ViewResult, tea.Cmd) {
 	if v.createdWorkspace != nil {
 		v.copyAttempted = true
-		err := clipboard.WriteAll(v.createdWorkspace.Path)
+		err := v.store.GetClipboard().WriteAll(v.createdWorkspace.Path)
 		v.pathCopied = err == nil
 	}
 	return ViewResult{}, nil

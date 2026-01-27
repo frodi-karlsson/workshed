@@ -133,6 +133,12 @@ func WithCreateError(err error) StoreOption {
 	}
 }
 
+func WithClipboardErr(err error) StoreOption {
+	return func(s *mockStore) {
+		s.clipboardErr = err
+	}
+}
+
 func WithCreateDelay(duration time.Duration) StoreOption {
 	return func(s *mockStore) {
 		s.createDelay = duration
@@ -228,6 +234,7 @@ type mockStore struct {
 	dirtyRepos      []string
 	invocationCWD   string
 	testFiles       map[string]string
+	clipboardErr    error
 }
 
 func (s *mockStore) GetInvocationCWD() string {
@@ -458,6 +465,27 @@ func (s *mockStore) ImportContext(ctx context.Context, opts workspace.ImportOpti
 
 func (s *mockStore) GetGit() git.Git {
 	return s.mockGit
+}
+
+func (s *mockStore) GetClipboard() interface{ WriteAll(string) error } {
+	if s.clipboardErr != nil {
+		return errorClipboard{err: s.clipboardErr}
+	}
+	return successClipboard{}
+}
+
+type successClipboard struct{}
+
+func (successClipboard) WriteAll(s string) error {
+	return nil
+}
+
+type errorClipboard struct {
+	err error
+}
+
+func (e errorClipboard) WriteAll(s string) error {
+	return e.err
 }
 
 func NewScenario(t *testing.T, gitOpts []GitOption, storeOpts []StoreOption) *Scenario {

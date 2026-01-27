@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/fs"
@@ -24,7 +23,7 @@ type ExportView struct {
 	loadErr    error
 }
 
-func NewExportView(s workspace.Store, ctx context.Context, handle string) ExportView {
+func NewExportView(s workspace.Store, ctx context.Context, handle string, opts ...func(*ExportView)) ExportView {
 	contextData, err := s.ExportContext(ctx, handle)
 	if err != nil {
 		contextData = &workspace.WorkspaceContext{
@@ -38,7 +37,7 @@ func NewExportView(s workspace.Store, ctx context.Context, handle string) Export
 
 	scrollable := components.NewScrollable(60, 8)
 
-	return ExportView{
+	v := ExportView{
 		store:      s,
 		ctx:        ctx,
 		handle:     handle,
@@ -46,6 +45,12 @@ func NewExportView(s workspace.Store, ctx context.Context, handle string) Export
 		scrollable: scrollable,
 		loadErr:    err,
 	}
+
+	for _, opt := range opts {
+		opt(&v)
+	}
+
+	return v
 }
 
 func (v *ExportView) OnPush() {}
@@ -88,11 +93,11 @@ func (v *ExportView) Update(msg tea.Msg) (ViewResult, tea.Cmd) {
 }
 
 func (v *ExportView) copyToClipboard() (ViewResult, tea.Cmd) {
-	err := clipboard.WriteAll(v.jsonData)
+	err := v.store.GetClipboard().WriteAll(v.jsonData)
 	if err == nil {
 		v.copyResult = "Copied to clipboard!"
 	} else {
-		v.copyResult = "Failed to copy: " + err.Error()
+		v.copyResult = "Failed to copy"
 	}
 	return ViewResult{}, nil
 }
