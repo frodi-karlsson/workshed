@@ -7,6 +7,7 @@ import (
 
 type MockGit struct {
 	mu                    sync.Mutex
+	initErr               error
 	cloneErr              error
 	checkoutErr           error
 	getRemoteErr          error
@@ -19,6 +20,7 @@ type MockGit struct {
 	revParseResult        string
 	statusPorcelainErr    error
 	statusPorcelainResult string
+	initCalls             []InitCall
 	cloneCalls            []CloneCall
 	checkoutCalls         []CheckoutCall
 	getRemoteCalls        []GetRemoteCall
@@ -26,6 +28,10 @@ type MockGit struct {
 	defaultBranchCalls    []DefaultBranchCall
 	revParseCalls         []RevParseCall
 	statusPorcelainCalls  []StatusPorcelainCall
+}
+
+type InitCall struct {
+	Dir string
 }
 
 type CloneCall struct {
@@ -58,6 +64,26 @@ type RevParseCall struct {
 
 type StatusPorcelainCall struct {
 	Dir string
+}
+
+func (m *MockGit) Init(ctx context.Context, dir string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.initCalls = append(m.initCalls, InitCall{Dir: dir})
+	return m.initErr
+}
+
+func (m *MockGit) SetInitErr(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.initErr = err
+}
+
+func (m *MockGit) GetInitCalls() []InitCall {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]InitCall{}, m.initCalls...)
 }
 
 func (m *MockGit) Clone(ctx context.Context, url, dir string, opts CloneOptions) error {

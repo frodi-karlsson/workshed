@@ -20,36 +20,11 @@ Simple patterns produce predictable behavior.
 
 ### StackModel
 
-The TUI manages views as a stack:
-
-```
-StackModel
-├── stack []View    # Views pushed/popped during navigation
-└── store Store     # Shared data access
-```
-
-The top view handles messages. It can:
-- Push a new view (`ViewResult.NextView`)
-- Perform stack action (`ViewResult.Action`: pop, dismiss, etc.)
+The TUI manages views as a stack. The top view handles messages and can push new views, pop, or dismiss.
 
 ### View Interface
 
-All views implement a consistent interface:
-
-```go
-type View interface {
-    Init() tea.Cmd           // Initial command
-    Update(msg) (ViewResult, tea.Cmd)
-    View() string
-    OnPush()                 // Called when pushed
-    OnResume()               // Called when returned to
-    IsLoading() bool         // Show spinner
-    Cancel()                 // Cancel ongoing work
-    Snapshot() interface{}   // Capture state
-}
-```
-
-This pattern keeps views decoupled and testable.
+All views implement a consistent interface with lifecycle methods: Init, Update, View, OnPush, OnResume, IsLoading, Cancel, and Snapshot. This pattern keeps views decoupled and testable.
 
 ## View Types
 
@@ -60,12 +35,9 @@ The entry point. Shows workspaces in a list with filtering and navigation.
 ### WizardView
 
 Multi-step creation flow embedded in the dashboard:
-
 1. Purpose input
 2. Repository inputs (press 't' for template configuration)
 3. Create workspace
-
-Press `[t]` in the repository step to open template configuration in a separate view.
 
 Handles user input, git detection, template copying with variable substitution, and repository cloning.
 
@@ -75,9 +47,7 @@ Actions menu for a selected workspace: inspect, path, exec, add repo, remove rep
 
 ### Modal Views
 
-Focused overlays: Inspect, Path, Exec, Update, Remove, Error.
-
-Each modal is self-contained with its own state and rendering.
+Focused overlays: Inspect, Path, Exec, Update, Remove, Error. Each modal is self-contained with its own state and rendering.
 
 ## Key Characteristics
 
@@ -101,8 +71,6 @@ Similar behaviors use similar patterns. Lists navigate the same way. Modals dism
 - Navigation: arrows or `j`/`k`
 - `Enter` - Open context menu
 
-The dashboard displays available shortcuts via `GenerateHelp()` at the bottom of the screen.
-
 ### Wizard
 - `Enter` - Next / Add item
 - `Tab` - Complete path / Add item
@@ -110,19 +78,12 @@ The dashboard displays available shortcuts via `GenerateHelp()` at the bottom of
 - `t` - Open template configuration (in repo step)
 - `Esc` - Back / Cancel
 
-### Path Completion
-- `Tab` - Complete with selected suggestion
-- `↑` / `↓` - Navigate through suggestions
-- `Esc` - Dismiss suggestions
-
 ### Context Menu
 - `i` - Info submenu (path, health, update)
 - `e` - Exec submenu (run command, view history)
 - `r` - Repositories submenu (add, remove)
 - `c` - Captures submenu (create, list, apply)
 - `x` - Remove workspace
-- `Enter` - Select menu item
-- `Esc` - Dismiss
 
 ### Modals
 - `Enter` - Confirm
@@ -130,21 +91,15 @@ The dashboard displays available shortcuts via `GenerateHelp()` at the bottom of
 
 ## Testing
 
-The TUI uses snapshot testing to verify view states:
-
-- Framework: `go-snaps` with custom DSL in `internal/tui/snapshot/snaplib.go`
-- Tests in `internal/tui/snapshot/`
-- Each test records view state and compares against stored snapshot
-
-See [Testing Architecture](testing.md) for details.
+The TUI uses snapshot testing to verify view states. See Testing Architecture for details.
 
 ## Development Principles
 
 ### Adding a View
 
-1. Implement the `View` interface
+1. Implement the View interface
 2. Keep state explicit in fields
-3. Return `ViewResult` for navigation
+3. Return ViewResult for navigation
 4. Add snapshot test
 
 ### Styling
@@ -166,13 +121,3 @@ The TUI aims to feel:
 - **Approachable** - Simple for new users, efficient for power users
 
 Implementation moves toward these goals incrementally.
-
-## References
-
-| Topic | Location |
-|-------|----------|
-| Stack model | `internal/tui/stack.go` |
-| View interface | `internal/tui/views/view.go` |
-| Views | `internal/tui/views/` |
-| Snapshot testing | `internal/tui/snapshot/` |
-| Testing guide | [Testing Architecture](testing.md) |

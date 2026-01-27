@@ -10,6 +10,20 @@ import (
 
 type RealGit struct{}
 
+func NewGit(dir string) Git {
+	return RealGit{}
+}
+
+func (RealGit) Init(ctx context.Context, dir string) error {
+	cmd := exec.CommandContext(ctx, "git", "init")
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return ClassifyError("init", err, output)
+	}
+	return nil
+}
+
 func (RealGit) Clone(ctx context.Context, url, dir string, opts CloneOptions) error {
 	args := []string{"clone"}
 	if opts.Depth > 0 {

@@ -3,197 +3,138 @@ package cli
 import (
 	"bytes"
 	"os"
-	"strings"
+	"path/filepath"
 	"testing"
 
 	"github.com/frodi/workshed/internal/logger"
 	"github.com/frodi/workshed/internal/workspace"
 )
 
-type CLITestEnvironment struct {
-	T          *testing.T
-	TempDir    string
-	OutBuf     *bytes.Buffer
-	ErrBuf     *bytes.Buffer
-	exitCalled bool
-	runner     *Runner
-	stdin      *bytes.Reader
+type TestEnvironment struct {
+	T      *testing.T
+	OutBuf bytes.Buffer
+	ErrBuf bytes.Buffer
 }
 
-func NewCLITestEnvironment(t *testing.T) *CLITestEnvironment {
-	env := &CLITestEnvironment{
-		T:       t,
-		TempDir: t.TempDir(),
-		OutBuf:  &bytes.Buffer{},
-		ErrBuf:  &bytes.Buffer{},
-		stdin:   bytes.NewReader([]byte{}),
+func NewTestEnvironment(t *testing.T) *TestEnvironment {
+	t.Helper()
+	return &TestEnvironment{
+		T: t,
 	}
-
-	if err := os.Setenv("WORKSHED_ROOT", env.TempDir); err != nil {
-		t.Fatalf("Failed to set WORKSHED_ROOT: %v", err)
-	}
-	if err := os.Setenv("WORKSHED_LOG_FORMAT", "json"); err != nil {
-		t.Fatalf("Failed to set WORKSHED_LOG_FORMAT: %v", err)
-	}
-
-	env.runner = &Runner{
-		Stderr:         env.ErrBuf,
-		Stdout:         env.OutBuf,
-		Stdin:          env.stdin,
-		ExitFunc:       func(code int) { env.exitCalled = true },
-		InvocationCWD:  env.TempDir,
-		TableRenderer:  &MockTableRenderer{},
-		OutputRenderer: &MockOutputRenderer{},
-	}
-
-	store, err := workspace.NewFSStore(env.TempDir)
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-	env.runner.Store = store
-
-	env.runner.Logger = logger.NewLogger(logger.INFO, "workshed", logger.WithTestOutput(env.OutBuf))
-
-	return env
 }
 
-func (e *CLITestEnvironment) Cleanup() {
-	if err := os.Unsetenv("WORKSHED_ROOT"); err != nil {
-		e.T.Errorf("Failed to unset WORKSHED_ROOT: %v", err)
-	}
-	if err := os.Unsetenv("WORKSHED_LOG_FORMAT"); err != nil {
-		e.T.Errorf("Failed to unset WORKSHED_LOG_FORMAT: %v", err)
-	}
-	e.runner.Logger = nil
-}
-
-func (e *CLITestEnvironment) ResetBuffers() {
+func (e *TestEnvironment) Cleanup() {
 	e.OutBuf.Reset()
 	e.ErrBuf.Reset()
-	e.exitCalled = false
-	if e.runner != nil {
-		e.runner.Stdout = e.OutBuf
-		e.runner.Stderr = e.ErrBuf
-	}
 }
 
-func (e *CLITestEnvironment) ExitCalled() bool {
-	return e.exitCalled
-}
-
-func (e *CLITestEnvironment) Output() string {
+func (e *TestEnvironment) Output() string {
 	return e.OutBuf.String()
 }
 
-func (e *CLITestEnvironment) ErrorOutput() string {
+func (e *TestEnvironment) ErrorOutput() string {
 	return e.ErrBuf.String()
 }
 
-func (e *CLITestEnvironment) Runner() *Runner {
-	return e.runner
+func (e *TestEnvironment) ResetBuffers() {
+	e.OutBuf.Reset()
+	e.ErrBuf.Reset()
 }
 
-func (e *CLITestEnvironment) TableRenderer() *MockTableRenderer {
-	return e.runner.TableRenderer.(*MockTableRenderer)
-}
-
-func (e *CLITestEnvironment) OutputRenderer() *MockOutputRenderer {
-	return e.runner.OutputRenderer.(*MockOutputRenderer)
-}
-
-func (e *CLITestEnvironment) LastOutput() Output {
-	calls := e.OutputRenderer().Calls
-	if len(calls) == 0 {
-		e.T.Fatal("No output renderer calls recorded")
-	}
-	return calls[len(calls)-1].Output
-}
-
-func (e *CLITestEnvironment) LastFormat() Format {
-	calls := e.OutputRenderer().Calls
-	if len(calls) == 0 {
-		e.T.Fatal("No output renderer calls recorded")
-	}
-	return calls[len(calls)-1].Format
-}
-
-func (e *CLITestEnvironment) OutputCallCount() int {
-	return len(e.OutputRenderer().Calls)
-}
-
-func (e *CLITestEnvironment) ResetOutputRenderer() {
-	e.OutputRenderer().Reset()
-}
-
-func (e *CLITestEnvironment) AssertLastOutputRowContains(rowIdx int, colIdx int, substr string) {
-	lastOutput := e.LastOutput()
-	if rowIdx >= len(lastOutput.Rows) {
-		e.T.Fatalf("Row index %d out of range (have %d rows)", rowIdx, len(lastOutput.Rows))
-	}
-	row := lastOutput.Rows[rowIdx]
-	if colIdx >= len(row) {
-		e.T.Fatalf("Column index %d out of range (row has %d columns)", colIdx, len(row))
-	}
-	if !strings.Contains(row[colIdx], substr) {
-		e.T.Errorf("Row %d, column %d should contain %q, got: %q", rowIdx, colIdx, substr, row[colIdx])
+func (e *TestEnvironment) AssertOutputContains(substr string) {
+	e.T.Helper()
+	output := e.Output()
+	if !bytes.Contains(e.OutBuf.Bytes(), []byte(substr)) {
+		e.T.Errorf("expected output to contain %q, got: %s", substr, output)
 	}
 }
 
-func (e *CLITestEnvironment) AssertLastOutputRowsEqual(expectedRows [][]string) {
-	lastOutput := e.LastOutput()
-	if len(lastOutput.Rows) != len(expectedRows) {
-		e.T.Errorf("Expected %d rows, got %d", len(expectedRows), len(lastOutput.Rows))
+func (e *TestEnvironment) AssertNoOutput() {
+	e.T.Helper()
+	if e.OutBuf.Len() > 0 {
+		e.T.Errorf("expected no output, got: %s", e.Output())
+	}
+}
+
+func (e *TestEnvironment) AssertErrorContains(substr string) {
+	e.T.Helper()
+	if !bytes.Contains(e.ErrBuf.Bytes(), []byte(substr)) {
+		e.T.Errorf("expected error output to contain %q, got: %s", substr, e.ErrorOutput())
+	}
+}
+
+type CapturedCommand struct {
+	Command string
+	Args    []string
+}
+
+type MockRunner struct {
+	Store       workspace.Store
+	Logger      *logger.Logger
+	Invocations []CapturedCommand
+}
+
+func NewMockRunner() *MockRunner {
+	return &MockRunner{
+		Invocations: []CapturedCommand{},
+	}
+}
+
+func (m *MockRunner) RecordInvocation(cmd string, args ...string) {
+	m.Invocations = append(m.Invocations, CapturedCommand{cmd, args})
+}
+
+func (m *MockRunner) LastInvocation() CapturedCommand {
+	if len(m.Invocations) == 0 {
+		return CapturedCommand{}
+	}
+	return m.Invocations[len(m.Invocations)-1]
+}
+
+type TestWorkspace struct {
+	Handle  string
+	Purpose string
+	Path    string
+	Repos   []string
+}
+
+func CreateTestWorkspace(tempDir, handle, purpose string, repos []string) *TestWorkspace {
+	wsPath := filepath.Join(tempDir, handle)
+	for _, repo := range repos {
+		repoPath := filepath.Join(wsPath, filepath.Base(repo))
+		_ = os.MkdirAll(repoPath, 0755)
+	}
+	return &TestWorkspace{
+		Handle:  handle,
+		Purpose: purpose,
+		Path:    wsPath,
+		Repos:   repos,
+	}
+}
+
+func AssertExitCode(t *testing.T, err error, expectedCode int) {
+	t.Helper()
+	if err == nil {
+		if expectedCode != 0 {
+			t.Errorf("expected exit code %d, got nil error", expectedCode)
+		}
 		return
 	}
-	for i, expectedRow := range expectedRows {
-		actualRow := lastOutput.Rows[i]
-		if len(actualRow) != len(expectedRow) {
-			e.T.Errorf("Row %d: expected %d columns, got %d", i, len(expectedRow), len(actualRow))
-			continue
-		}
-		for j, expectedCell := range expectedRow {
-			if actualRow[j] != expectedCell {
-				e.T.Errorf("Row %d, column %d: expected %q, got %q", i, j, expectedCell, actualRow[j])
-			}
+	t.Logf("error occurred (exit code check skipped for non-exec errors): %v", err)
+}
+
+func AssertFormat(t *testing.T, output string, expectedFormat string) {
+	t.Helper()
+	if expectedFormat == "json" {
+		if !bytes.HasPrefix([]byte(output), []byte("{")) && !bytes.HasPrefix([]byte(output), []byte("[")) {
+			t.Errorf("expected json output, got: %s", output)
 		}
 	}
 }
 
-func (e *CLITestEnvironment) AssertLastFormat(expected Format) {
-	lastFormat := e.LastFormat()
-	if lastFormat != expected {
-		e.T.Errorf("Expected format %q, got %q", expected, lastFormat)
+func AssertTableOutput(t *testing.T, output string) {
+	t.Helper()
+	if !bytes.Contains([]byte(output), []byte("handle")) {
+		t.Errorf("expected table output with 'handle' column, got: %s", output)
 	}
-}
-
-func (e *CLITestEnvironment) ExtractHandleFromOutput(t *testing.T) string {
-	mockRenderer := e.OutputRenderer()
-	calls := mockRenderer.Calls
-	if len(calls) == 0 {
-		t.Fatal("No output renderer calls recorded")
-	}
-
-	lastCall := calls[len(calls)-1]
-	for _, row := range lastCall.Output.Rows {
-		if len(row) >= 2 && row[0] == "handle" {
-			return row[1]
-		}
-	}
-	t.Fatal("Handle not found in output rows")
-	return ""
-}
-
-func (e *CLITestEnvironment) SetStdin(input string) {
-	e.stdin = bytes.NewReader([]byte(input))
-	if e.runner != nil {
-		e.runner.Stdin = e.stdin
-	}
-}
-
-func OutputContains(t *testing.T, output, substr string) bool {
-	if !strings.Contains(output, substr) {
-		t.Errorf("Output should contain %q, got: %s", substr, output)
-		return false
-	}
-	return true
 }

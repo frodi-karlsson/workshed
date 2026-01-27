@@ -32,6 +32,9 @@ var (
 
 // Git defines the interface for interacting with git repositories.
 type Git interface {
+	// Init creates a new git repository.
+	Init(ctx context.Context, dir string) error
+
 	// Clone creates a local copy of a remote repository.
 	Clone(ctx context.Context, url, dir string, opts CloneOptions) error
 

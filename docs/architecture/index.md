@@ -43,51 +43,19 @@ workshed/
 
 ### CLI to Workspace
 
-CLI commands inject dependencies and call workspace operations:
-
-```
-CLI (internal/cli) ──> Workspace (internal/workspace)
-    GetOrCreateStore(l)      NewFSStore(path)
-    store.Create(ctx, opts)  FSStore.Create(ctx, opts)
-```
-
-The CLI never imports TUI packages. When interactivity is needed, it falls back to a separate TUI invocation.
+CLI commands inject dependencies and call workspace operations. The CLI never imports TUI packages. When interactivity is needed, it falls back to a separate TUI invocation.
 
 ### CLI to TUI
 
-The CLI can invoke the TUI for interactive workspace selection:
-
-```
-CLI ──> tui.TrySelectWorkspace(ctx, store, err, l) ──> User selection
-```
-
-For workspace creation, run `workshed` to open the dashboard, then press 'c' to use the embedded wizard.
-
-The TUI runs in its own process with its own event loop. Results are passed back through return values.
+The CLI can invoke the TUI for interactive workspace selection. For workspace creation, run `workshed` to open the dashboard, then press 'c' to use the embedded wizard.
 
 ### TUI to Workspace
 
-The TUI uses the same store interface as CLI commands:
-
-```
-TUI (internal/tui) ──> Workspace (internal/workspace)
-    StackModel.store        FSStore (interface)
-    store.List(ctx, opts)   FSStore.List(ctx, opts)
-```
-
-Both layers depend on the same interface. This ensures consistent behavior regardless of how the user interacts.
+The TUI uses the same store interface as CLI commands. Both layers depend on the same interface. This ensures consistent behavior regardless of how the user interacts.
 
 ### Workspace to Storage
 
-The workspace package abstracts storage behind an interface:
-
-```
-Workspace (internal/workspace) ──> Storage
-    FSStore                  Filesystem-based implementation
-    Store interface          Abstracts persistence
-```
-
-Tests use in-memory or mock stores. The production implementation uses the filesystem.
+The workspace package abstracts storage behind an interface. Tests use in-memory or mock stores. The production implementation uses the filesystem.
 
 ## Data Flow
 
@@ -95,9 +63,9 @@ Tests use in-memory or mock stores. The production implementation uses the files
 
 1. User runs `workshed <command> [flags]`
 2. `main.go` routes to command function
-3. Command parses flags with `spf13/pflag`
+3. Command parses flags
 4. Command validates required inputs
-5. Command gets store via `GetOrCreateStore`
+5. Command gets store via shared runner
 6. Command calls workspace operation
 7. Workspace performs business logic
 8. Workspace persists to storage
@@ -106,8 +74,8 @@ Tests use in-memory or mock stores. The production implementation uses the files
 ### Interactive Session
 
 1. User runs `workshed` (no command)
-2. `main.go` calls `RunStackModel`
-3. TUI creates stack model with store
+2. `main.go` calls TUI entry point
+3. TUI creates model with store
 4. Bubble tea program runs event loop
 5. User navigates, selects, creates
 6. Views call store operations
@@ -117,59 +85,23 @@ Tests use in-memory or mock stores. The production implementation uses the files
 ### Workspace Discovery
 
 When a command needs a workspace handle:
-
 1. User provides handle explicitly, or
 2. CLI attempts auto-discovery from current directory, or
 3. CLI falls back to TUI selection (human mode only)
-
-```go
-handle := ResolveHandle(ctx, store, providedHandle, l)
-// Returns providedHandle, auto-discovered handle, or exits
-```
 
 ## Shared Abstractions
 
 ### Store Interface
 
-Both CLI and TUI use the same store interface:
-
-```go
-type store interface {
-    List(ctx context.Context, opts ListOptions) ([]*Workspace, error)
-    Get(ctx context.Context, handle string) (*Workspace, error)
-    Create(ctx context.Context, opts CreateOptions) (*Workspace, error)
-    UpdatePurpose(ctx context.Context, handle string, purpose string) error
-    Remove(ctx context.Context, handle string) error
-    Exec(ctx context.Context, handle string, opts ExecOptions) ([]ExecResult, error)
-    AddRepository(ctx context.Context, handle string, repo RepositoryOption) error
-    AddRepositories(ctx context.Context, handle string, repos []RepositoryOption) error
-    RemoveRepository(ctx context.Context, handle string, repoName string) error
-}
-```
-
-This interface is defined in `internal/workspace` and is imported by both CLI and TUI packages.
+Both CLI and TUI use the same store interface defined in `internal/workspace`. This interface is imported by both CLI and TUI packages.
 
 ### Logger Interface
 
-All modules log through `internal/logger`:
-
-- `DEBUG` - Diagnostic information
-- `INFO` - General information
-- `HELP` - User guidance
-- `SUCCESS` - Successful completion
-- `ERROR` - Error conditions
-
-Output format adapts to mode (human, JSON, raw).
+All modules log through `internal/logger` with levels: DEBUG, INFO, HELP, SUCCESS, ERROR. Output format adapts to mode (human, JSON, raw).
 
 ### Context Passing
 
-All operations accept `context.Context` for cancellation and timeouts:
-
-```go
-store.Create(ctx, opts)  // Respects ctx cancellation
-```
-
-This enables timeout handling for long-running operations like cloning repositories.
+All operations accept `context.Context` for cancellation and timeouts. This enables timeout handling for long-running operations like cloning repositories.
 
 ## Configuration
 
@@ -183,43 +115,19 @@ No config files. No complex configuration. Environment variables compose natural
 ## Error Handling
 
 Errors follow a consistent pattern:
-
 1. Log with context using structured fields
 2. Exit with appropriate code (0 for success, 1 for error)
 3. Provide actionable messages
-
-```go
-if err != nil {
-    l.Error("operation failed", "context", value, "error", err)
-    exitFunc(1)
-}
-```
 
 The TUI handles errors differently, showing them in a modal with recovery options.
 
 ## Testing Strategy
 
-### Layer Boundaries
-
-| Layer | Tests | Mocking |
-|-------|-------|---------|
+| Layer | Tests | Characteristics |
+|-------|-------|-----------------|
 | CLI | Unit + integration | Mock store, captured output |
-| TUI | Unit + e2e (teatest) | Mock store |
+| TUI | Unit + e2e (snapshot) | Mock store |
 | Workspace | Unit + integration | In-memory store |
-
-### Integration Points
-
-- `cli_integration_test.go`: Complete CLI workflows
-- `internal/tui/snapshot/`: Snapshot tests for TUI views
-- `workspace/...`: Tests for persistence logic
-
-### Test Isolation
-
-Each test:
-- Uses temporary directories
-- Captures output
-- Overrides exit function
-- Cleans up after itself
 
 ## Design Smells to Avoid
 
@@ -230,9 +138,3 @@ Each test:
 - Over-abstraction (creating interfaces before understanding the shape)
 
 When these appear, the design has drifted. Refactor toward simplicity.
-
-## Further Reading
-
-- [CLI Architecture](cli.md) - Command structure, patterns, and conventions
-- [TUI Architecture](tui.md) - View design, state management, and interaction patterns
-- [Testing Architecture](testing.md) - Snapshot testing and test patterns

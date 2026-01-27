@@ -46,11 +46,7 @@ If `git worktree` is about checking out another branch, Workshed is about groupi
 
 ## Quick Start
 
-You can call `workshed` from the terminal to open the interactive dashboard:
-
-<img src="media/example_1.gif" width="600"/>
-
-Or, run commands directly:
+Run `workshed` to open the interactive dashboard, or run commands directly:
 
 ```bash
 # Create a workspace with purpose and repositories
@@ -236,7 +232,7 @@ workshed captures
 | `workshed list` | List workspaces, filter by purpose, paginate with --page and --page-size |
 | `workshed inspect` | Show workspace details |
 | `workshed path` | Print workspace path |
-| `workshed exec -- <cmd>` | Run command in repositories |
+| `workshed exec -- <cmd>` | Run command in repositories (use -a flag for all repos) |
 | `workshed capture` | Record a descriptive snapshot of git state |
 | `workshed captures` | List captures for a workspace, filter by repository or branch with --filter |
 | `workshed apply` | Attempt to restore git state from a capture |
@@ -283,27 +279,15 @@ JSON output is designed for scripting and automation.
 
 ---
 
-## Terminal UI (TUI)
+## Output
 
-Workshed includes optional interactive UI for workspace selection and purpose input. Active by default in human mode.
+Workshed provides structured output for scripting:
 
-### When TUI Is Enabled
+- `--format table` - Human-readable table output (default)
+- `--format json` - JSON for scripting and automation
+- `--format raw` - Minimal output for parsing
 
-Default behavior when `WORKSHED_LOG_FORMAT` is unset or `human`. Set to `json` to disable.
-
-### Features
-
-- **Workspace selector** — Interactive list when auto-discovery fails (arrow keys/`j`/`k` to navigate, `Enter` to select)
-- **Purpose autocomplete** — Suggestions from existing purposes as you type
-- **Path completion** — Tab completes file/directory paths; ↑/↓ navigate suggestions; Esc dismisses
-- **Dashboard** — Full interactive workspace management
-- **Template support** — Configure template directory and variable substitution (`{{key}}` → value)
-
-### Non-Interactive Fallback
-
-When `WORKSHED_LOG_FORMAT` is set to `json`, or when running in CI environments, the TUI is not available. Commands that would normally show interactive selection will fail with an error instead.
-
-To use Workshed non-interactively, provide all required flags explicitly.
+JSON mode disables interactive prompts. Set `WORKSHED_LOG_FORMAT=json` for fully non-interactive use.
 
 ---
 

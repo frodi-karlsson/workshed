@@ -1,77 +1,89 @@
-// workshed is a CLI tool for managing intent-scoped local development workspaces.
-//
-// Usage:
-//
-//	workshed create --purpose "Debug payment timeout"
-//	workshed list
-//	workshed inspect aquatic-fish-motion
-//	workshed path aquatic-fish-motion
-//	workshed remove aquatic-fish-motion
 package main
 
 import (
-	"fmt"
+	"context"
 	"os"
 
+	"github.com/frodi/workshed/cmd/workshed/apply"
+	"github.com/frodi/workshed/cmd/workshed/capture"
+	"github.com/frodi/workshed/cmd/workshed/captures"
+	"github.com/frodi/workshed/cmd/workshed/completion"
+	"github.com/frodi/workshed/cmd/workshed/create"
+	"github.com/frodi/workshed/cmd/workshed/exec"
+	"github.com/frodi/workshed/cmd/workshed/export"
+	"github.com/frodi/workshed/cmd/workshed/health"
+	"github.com/frodi/workshed/cmd/workshed/importcmd"
+	"github.com/frodi/workshed/cmd/workshed/inspect"
+	"github.com/frodi/workshed/cmd/workshed/list"
+	"github.com/frodi/workshed/cmd/workshed/path"
+	"github.com/frodi/workshed/cmd/workshed/remove"
+	"github.com/frodi/workshed/cmd/workshed/repos"
+	"github.com/frodi/workshed/cmd/workshed/update"
 	"github.com/frodi/workshed/internal/cli"
+	"github.com/frodi/workshed/internal/tui"
+	"github.com/spf13/cobra"
 )
 
+var version = "0.4.0"
+
 func main() {
-	invocationCWD, err := os.Getwd()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting current working directory: %v\n", err)
-		os.Exit(1)
-	}
-
-	r := cli.NewRunner(invocationCWD)
-
 	if len(os.Args) < 2 {
-		r.RunMainDashboard()
+		runDashboard()
 		return
 	}
 
-	command := os.Args[1]
+	root := &cobra.Command{
+		Use:     "workshed",
+		Version: version,
+		Short:   "Intent-scoped local development workspaces",
+		Long: `workshed - Intent-scoped local development workspaces
 
-	switch command {
-	case "create":
-		r.Create(os.Args[2:])
-	case "list":
-		r.List(os.Args[2:])
-	case "inspect":
-		r.Inspect(os.Args[2:])
-	case "path":
-		r.Path(os.Args[2:])
-	case "exec":
-		r.Exec(os.Args[2:])
-	case "remove":
-		r.Remove(os.Args[2:])
-	case "update":
-		r.Update(os.Args[2:])
-	case "repos":
-		r.Repos(os.Args[2:])
-	case "capture":
-		r.Capture(os.Args[2:])
-	case "apply":
-		r.Apply(os.Args[2:])
-	case "export":
-		r.Export(os.Args[2:])
-	case "import":
-		r.Import(os.Args[2:])
-	case "captures":
-		r.Captures(os.Args[2:])
-	case "health":
-		r.Health(os.Args[2:])
-	case "completion":
-		r.Completion(os.Args[2:])
-	case "dashboard":
-		r.RunMainDashboard()
-	case "version", "-v", "--version":
-		r.Version()
-	case "help", "-h", "--help":
-		r.Usage()
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %q\n", command)
-		fmt.Fprintf(os.Stderr, "Run 'workshed help' for available commands\n")
+Create isolated workspaces for specific tasks with their own purpose,
+repositories, and state captures.
+
+Examples:
+  workshed create --purpose "Debug payment timeout" --repo github.com/org/api@main
+  workshed list
+  workshed exec -- make test
+  workshed capture --name "Before changes"
+  workshed apply --name "Before changes"`,
+	}
+
+	root.AddCommand(create.Command())
+	root.AddCommand(list.Command())
+	root.AddCommand(inspect.Command())
+	root.AddCommand(path.Command())
+	root.AddCommand(repos.Command())
+	root.AddCommand(captures.Command())
+	root.AddCommand(capture.Command())
+	root.AddCommand(apply.Command())
+	root.AddCommand(exec.Command())
+	root.AddCommand(export.Command())
+	root.AddCommand(importcmd.Command())
+	root.AddCommand(remove.Command())
+	root.AddCommand(update.Command())
+	root.AddCommand(health.Command())
+
+	completion.SetRootCommand(root)
+	root.AddCommand(completion.Command())
+
+	if err := root.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func runDashboard() {
+	if !tui.IsHumanMode() {
+		root := &cobra.Command{Use: "workshed"}
+		root.SetArgs([]string{"--help"})
+		_ = root.Execute()
+		return
+	}
+
+	r := cli.NewRunner("")
+	ctx := context.Background()
+	err := tui.RunDashboard(ctx, r.GetStore(), r)
+	if err != nil {
 		os.Exit(1)
 	}
 }
