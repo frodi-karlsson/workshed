@@ -931,8 +931,8 @@ func TestReposAdd(t *testing.T) {
 		}
 
 		output := env.Output()
-		if !strings.Contains(output, "failed to add repository") {
-			t.Errorf("ReposAdd output should mention failure, got: %s", output)
+		if !strings.Contains(output, "workspace not found") {
+			t.Errorf("ReposAdd output should mention workspace not found, got: %s", output)
 		}
 	})
 }

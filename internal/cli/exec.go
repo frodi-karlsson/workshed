@@ -80,7 +80,7 @@ func (r *Runner) Exec(args []string) {
 	if sepIdx > 0 && fs.NArg() >= 1 {
 		providedHandle = fs.Arg(0)
 	}
-	handle := r.ResolveHandle(ctx, providedHandle, l)
+	handle := r.ResolveHandle(ctx, providedHandle, true, l)
 
 	s := r.getStore()
 	opts := workspace.ExecOptions{

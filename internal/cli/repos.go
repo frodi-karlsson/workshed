@@ -94,7 +94,7 @@ func (r *Runner) ReposAdd(args []string) {
 		return
 	}
 
-	handle := r.ResolveHandle(context.Background(), fs.Arg(0), l)
+	handle := r.ResolveHandle(context.Background(), fs.Arg(0), true, l)
 	if handle == "" {
 		return
 	}
@@ -191,7 +191,7 @@ func (r *Runner) ReposRemove(args []string) {
 		return
 	}
 
-	handle := r.ResolveHandle(context.Background(), fs.Arg(0), l)
+	handle := r.ResolveHandle(context.Background(), fs.Arg(0), true, l)
 	if handle == "" {
 		return
 	}

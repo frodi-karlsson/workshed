@@ -54,7 +54,7 @@ func (r *Runner) Apply(args []string) {
 		providedHandle = fs.Arg(0)
 		argIdx = 1
 	}
-	handle := r.ResolveHandle(ctx, providedHandle, l)
+	handle := r.ResolveHandle(ctx, providedHandle, true, l)
 
 	s := r.getStore()
 

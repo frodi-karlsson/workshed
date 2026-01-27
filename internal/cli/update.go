@@ -42,7 +42,7 @@ func (r *Runner) Update(args []string) {
 	if fs.NArg() >= 1 {
 		providedHandle = fs.Arg(0)
 	}
-	handle := r.ResolveHandle(ctx, providedHandle, l)
+	handle := r.ResolveHandle(ctx, providedHandle, true, l)
 
 	s := r.getStore()
 	if err := s.UpdatePurpose(ctx, handle, *purpose); err != nil {

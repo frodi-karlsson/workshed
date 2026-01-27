@@ -30,7 +30,7 @@ func (r *Runner) Health(args []string) {
 		r.ExitFunc(1)
 	}
 
-	handle := r.ResolveHandle(ctx, "", l)
+	handle := r.ResolveHandle(ctx, "", true, l)
 	if handle == "" {
 		return
 	}

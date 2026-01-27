@@ -164,8 +164,21 @@ func (r *Runner) Version() {
 	logger.SafeFprintf(r.Stdout, "%s\n", version)
 }
 
-func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, l *logger.Logger) string {
+func (r *Runner) ResolveHandle(ctx context.Context, providedHandle string, validate bool, l *logger.Logger) string {
 	if providedHandle != "" {
+		if validate {
+			s := r.getStore()
+			_, err := s.Get(ctx, providedHandle)
+			if err != nil {
+				l.Error("workspace not found", "handle", providedHandle, "error", err)
+				logger.SafeFprintf(r.Stderr, "\nHint: Workshed uses 'workshed <command> [<handle>]' syntax.\n")
+				logger.SafeFprintf(r.Stderr, "  Example: workshed exec -- go test\n")
+				logger.SafeFprintf(r.Stderr, "  Or with a handle: workshed exec my-workspace -- go test\n")
+				logger.SafeFprintf(r.Stderr, "  Run 'cd $(workshed path)' to use workspaces without handles.\n")
+				r.ExitFunc(1)
+				return ""
+			}
+		}
 		return providedHandle
 	}
 

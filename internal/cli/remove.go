@@ -48,7 +48,10 @@ func (r *Runner) Remove(args []string) {
 	if fs.NArg() >= 1 {
 		providedHandle = fs.Arg(0)
 	}
-	handle := r.ResolveHandle(ctx, providedHandle, l)
+	handle := r.ResolveHandle(ctx, providedHandle, true, l)
+	if handle == "" {
+		return
+	}
 
 	s := r.getStore()
 	ws, err := s.Get(ctx, handle)

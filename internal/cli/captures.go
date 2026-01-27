@@ -39,7 +39,7 @@ func (r *Runner) Captures(args []string) {
 	if fs.NArg() >= 1 {
 		providedHandle = fs.Arg(0)
 	}
-	handle := r.ResolveHandle(ctx, providedHandle, l)
+	handle := r.ResolveHandle(ctx, providedHandle, true, l)
 
 	s := r.getStore()
 	captures, err := s.ListCaptures(ctx, handle)
