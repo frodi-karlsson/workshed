@@ -229,6 +229,7 @@ func (v *DashboardView) KeyBindings() []KeyBinding {
 	}
 	return []KeyBinding{
 		{Key: "c", Help: "[c] Create", Action: v.createWorkspace},
+		{Key: "i", Help: "[i] Import", Action: v.importWorkspace},
 		{Key: "enter", Help: "[Enter] Menu", Action: v.openMenu},
 		{Key: "l", Help: "[l] Filter", Action: v.enableFilter},
 		{Key: "q", Help: "[q] Quit", Action: v.quit},
@@ -240,6 +241,11 @@ func (v *DashboardView) KeyBindings() []KeyBinding {
 func (v *DashboardView) createWorkspace() (ViewResult, tea.Cmd) {
 	wizardView := NewWizardView(v.ctx, v.store)
 	return ViewResult{NextView: &wizardView}, nil
+}
+
+func (v *DashboardView) importWorkspace() (ViewResult, tea.Cmd) {
+	importView := NewImportWizardView(v.ctx, v.store, v.invocationCtx)
+	return ViewResult{NextView: &importView}, nil
 }
 
 func (v *DashboardView) openMenu() (ViewResult, tea.Cmd) {

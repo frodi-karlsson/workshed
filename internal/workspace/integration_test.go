@@ -1188,3 +1188,60 @@ func TestIntegrationTemplate(t *testing.T) {
 		}
 	})
 }
+
+func TestExportImport_RoundTrip(t *testing.T) {
+	t.Run("export and import preserves ref", func(t *testing.T) {
+		root := t.TempDir()
+		store, err := NewFSStore(root)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: CreateLocalGitRepo(t, "repo1", map[string]string{"file.txt": "content"}), Ref: "main"},
+				{URL: CreateLocalGitRepo(t, "repo2", map[string]string{"file.txt": "content"}), Ref: "main"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		exported, err := store.ExportContext(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("ExportContext failed: %v", err)
+		}
+
+		if len(exported.Repositories) != 2 {
+			t.Fatalf("Expected 2 repositories, got %d", len(exported.Repositories))
+		}
+
+		if exported.Repositories[0].Ref != "main" {
+			t.Errorf("Expected ref 'main', got %q", exported.Repositories[0].Ref)
+		}
+		if exported.Repositories[1].Ref != "main" {
+			t.Errorf("Expected ref 'main', got %q", exported.Repositories[1].Ref)
+		}
+
+		imported, err := store.ImportContext(ctx, ImportOptions{
+			Context:        exported,
+			PreserveHandle: false,
+		})
+		if err != nil {
+			t.Fatalf("ImportContext failed: %v", err)
+		}
+
+		if len(imported.Repositories) != 2 {
+			t.Fatalf("Expected 2 repositories after import, got %d", len(imported.Repositories))
+		}
+
+		if imported.Repositories[0].Ref != "main" {
+			t.Errorf("Expected ref 'main' after import, got %q", imported.Repositories[0].Ref)
+		}
+		if imported.Repositories[1].Ref != "main" {
+			t.Errorf("Expected ref 'main' after import, got %q", imported.Repositories[1].Ref)
+		}
+	})
+}

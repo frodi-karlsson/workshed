@@ -20,7 +20,7 @@ resource_menu_open
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     }
@@ -49,7 +49,7 @@ inspect_view
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },
@@ -58,7 +58,7 @@ inspect_view
       "Data": {
         "Type": "InfoMenuView",
         "Handle": "test-ws",
-        "ItemCount": 4,
+        "ItemCount": 5,
         "SelectedIdx": 0
       }
     }
@@ -87,7 +87,7 @@ inspect_dismissed
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     }

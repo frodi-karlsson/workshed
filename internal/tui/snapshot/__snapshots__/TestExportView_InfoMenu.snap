@@ -1,6 +1,6 @@
 
-[TestCaptureListView_MultipleCaptures - 1]
-TestCaptureListView_MultipleCaptures
+[TestExportView_InfoMenu/export_via_info_menu - 1]
+TestExportView_InfoMenu/export_via_info_menu
 {
   "Views": [
     {
@@ -25,21 +25,21 @@ TestCaptureListView_MultipleCaptures
       }
     },
     {
-      "Type": "*views.CapturesMenuView",
+      "Type": "*views.InfoMenuView",
       "Data": {
-        "Type": "CapturesMenuView",
+        "Type": "InfoMenuView",
         "Handle": "test-ws",
-        "HasCaptures": true,
-        "CaptureCnt": 3
+        "ItemCount": 5,
+        "SelectedIdx": 0
       }
     },
     {
-      "Type": "*views.CaptureListView",
+      "Type": "*views.ExportView",
       "Data": {
-        "Type": "CaptureListView",
+        "Type": "ExportView",
         "Handle": "test-ws",
-        "CaptureCnt": 3,
-        "Selected": 0
+        "HasCopyResult": false,
+        "CopyResult": ""
       }
     }
   ]

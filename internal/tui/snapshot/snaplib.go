@@ -193,6 +193,18 @@ func WithCaptureError(err error) StoreOption {
 	}
 }
 
+func WithExportError(err error) StoreOption {
+	return func(s *mockStore) {
+		s.exportErr = err
+	}
+}
+
+func WithFileReader(files map[string]string) StoreOption {
+	return func(s *mockStore) {
+		s.testFiles = files
+	}
+}
+
 func WithDirtyRepo(name string) StoreOption {
 	return func(s *mockStore) {
 		s.dirtyRepos = append(s.dirtyRepos, name)
@@ -212,8 +224,10 @@ type mockStore struct {
 	listErr         error
 	applyErr        error
 	captureErr      error
+	exportErr       error
 	dirtyRepos      []string
 	invocationCWD   string
+	testFiles       map[string]string
 }
 
 func (s *mockStore) GetInvocationCWD() string {
@@ -369,7 +383,10 @@ func (s *mockStore) ListCaptures(ctx context.Context, handle string) ([]workspac
 	return s.captures, nil
 }
 
-func (s *mockStore) DeriveContext(ctx context.Context, handle string) (*workspace.WorkspaceContext, error) {
+func (s *mockStore) ExportContext(ctx context.Context, handle string) (*workspace.WorkspaceContext, error) {
+	if s.exportErr != nil {
+		return nil, s.exportErr
+	}
 	if s.context != nil {
 		return s.context, nil
 	}
@@ -422,6 +439,21 @@ func (s *mockStore) DeriveContext(ctx context.Context, handle string) (*workspac
 
 func (s *mockStore) ListExecutions(ctx context.Context, handle string, opts workspace.ListExecutionsOptions) ([]workspace.ExecutionRecord, error) {
 	return s.executions, nil
+}
+
+func (s *mockStore) ImportContext(ctx context.Context, opts workspace.ImportOptions) (*workspace.Workspace, error) {
+	ws := &workspace.Workspace{
+		Handle:       "test-workspace",
+		Purpose:      opts.Context.Purpose,
+		Repositories: make([]workspace.Repository, len(opts.Context.Repositories)),
+	}
+	for i, r := range opts.Context.Repositories {
+		ws.Repositories[i] = workspace.Repository{
+			URL:  r.URL,
+			Name: "repo-" + string(rune('1'+i)),
+		}
+	}
+	return ws, nil
 }
 
 func (s *mockStore) GetGit() git.Git {
@@ -503,6 +535,10 @@ func (s *Scenario) Record() tui.StackSnapshot {
 
 func (s *Scenario) WaitForIdle() {
 	// No-op: commands are processed synchronously
+}
+
+func (s *Scenario) GetInvocationCWD() string {
+	return s.store.invocationCWD
 }
 
 func (s *Scenario) executeStep(step Step) {

@@ -1,0 +1,175 @@
+
+[TestImportWizardView_Wizard/initial_state - 1]
+TestImportWizardView_Wizard/initial_state
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 0,
+        "FilePath": "",
+        "HasContext": false,
+        "Purpose": "",
+        "RepoCount": 0,
+        "PreserveHandle": false,
+        "Force": false,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestImportWizardView_Wizard/preview_step - 1]
+TestImportWizardView_Wizard/preview_step
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 1,
+        "FilePath": "export.json",
+        "HasContext": true,
+        "Purpose": "Imported workspace",
+        "RepoCount": 2,
+        "PreserveHandle": false,
+        "Force": false,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestImportWizardView_Wizard/empty_path_validation - 1]
+TestImportWizardView_Wizard/empty_path_validation
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 0,
+        "FilePath": "",
+        "HasContext": false,
+        "Purpose": "",
+        "RepoCount": 0,
+        "PreserveHandle": false,
+        "Force": false,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestImportWizardView_Wizard/back_from_preview - 1]
+TestImportWizardView_Wizard/back_from_preview
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 0,
+        "FilePath": "file.json",
+        "HasContext": true,
+        "Purpose": "Imported workspace",
+        "RepoCount": 1,
+        "PreserveHandle": false,
+        "Force": false,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestImportWizardView_Wizard/back_from_options - 1]
+TestImportWizardView_Wizard/back_from_options
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 1,
+        "FilePath": "file.json",
+        "HasContext": true,
+        "Purpose": "Imported workspace",
+        "RepoCount": 1,
+        "PreserveHandle": false,
+        "Force": false,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---

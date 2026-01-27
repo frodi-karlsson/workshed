@@ -84,6 +84,7 @@ type ContextRepo struct {
 	Path     string `json:"path"`
 	URL      string `json:"url"`
 	RootPath string `json:"root_path"`
+	Ref      string `json:"ref,omitempty"`
 }
 
 type ContextMetadata struct {
@@ -106,6 +107,13 @@ type CaptureOptions struct {
 	Description string
 	Tags        []string
 	Custom      map[string]string
+}
+
+type ImportOptions struct {
+	Context        *WorkspaceContext
+	InvocationCWD  string
+	PreserveHandle bool
+	Force          bool
 }
 
 type ApplyPreflightError struct {

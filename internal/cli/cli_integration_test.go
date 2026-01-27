@@ -82,7 +82,7 @@ func TestCreate(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().Remove([]string{"--force", handle})
+		env.Runner().Remove([]string{"-y", handle})
 		if env.ExitCalled() {
 			t.Fatalf("Remove exited: %s", env.ErrorOutput())
 		}
@@ -448,7 +448,7 @@ func TestRemove(t *testing.T) {
 		defer env.Cleanup()
 
 		env.ResetBuffers()
-		env.Runner().Remove([]string{"--force", "nonexistent-handle"})
+		env.Runner().Remove([]string{"-y", "nonexistent-handle"})
 
 		if !env.ExitCalled() {
 			t.Error("Remove should exit with error for nonexistent workspace")
@@ -473,12 +473,12 @@ func TestRemove(t *testing.T) {
 		}
 
 		output := env.Output()
-		if !strings.Contains(output, "non-terminal") {
-			t.Errorf("Remove output should mention non-terminal, got: %s", output)
+		if !strings.Contains(output, "non-interactive") {
+			t.Errorf("Remove output should mention non-interactive, got: %s", output)
 		}
 	})
 
-	t.Run("should remove workspace with --force flag", func(t *testing.T) {
+	t.Run("should remove workspace with -y flag", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 
@@ -501,7 +501,7 @@ func TestRemove(t *testing.T) {
 		}
 
 		env.ResetBuffers()
-		env.Runner().Remove([]string{"--force", ws.Handle})
+		env.Runner().Remove([]string{"-y", ws.Handle})
 
 		if env.ExitCalled() {
 			t.Fatalf("Remove exited unexpectedly: %s", env.ErrorOutput())
@@ -938,7 +938,7 @@ func TestReposAdd(t *testing.T) {
 }
 
 func TestReposRemove(t *testing.T) {
-	t.Run("should remove repository from workspace with --force", func(t *testing.T) {
+	t.Run("should remove repository from workspace", func(t *testing.T) {
 		env := NewCLITestEnvironment(t)
 		defer env.Cleanup()
 

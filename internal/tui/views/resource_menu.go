@@ -44,7 +44,8 @@ func NewResourceMenuView(s workspace.Store, ctx context.Context, handle string, 
 		ResourceItem{key: "e", title: "[e] Exec", description: "Run command or view history", section: "Actions"},
 		ResourceItem{key: "r", title: "[r] Repositories", description: "Manage repositories", section: "Repositories"},
 		ResourceItem{key: "c", title: "[c] Captures", description: "State captures and apply", section: "Captures"},
-		ResourceItem{key: "x", title: "[x] Remove", description: "Delete this workspace", section: "System"},
+		ResourceItem{key: "x", title: "[x] Export", description: "Export workspace to JSON", section: "System"},
+		ResourceItem{key: "d", title: "[d] Delete", description: "Delete this workspace", section: "System"},
 	}
 
 	l := list.New(items, list.NewDefaultDelegate(), 30, MaxListHeight)
@@ -67,6 +68,7 @@ func NewResourceMenuView(s workspace.Store, ctx context.Context, handle string, 
 		invocationCtx: invocationCtx,
 		subMenus: map[string]func() View{
 			"i": func() View { infoMenu := NewInfoMenuView(s, ctx, handle); return &infoMenu },
+			"x": func() View { exportView := NewExportView(s, ctx, handle); return &exportView },
 		},
 	}
 }
@@ -161,6 +163,9 @@ func (v *ResourceMenuView) handleResourceAction(item ResourceItem) ViewResult {
 		capturesMenu := NewCapturesMenuView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: &capturesMenu}
 	case "x":
+		exportView := NewExportView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: &exportView}
+	case "d":
 		removeView := NewRemoveConfirmView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: &removeView}
 	}

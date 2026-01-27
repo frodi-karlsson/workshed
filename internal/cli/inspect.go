@@ -28,6 +28,13 @@ func (r *Runner) Inspect(args []string) {
 		r.ExitFunc(1)
 	}
 
+	if err := ValidateFormat(Format(*format), "inspect"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
+		r.ExitFunc(1)
+		return
+	}
+
 	ctx := context.Background()
 
 	providedHandle := ""

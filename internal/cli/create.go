@@ -2,6 +2,9 @@ package cli
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -84,6 +87,13 @@ func (r *Runner) Create(args []string) {
 			if repo == "" {
 				continue
 			}
+
+			if err := validateRepoFlag(repo); err != nil {
+				l.Error("invalid repository specification", "repo", repo, "error", err)
+				r.ExitFunc(1)
+				return
+			}
+
 			url, ref := workspace.ParseRepoFlag(repo)
 			repoOpts = append(repoOpts, workspace.RepositoryOption{
 				URL: url,
@@ -135,4 +145,65 @@ func (r *Runner) Create(args []string) {
 	if err := r.getOutputRenderer().Render(output, Format(*format), r.Stdout); err != nil {
 		l.Error("failed to render output", "error", err)
 	}
+}
+
+func validateRepoFlag(repo string) error {
+	repo = strings.TrimSpace(repo)
+	if repo == "" {
+		return nil
+	}
+
+	atIdx := strings.LastIndex(repo, "@")
+	url := repo
+	if atIdx != -1 {
+		url = repo[:atIdx]
+	}
+
+	if strings.HasPrefix(url, "git@") {
+		parts := strings.SplitN(url, ":", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid git SSH URL format (expected: git@host:path)")
+		}
+		if parts[1] == "" {
+			return fmt.Errorf("missing path in git SSH URL")
+		}
+		return nil
+	}
+
+	if strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://") {
+		if url == "https://" || url == "http://" {
+			return fmt.Errorf("incomplete URL: missing host")
+		}
+		return nil
+	}
+
+	if strings.HasPrefix(url, "file://") {
+		path := strings.TrimPrefix(url, "file://")
+		if path == "" {
+			return fmt.Errorf("missing path in file:// URL")
+		}
+		if !filepath.IsAbs(path) {
+			return fmt.Errorf("file:// URL must use absolute path")
+		}
+		return nil
+	}
+
+	if strings.Contains(url, "://") {
+		return fmt.Errorf("unsupported URL scheme: use https://, git@, or local path")
+	}
+
+	if !strings.Contains(url, "/") && !strings.Contains(url, "\\") {
+		if _, err := os.Stat(url); err == nil {
+			return nil
+		}
+		if strings.HasSuffix(url, ".git") {
+			return fmt.Errorf("repository not found: %s", url)
+		}
+	}
+
+	if _, err := os.Stat(url); err == nil {
+		return nil
+	}
+
+	return nil
 }

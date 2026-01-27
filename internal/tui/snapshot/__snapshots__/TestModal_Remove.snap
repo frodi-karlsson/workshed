@@ -19,7 +19,7 @@ TestModal_Remove
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "delete-me",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },

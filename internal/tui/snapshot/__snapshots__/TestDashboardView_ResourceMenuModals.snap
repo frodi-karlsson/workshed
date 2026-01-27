@@ -20,7 +20,7 @@ TestDashboardView_ResourceMenuModals/remove_dismiss
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     }
@@ -69,7 +69,7 @@ TestDashboardView_ResourceMenuModals/update_purpose_success
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },

@@ -44,6 +44,10 @@ type Git interface {
 	// CurrentBranch returns the name of the currently checked out branch.
 	CurrentBranch(ctx context.Context, dir string) (string, error)
 
+	// DefaultBranch returns the default branch name for a remote repository.
+	// Returns empty string and error if the repository is inaccessible.
+	DefaultBranch(ctx context.Context, url string) (string, error)
+
 	// RevParse returns the commit hash for a given reference.
 	RevParse(ctx context.Context, dir, ref string) (string, error)
 

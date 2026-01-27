@@ -1,0 +1,140 @@
+
+[TestImportWizardView_Options/options_step - 1]
+TestImportWizardView_Options/options_step
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 2,
+        "FilePath": "file.json",
+        "HasContext": true,
+        "Purpose": "Imported workspace",
+        "RepoCount": 1,
+        "PreserveHandle": false,
+        "Force": false,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestImportWizardView_Options/toggle_preserve_handle - 1]
+TestImportWizardView_Options/toggle_preserve_handle
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 2,
+        "FilePath": "file.json",
+        "HasContext": true,
+        "Purpose": "Imported workspace",
+        "RepoCount": 1,
+        "PreserveHandle": true,
+        "Force": false,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestImportWizardView_Options/toggle_force - 1]
+TestImportWizardView_Options/toggle_force
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 2,
+        "FilePath": "file.json",
+        "HasContext": true,
+        "Purpose": "Imported workspace",
+        "RepoCount": 1,
+        "PreserveHandle": false,
+        "Force": true,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---
+
+[TestImportWizardView_Options/both_options_toggled - 1]
+TestImportWizardView_Options/both_options_toggled
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 2,
+        "FilePath": "file.json",
+        "HasContext": true,
+        "Purpose": "Imported workspace",
+        "RepoCount": 1,
+        "PreserveHandle": true,
+        "Force": true,
+        "Done": false,
+        "HasError": false
+      }
+    }
+  ]
+}
+---

@@ -20,7 +20,7 @@ TestCaptureCreateView_EmptyDescription
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "simple-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },

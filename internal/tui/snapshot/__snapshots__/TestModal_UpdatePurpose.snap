@@ -20,7 +20,7 @@ TestModal_UpdatePurpose/view
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "old-purpose-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     }

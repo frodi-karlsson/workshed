@@ -20,7 +20,7 @@ TestHealthView_HealthyWorkspace
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "healthy-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     }

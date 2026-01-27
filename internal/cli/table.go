@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 
@@ -28,6 +29,7 @@ const (
 	FormatTable  Format = "table"
 	FormatJSON   Format = "json"
 	FormatStream Format = "stream"
+	FormatRaw    Format = "raw"
 )
 
 type Output struct {
@@ -230,4 +232,25 @@ func DetectFormatFromFilePath(path string) Format {
 		return FormatJSON
 	}
 	return FormatTable
+}
+
+func ValidFormatsForCommand(cmd string) []string {
+	switch cmd {
+	case "exec":
+		return []string{"stream", "json"}
+	case "path":
+		return []string{"raw", "table", "json"}
+	default:
+		return []string{"table", "json"}
+	}
+}
+
+func ValidateFormat(format Format, cmd string) error {
+	valid := ValidFormatsForCommand(cmd)
+	for _, v := range valid {
+		if format == Format(v) {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported format %q. Valid: %s", format, strings.Join(valid, "|"))
 }

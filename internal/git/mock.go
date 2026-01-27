@@ -13,6 +13,8 @@ type MockGit struct {
 	getRemoteURLResult    string
 	currentBranchErr      error
 	currentBranchResult   string
+	defaultBranchErr      error
+	defaultBranchResult   string
 	revParseErr           error
 	revParseResult        string
 	statusPorcelainErr    error
@@ -21,6 +23,7 @@ type MockGit struct {
 	checkoutCalls         []CheckoutCall
 	getRemoteCalls        []GetRemoteCall
 	currentBranchCalls    []CurrentBranchCall
+	defaultBranchCalls    []DefaultBranchCall
 	revParseCalls         []RevParseCall
 	statusPorcelainCalls  []StatusPorcelainCall
 }
@@ -42,6 +45,10 @@ type GetRemoteCall struct {
 
 type CurrentBranchCall struct {
 	Dir string
+}
+
+type DefaultBranchCall struct {
+	URL string
 }
 
 type RevParseCall struct {
@@ -149,6 +156,35 @@ func (m *MockGit) GetCurrentBranchCalls() []CurrentBranchCall {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return append([]CurrentBranchCall{}, m.currentBranchCalls...)
+}
+
+func (m *MockGit) DefaultBranch(ctx context.Context, url string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.defaultBranchCalls = append(m.defaultBranchCalls, DefaultBranchCall{URL: url})
+	if m.defaultBranchErr != nil {
+		return "", m.defaultBranchErr
+	}
+	return m.defaultBranchResult, nil
+}
+
+func (m *MockGit) SetDefaultBranchErr(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.defaultBranchErr = err
+}
+
+func (m *MockGit) SetDefaultBranchResult(branch string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.defaultBranchResult = branch
+}
+
+func (m *MockGit) GetDefaultBranchCalls() []DefaultBranchCall {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]DefaultBranchCall{}, m.defaultBranchCalls...)
 }
 
 func (m *MockGit) RevParse(ctx context.Context, dir, ref string) (string, error) {

@@ -20,7 +20,7 @@ TestHealthView_DryRun
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },
@@ -29,7 +29,7 @@ TestHealthView_DryRun
       "Data": {
         "Type": "InfoMenuView",
         "Handle": "test-ws",
-        "ItemCount": 4,
+        "ItemCount": 5,
         "SelectedIdx": 0
       }
     }

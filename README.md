@@ -72,7 +72,7 @@ workshed repos remove my-workspace --repo new-repo
 # Output formats: --format table|json (default varies by command)
 workshed list --format json
 workshed captures --format json
-workshed derive --format json
+workshed export --format json
 
 # List and manage workspaces
 workshed list
@@ -182,29 +182,37 @@ The `apply` command attempts to restore git state from a capture. It uses non-in
 
 Apply does not enforce HEAD matching or historical correctness. It attempts the operation and reports success or failure.
 
-### Derive
+### Export
 
-The `derive` command produces machine-readable workspace context as JSON. The output includes:
+The `export` command produces machine-readable workspace configuration as JSON. The output includes:
 
-- Repository paths and metadata
-- Capture history with git state
-- Execution records and timing
-- Aggregate counts and timestamps
+- Repository URLs and refs
+- Workspace purpose
+- Capture metadata (not git state)
 
-This output is designed for tools, scripts, and AI agents that need structured workspace information.
+This output is designed for sharing workspace configurations with teammates or recreating workspaces.
 
 ### Example Usage
 
 ```bash
+# Export workspace configuration
+workshed export > workspace.json
+
+# Export and use with jq
+workshed export | jq '.repositories'
+
+# Import to create a new workspace
+workshed import workspace.json
+
+# Import with original handle
+workshed import workspace.json --preserve-handle
+
 # Capture current state with intent
 workshed capture --name "Before refactor" \
   --description "API change point"
 
 # List captures in JSON format for scripting
 workshed captures --format json | jq '.[].name'
-
-# Inspect recent captures via derived context
-workshed derive | jq '.captures[:3]'
 
 # Attempt to restore a previous capture
 workshed apply 01HVABCDEFG
@@ -230,7 +238,8 @@ workshed captures
 | `workshed capture` | Record a descriptive snapshot of git state |
 | `workshed captures` | List captures for a workspace |
 | `workshed apply` | Attempt to restore git state from a capture |
-| `workshed derive` | Generate workspace context as JSON |
+| `workshed export` | Export workspace configuration |
+| `workshed import` | Create workspace from exported JSON |
 | `workshed health` | Check workspace health |
 | `workshed repos add` | Add repository to workspace |
 | `workshed repos remove` | Remove repository from workspace |
@@ -263,7 +272,7 @@ Most commands support `--format table|json` for structured output:
 | `repos add` | table | Shows added repositories |
 | `repos remove` | table | Shows removed repository |
 | `update` | table | Shows updated purpose |
-| `derive` | table | Auto-detects from `--output` extension |
+| `export` | table | Auto-detects from `--output` extension |
 | `exec` | stream | Raw command output by default |
 
 JSON output is designed for scripting and automation.

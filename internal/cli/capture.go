@@ -37,6 +37,13 @@ func (r *Runner) Capture(args []string) {
 		return
 	}
 
+	if err := ValidateFormat(Format(*format), "capture"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
+		r.ExitFunc(1)
+		return
+	}
+
 	if *name == "" {
 		l.Error("missing required flag --name")
 		fs.Usage()

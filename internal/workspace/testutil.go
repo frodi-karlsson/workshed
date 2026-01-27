@@ -235,3 +235,14 @@ func CreateGitBranch(repoDir, branchName string) error {
 	}
 	return nil
 }
+
+func ChangeDefaultBranch(t *testing.T, repoDir, branchName string) {
+	if err := CreateGitBranch(repoDir, branchName); err != nil {
+		t.Fatalf("Failed to create branch %s: %v", branchName, err)
+	}
+	cmd := exec.Command("git", "branch", "-M", branchName)
+	cmd.Dir = repoDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to rename default branch to %s: %v\n%s", branchName, err, out)
+	}
+}

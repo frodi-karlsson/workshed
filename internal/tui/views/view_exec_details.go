@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/frodi/workshed/internal/tui/components"
@@ -21,7 +20,7 @@ type ExecDetailsView struct {
 	exec        *workspace.ExecutionRecord
 	outputs     map[string]string
 	selectedTab int
-	vp          viewport.Model
+	vp          components.Scrollable
 	size        measure.Window
 }
 
@@ -61,8 +60,7 @@ func NewExecDetailsView(s workspace.Store, ctx context.Context, handle, execID s
 		}
 	}
 
-	vp := viewport.New(80, 20)
-	vp.KeyMap = viewport.KeyMap{}
+	vp := components.NewScrollable(80, 20)
 
 	return &ExecDetailsView{
 		store:       s,
@@ -80,8 +78,7 @@ func (v *ExecDetailsView) Init() tea.Cmd { return nil }
 
 func (v *ExecDetailsView) SetSize(size measure.Window) {
 	v.size = size
-	v.vp.Width = size.ModalWidth() - 4
-	v.vp.Height = size.ModalHeight() - 18
+	v.vp.SetSize(size.ModalWidth()-4, size.ModalHeight()-18)
 	v.updateViewportContent()
 }
 
@@ -129,12 +126,12 @@ func (v *ExecDetailsView) prevTab() (ViewResult, tea.Cmd) {
 }
 
 func (v *ExecDetailsView) scrollUp() (ViewResult, tea.Cmd) {
-	v.vp.LineUp(1)
+	v.vp.LineUp()
 	return ViewResult{}, nil
 }
 
 func (v *ExecDetailsView) scrollDown() (ViewResult, tea.Cmd) {
-	v.vp.LineDown(1)
+	v.vp.LineDown()
 	return ViewResult{}, nil
 }
 
@@ -234,19 +231,9 @@ func (v *ExecDetailsView) View() string {
 	}
 	content += "\n\n"
 
-	v.vp.Width = v.size.ModalWidth() - 6
-	v.vp.Height = v.size.ModalHeight() - 18
 	v.updateViewportContent()
 
-	outputBox := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(components.ColorBorder).
-		Padding(1).
-		Width(v.size.ModalWidth() - 4).
-		Height(v.size.ModalHeight() - 17).
-		Render(v.vp.View())
-
-	content += outputBox
+	content += v.vp.View()
 	content += "\n" + dimStyle.Render(GenerateHelp(v.KeyBindings()))
 
 	return ModalFrame(v.size).Render(content)

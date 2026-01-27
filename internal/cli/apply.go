@@ -39,6 +39,13 @@ func (r *Runner) Apply(args []string) {
 		return
 	}
 
+	if err := ValidateFormat(Format(*format), "apply"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
+		r.ExitFunc(1)
+		return
+	}
+
 	ctx := context.Background()
 
 	providedHandle := ""
@@ -88,6 +95,29 @@ func (r *Runner) Apply(args []string) {
 		return
 	}
 
+	preflight, err := s.PreflightApply(ctx, handle, captureID)
+	if err != nil {
+		l.Error("preflight check failed", "handle", handle, "capture", captureID, "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	if !preflight.Valid {
+		logger.SafeFprintf(r.Stderr, "ERROR: apply blocked by preflight errors\n\n")
+		logger.SafeFprintf(r.Stderr, "Problems found:\n")
+		for _, e := range preflight.Errors {
+			hint := preflightErrorHint(e.Reason)
+			logger.SafeFprintf(r.Stderr, "  - %s: %s\n", e.Repository, e.Details)
+			if hint != "" {
+				logger.SafeFprintf(r.Stderr, "    Hint: %s\n", hint)
+			}
+		}
+		logger.SafeFprintf(r.Stderr, "\n")
+		l.Error("preflight validation failed", "handle", handle, "capture", captureID, "error_count", len(preflight.Errors))
+		r.ExitFunc(1)
+		return
+	}
+
 	if err := s.ApplyCapture(ctx, handle, captureID); err != nil {
 		l.Error("apply failed", "handle", handle, "capture", captureID, "error", err)
 		r.ExitFunc(1)
@@ -115,5 +145,22 @@ func (r *Runner) Apply(args []string) {
 
 	if err := r.getOutputRenderer().Render(output, effectiveFormat, r.Stdout); err != nil {
 		l.Error("failed to render output", "error", err)
+	}
+}
+
+func preflightErrorHint(reason string) string {
+	switch reason {
+	case "dirty_working_tree":
+		return "Commit, stash, or discard your changes before applying"
+	case "missing_repository":
+		return "The capture references repos not in your workspace. To apply, either add these repos with 'repos add', or choose a capture that matches your workspace"
+	case "not_a_git_repository":
+		return "This directory is not a git repository"
+	case "checkout_failed":
+		return "Check that the ref exists in the repository"
+	case "head_mismatch":
+		return "The branch has diverged; reset or merge first"
+	default:
+		return ""
 	}
 }

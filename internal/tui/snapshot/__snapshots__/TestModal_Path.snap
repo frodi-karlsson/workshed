@@ -20,7 +20,7 @@ TestModal_Path/view
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     }

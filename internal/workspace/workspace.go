@@ -138,6 +138,9 @@ type Store interface {
 	GetCapture(ctx context.Context, handle, captureID string) (*Capture, error)
 	ListCaptures(ctx context.Context, handle string) ([]Capture, error)
 
-	// Context derivation
-	DeriveContext(ctx context.Context, handle string) (*WorkspaceContext, error)
+	// Context export
+	ExportContext(ctx context.Context, handle string) (*WorkspaceContext, error)
+
+	// Import creates a workspace from an exported context.
+	ImportContext(ctx context.Context, opts ImportOptions) (*Workspace, error)
 }

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/frodi/workshed/internal/fs"
 	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/handle"
 	"github.com/oklog/ulid/v2"
@@ -667,7 +668,7 @@ func (s *FSStore) writeMetadataToDir(ws *Workspace, dir string) error {
 		return fmt.Errorf("marshaling metadata: %w", err)
 	}
 
-	if err := os.WriteFile(metaPath, data, 0644); err != nil {
+	if err := fs.WriteJson(metaPath, data); err != nil {
 		return fmt.Errorf("writing metadata file: %w", err)
 	}
 
@@ -699,7 +700,16 @@ func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir, invocat
 
 	// Fallback to "main" for remote repos or if branch detection failed
 	if ref == "" {
-		ref = "main"
+		if isLocalPath(url) {
+			ref = "main"
+		} else {
+			defaultBranch, err := s.git.DefaultBranch(ctx, url)
+			if err == nil && defaultBranch != "" {
+				ref = defaultBranch
+			} else {
+				ref = "main"
+			}
+		}
 	}
 
 	repoDir := filepath.Join(wsDir, repo.Name)
@@ -871,7 +881,7 @@ func (s *FSStore) RecordExecution(ctx context.Context, handle string, record Exe
 			if out, ok := outputMap[result.Repository]; ok {
 				if len(out.Output) > 0 {
 					stdoutPath := filepath.Join(stdoutDir, result.Repository+".txt")
-					if err := os.WriteFile(stdoutPath, out.Output, 0644); err != nil {
+					if err := fs.WriteText(stdoutPath, out.Output); err != nil {
 						return fmt.Errorf("writing stdout for %s: %w", result.Repository, err)
 					}
 				}
@@ -888,7 +898,7 @@ func (s *FSStore) RecordExecution(ctx context.Context, handle string, record Exe
 	if err != nil {
 		return fmt.Errorf("marshaling execution record: %w", err)
 	}
-	if err := os.WriteFile(recordPath, data, 0644); err != nil {
+	if err := fs.WriteJson(recordPath, data); err != nil {
 		return fmt.Errorf("writing execution record: %w", err)
 	}
 
@@ -1025,7 +1035,7 @@ func (s *FSStore) CaptureState(ctx context.Context, handle string, opts CaptureO
 	if err != nil {
 		return nil, fmt.Errorf("marshaling capture: %w", err)
 	}
-	if err := os.WriteFile(capturePath, data, 0644); err != nil {
+	if err := fs.WriteJson(capturePath, data); err != nil {
 		return nil, fmt.Errorf("writing capture: %w", err)
 	}
 
@@ -1199,7 +1209,7 @@ func (s *FSStore) ListCaptures(ctx context.Context, handle string) ([]Capture, e
 	return captures, nil
 }
 
-func (s *FSStore) DeriveContext(ctx context.Context, handle string) (*WorkspaceContext, error) {
+func (s *FSStore) ExportContext(ctx context.Context, handle string) (*WorkspaceContext, error) {
 	ws, err := s.Get(ctx, handle)
 	if err != nil {
 		return nil, err
@@ -1217,11 +1227,21 @@ func (s *FSStore) DeriveContext(ctx context.Context, handle string) (*WorkspaceC
 
 	repos := make([]ContextRepo, len(ws.Repositories))
 	for i, repo := range ws.Repositories {
+		ref := repo.Ref
+		// Detect ref if not stored (backward compatibility)
+		if ref == "" {
+			repoDir := filepath.Join(ws.Path, repo.Name)
+			currentBranch, err := s.git.CurrentBranch(ctx, repoDir)
+			if err == nil && currentBranch != "" {
+				ref = currentBranch
+			}
+		}
 		repos[i] = ContextRepo{
 			Name:     repo.Name,
 			Path:     filepath.Join(ws.Path, repo.Name),
 			URL:      repo.URL,
 			RootPath: repo.Name,
+			Ref:      ref,
 		}
 	}
 
@@ -1265,4 +1285,63 @@ func (s *FSStore) DeriveContext(ctx context.Context, handle string) (*WorkspaceC
 			LastCapturedAt:  lastCaptured,
 		},
 	}, nil
+}
+
+func (s *FSStore) ImportContext(ctx context.Context, opts ImportOptions) (*Workspace, error) {
+	if opts.Context == nil {
+		return nil, errors.New("context is required")
+	}
+	if opts.Context.Version != ContextVersion {
+		return nil, fmt.Errorf("unsupported context version: %d (expected %d)", opts.Context.Version, ContextVersion)
+	}
+	if opts.Context.Purpose == "" {
+		return nil, errors.New("purpose is required")
+	}
+	if len(opts.Context.Repositories) == 0 {
+		return nil, errors.New("at least one repository is required")
+	}
+
+	wsHandle := opts.Context.Handle
+	if !opts.PreserveHandle {
+		gen := handle.NewGenerator()
+		newHandle, err := gen.GenerateUnique(func(h string) bool {
+			_, err := s.Get(ctx, h)
+			return err == nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("generating handle: %w", err)
+		}
+		wsHandle = newHandle
+	}
+
+	if opts.PreserveHandle {
+		_, err := s.Get(ctx, wsHandle)
+		if err == nil {
+			if !opts.Force {
+				return nil, fmt.Errorf("workspace with handle '%s' already exists; use --force to overwrite", wsHandle)
+			}
+			if err := s.Remove(ctx, wsHandle); err != nil {
+				return nil, fmt.Errorf("failed to remove existing workspace: %w", err)
+			}
+		}
+	}
+
+	repos := make([]RepositoryOption, len(opts.Context.Repositories))
+	for i, ctxRepo := range opts.Context.Repositories {
+		repos[i] = RepositoryOption{
+			URL: ctxRepo.URL,
+			Ref: ctxRepo.Ref,
+		}
+	}
+
+	workspace, err := s.Create(ctx, CreateOptions{
+		Purpose:       opts.Context.Purpose,
+		Repositories:  repos,
+		InvocationCWD: opts.InvocationCWD,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating workspace: %w", err)
+	}
+
+	return workspace, nil
 }

@@ -80,7 +80,7 @@ TestDashboardView_FilterMode/filter_enter_opens_menu
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     }

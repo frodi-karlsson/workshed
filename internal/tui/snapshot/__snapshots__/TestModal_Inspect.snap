@@ -20,7 +20,7 @@ TestModal_Inspect/workspace
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "my-workspace",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },
@@ -29,7 +29,7 @@ TestModal_Inspect/workspace
       "Data": {
         "Type": "InfoMenuView",
         "Handle": "my-workspace",
-        "ItemCount": 4,
+        "ItemCount": 5,
         "SelectedIdx": 0
       }
     }
@@ -58,7 +58,7 @@ TestModal_Inspect/single_repo
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "single-repo",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },
@@ -67,7 +67,7 @@ TestModal_Inspect/single_repo
       "Data": {
         "Type": "InfoMenuView",
         "Handle": "single-repo",
-        "ItemCount": 4,
+        "ItemCount": 5,
         "SelectedIdx": 0
       }
     }
@@ -96,7 +96,7 @@ TestModal_Inspect/no_repos
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "no-repos",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },
@@ -105,7 +105,7 @@ TestModal_Inspect/no_repos
       "Data": {
         "Type": "InfoMenuView",
         "Handle": "no-repos",
-        "ItemCount": 4,
+        "ItemCount": 5,
         "SelectedIdx": 0
       }
     }
@@ -134,7 +134,7 @@ TestModal_Inspect/dismiss_esc
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     }

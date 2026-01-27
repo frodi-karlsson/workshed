@@ -1,6 +1,6 @@
 
-[TestHealthView_ToggleDryRun - 1]
-dry_run_on
+[TestImportWizardView_Success/import_completes - 1]
+TestImportWizardView_Success/import_completes
 {
   "Views": [
     {
@@ -10,26 +10,32 @@ dry_run_on
         "FilterMode": false,
         "FilterQuery": "",
         "SortOrder": "Created ↓",
-        "ItemCount": 1,
+        "ItemCount": 0,
         "SelectedIndex": 0,
         "HasError": false
       }
     },
     {
-      "Type": "*views.ResourceMenuView",
+      "Type": "*views.ImportWizardView",
       "Data": {
-        "Type": "ResourceMenuView",
-        "Handle": "test-ws",
-        "ItemCount": 6,
-        "SelectedIdx": 0
+        "Type": "ImportWizardView",
+        "Step": 2,
+        "FilePath": "file.json",
+        "HasContext": true,
+        "Purpose": "Imported workspace",
+        "RepoCount": 1,
+        "PreserveHandle": false,
+        "Force": false,
+        "Done": true,
+        "HasError": false
       }
     }
   ]
 }
 ---
 
-[TestHealthView_ToggleDryRun - 2]
-dry_run_off
+[TestImportWizardView_Success/dismiss_success - 1]
+TestImportWizardView_Success/dismiss_success
 {
   "Views": [
     {
@@ -39,18 +45,9 @@ dry_run_off
         "FilterMode": false,
         "FilterQuery": "",
         "SortOrder": "Created ↓",
-        "ItemCount": 1,
+        "ItemCount": 0,
         "SelectedIndex": 0,
         "HasError": false
-      }
-    },
-    {
-      "Type": "*views.ResourceMenuView",
-      "Data": {
-        "Type": "ResourceMenuView",
-        "Handle": "test-ws",
-        "ItemCount": 6,
-        "SelectedIdx": 0
       }
     }
   ]

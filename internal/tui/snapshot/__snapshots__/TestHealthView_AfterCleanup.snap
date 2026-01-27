@@ -20,7 +20,7 @@ TestHealthView_AfterCleanup
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },
@@ -29,7 +29,7 @@ TestHealthView_AfterCleanup
       "Data": {
         "Type": "InfoMenuView",
         "Handle": "test-ws",
-        "ItemCount": 4,
+        "ItemCount": 5,
         "SelectedIdx": 0
       }
     },
@@ -41,7 +41,7 @@ TestHealthView_AfterCleanup
         "Purpose": "Test workspace",
         "Path": "",
         "RepoCount": 0,
-        "CreatedDate": "Jan 26, 2026"
+        "CreatedDate": "Jan 27, 2026"
       }
     }
   ]

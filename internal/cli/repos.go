@@ -27,7 +27,12 @@ func (r *Runner) Repos(args []string) {
 		r.ReposUsage()
 	default:
 		logger.SafeFprintf(r.Stderr, "Unknown repos subcommand: %s\n\n", subcommand)
-		r.ReposUsage()
+		logger.SafeFprintf(r.Stderr, "Use a workspace handle, or run from within a workspace directory:\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos add [<handle>] --repo <url>\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos remove [<handle>] --repo <name>\n\n")
+		logger.SafeFprintf(r.Stderr, "Or cd into a workspace and omit the handle:\n")
+		logger.SafeFprintf(r.Stderr, "  cd $(workshed path)\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos add --repo <url>\n\n")
 		r.ExitFunc(1)
 	}
 }
@@ -36,17 +41,21 @@ func (r *Runner) ReposUsage() {
 	msg := `workshed repos - Manage repositories in a workspace
 
 Usage:
-  workshed <handle> repos add --repo url[@ref]...
-  workshed <handle> repos remove --repo <name>
+  workshed repos add [<handle>] --repo url[@ref]...
+  workshed repos remove [<handle>] --repo <name>
 
 Subcommands:
   add     Add repositories to a workspace
   remove  Remove a repository from a workspace
 
 Examples:
-  workshed my-workspace repos add --repo https://github.com/org/repo@main
+  workshed repos add --repo https://github.com/org/repo@main
 
-  workshed my-workspace repos remove --repo my-repo
+  workshed repos remove --repo my-repo
+
+  # From within a workspace:
+  cd $(workshed path)
+  workshed repos add --repo https://github.com/org/repo@main
 `
 	logger.SafeFprintf(r.Stderr, "%s\n", msg)
 }
@@ -62,18 +71,25 @@ func (r *Runner) ReposAdd(args []string) {
 	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed <handle> repos add --repo url[@ref]... [flags]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed repos add [<handle>] --repo url[@ref]... [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Add repositories to a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed my-workspace repos add --repo github.com/org/new-repo@main\n")
-		logger.SafeFprintf(r.Stderr, "  workshed my-workspace repos add -r github.com/org/repo1 -r github.com/org/repo2\n")
-		logger.SafeFprintf(r.Stderr, "  workshed my-workspace repos add --repo ./local-lib\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos add --repo github.com/org/new-repo@main\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos add -r github.com/org/repo1 -r github.com/org/repo2\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos add my-workspace --repo ./local-lib\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	if err := ValidateFormat(Format(*format), "repos"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
 		r.ExitFunc(1)
 		return
 	}
@@ -153,16 +169,24 @@ func (r *Runner) ReposRemove(args []string) {
 	format := fs.String("format", "table", "Output format (table|json)")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed <handle> repos remove --repo <name> [flags]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed repos remove [<handle>] --repo <name> [flags]\n\n")
 		logger.SafeFprintf(r.Stderr, "Remove a repository from a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
-		logger.SafeFprintf(r.Stderr, "  workshed my-workspace repos remove --repo my-repo\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos remove --repo my-repo\n")
+		logger.SafeFprintf(r.Stderr, "  workshed repos remove my-workspace --repo my-repo\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
+		r.ExitFunc(1)
+		return
+	}
+
+	if err := ValidateFormat(Format(*format), "repos"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
 		r.ExitFunc(1)
 		return
 	}

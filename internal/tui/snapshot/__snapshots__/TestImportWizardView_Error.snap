@@ -1,0 +1,35 @@
+
+[TestImportWizardView_Error/file_not_found - 1]
+TestImportWizardView_Error/file_not_found
+{
+  "Views": [
+    {
+      "Type": "*views.DashboardView",
+      "Data": {
+        "Type": "DashboardView",
+        "FilterMode": false,
+        "FilterQuery": "",
+        "SortOrder": "Created ↓",
+        "ItemCount": 0,
+        "SelectedIndex": 0,
+        "HasError": false
+      }
+    },
+    {
+      "Type": "*views.ImportWizardView",
+      "Data": {
+        "Type": "ImportWizardView",
+        "Step": 0,
+        "FilePath": "nonexistent.json",
+        "HasContext": false,
+        "Purpose": "",
+        "RepoCount": 0,
+        "PreserveHandle": false,
+        "Force": false,
+        "Done": false,
+        "HasError": true
+      }
+    }
+  ]
+}
+---

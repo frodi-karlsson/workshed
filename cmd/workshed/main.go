@@ -53,12 +53,16 @@ func main() {
 		r.Capture(os.Args[2:])
 	case "apply":
 		r.Apply(os.Args[2:])
-	case "derive":
-		r.Derive(os.Args[2:])
+	case "export":
+		r.Export(os.Args[2:])
+	case "import":
+		r.Import(os.Args[2:])
 	case "captures":
 		r.Captures(os.Args[2:])
 	case "health":
 		r.Health(os.Args[2:])
+	case "completion":
+		r.Completion(os.Args[2:])
 	case "dashboard":
 		r.RunMainDashboard()
 	case "version", "-v", "--version":
@@ -66,8 +70,8 @@ func main() {
 	case "help", "-h", "--help":
 		r.Usage()
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
-		r.Usage()
+		fmt.Fprintf(os.Stderr, "Unknown command: %q\n", command)
+		fmt.Fprintf(os.Stderr, "Run 'workshed help' for available commands\n")
 		os.Exit(1)
 	}
 }

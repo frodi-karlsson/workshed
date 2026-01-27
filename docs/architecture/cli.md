@@ -18,7 +18,7 @@ Create logger -> Parse flags -> Validate inputs -> Execute -> Handle errors
 
 Commands are functions in `internal/cli/`:
 - `Create`, `List`, `Inspect`, `Path`, `Exec`, `Remove`, `Update`, `Repos`
-- `Capture`, `Apply`, `Derive`, `Captures`, `Health`
+- `Capture`, `Apply`, `Export`, `Captures`, `Health`
 
 ### Dependencies
 
@@ -132,7 +132,7 @@ Workshed provides commands for state management:
   workshed apply my-workspace --name "Starting point"
   ```
 
-- **derive**: Generates workspace context as JSON, including repository paths, metadata, and artifact counts.
+- **export**: Generates workspace configuration as JSON, including repository URLs, refs, and purpose.
 - **health**: Checks workspace health, reporting issues like stale executions (>30 days).
 
 These commands compose primitive operations from the workspace package.

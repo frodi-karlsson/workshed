@@ -20,7 +20,7 @@ TestCaptureCreateView_MultipleReposMixed
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "mixed-state-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },

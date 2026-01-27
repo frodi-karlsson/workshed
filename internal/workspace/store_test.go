@@ -602,8 +602,8 @@ func TestListExecutions(t *testing.T) {
 	})
 }
 
-func TestDeriveContext(t *testing.T) {
-	t.Run("should derive context for workspace", func(t *testing.T) {
+func TestExportContext(t *testing.T) {
+	t.Run("should export context for workspace", func(t *testing.T) {
 		root := t.TempDir()
 		store, err := NewFSStore(root)
 		if err != nil {
@@ -619,9 +619,9 @@ func TestDeriveContext(t *testing.T) {
 			t.Fatalf("Create failed: %v", err)
 		}
 
-		context, err := store.DeriveContext(ctx, ws.Handle)
+		context, err := store.ExportContext(ctx, ws.Handle)
 		if err != nil {
-			t.Fatalf("DeriveContext failed: %v", err)
+			t.Fatalf("ExportContext failed: %v", err)
 		}
 		if context.Version != ContextVersion {
 			t.Errorf("Expected version %d, got: %d", ContextVersion, context.Version)
@@ -825,6 +825,135 @@ func TestPreflightApply(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("Expected missing repository error, got: %v", result.Errors)
+		}
+	})
+}
+
+func TestExportContext_RefHandling(t *testing.T) {
+	t.Run("includes ref from stored repository", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetCurrentBranchResult("main")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/test/repo", Ref: "develop"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		context, err := store.ExportContext(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("ExportContext failed: %v", err)
+		}
+
+		if len(context.Repositories) != 1 {
+			t.Fatalf("Expected 1 repository, got %d", len(context.Repositories))
+		}
+
+		if context.Repositories[0].Ref != "develop" {
+			t.Errorf("Expected ref 'develop', got %q", context.Repositories[0].Ref)
+		}
+	})
+
+	t.Run("detects ref for workspace without stored ref", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetCurrentBranchResult("feature-branch")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/test/repo"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		context, err := store.ExportContext(ctx, ws.Handle)
+		if err != nil {
+			t.Fatalf("ExportContext failed: %v", err)
+		}
+
+		if context.Repositories[0].Ref != "feature-branch" {
+			t.Errorf("Expected ref 'feature-branch', got %q", context.Repositories[0].Ref)
+		}
+	})
+}
+
+func TestImportContext_RefHandling(t *testing.T) {
+	t.Run("preserves ref when importing", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		imported, err := store.ImportContext(ctx, ImportOptions{
+			Context: &WorkspaceContext{
+				Version: 1,
+				Handle:  "test-workspace",
+				Purpose: "Imported workspace",
+				Repositories: []ContextRepo{
+					{Name: "repo", URL: "https://github.com/test/repo", Ref: "v1.0.0"},
+				},
+			},
+		})
+		if err != nil {
+			t.Fatalf("ImportContext failed: %v", err)
+		}
+
+		if len(imported.Repositories) != 1 {
+			t.Fatalf("Expected 1 repository, got %d", len(imported.Repositories))
+		}
+
+		if imported.Repositories[0].Ref != "v1.0.0" {
+			t.Errorf("Expected ref 'v1.0.0', got %q", imported.Repositories[0].Ref)
+		}
+	})
+
+	t.Run("generates new handle when not preserving", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		imported, err := store.ImportContext(ctx, ImportOptions{
+			Context: &WorkspaceContext{
+				Version: 1,
+				Handle:  "original-handle",
+				Purpose: "Imported workspace",
+				Repositories: []ContextRepo{
+					{Name: "repo", URL: "https://github.com/test/repo", Ref: "main"},
+				},
+			},
+			PreserveHandle: false,
+		})
+		if err != nil {
+			t.Fatalf("ImportContext failed: %v", err)
+		}
+
+		if imported.Handle == "original-handle" {
+			t.Error("Expected new handle to be generated")
 		}
 	})
 }

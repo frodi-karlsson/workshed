@@ -31,6 +31,13 @@ func (r *Runner) List(args []string) {
 		r.ExitFunc(1)
 	}
 
+	if err := ValidateFormat(Format(*format), "list"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
+		r.ExitFunc(1)
+		return
+	}
+
 	s := r.getStore()
 
 	opts := workspace.ListOptions{

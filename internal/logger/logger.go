@@ -116,12 +116,21 @@ func (l *Logger) logHuman(level, msg string, args []interface{}) {
 	}
 
 	if len(args) > 0 {
+		hintFound := false
 		for i := 0; i < len(args); i += 2 {
 			if i+1 < len(args) {
-				if _, ok := args[i+1].(string); ok {
-					l.log.Printf("  %s: %q", args[i], args[i+1])
+				key := args[i]
+				value := args[i+1]
+
+				if key == "hint" {
+					if !hintFound {
+						l.log.Printf("  hint: %v", value)
+						hintFound = true
+					}
+				} else if _, ok := value.(string); ok {
+					l.log.Printf("  %s: %q", key, value)
 				} else {
-					l.log.Printf("  %s: %v", args[i], args[i+1])
+					l.log.Printf("  %s: %v", key, value)
 				}
 			}
 		}

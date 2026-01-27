@@ -141,7 +141,7 @@ func TestModal_Remove(t *testing.T) {
 		}),
 	})
 	scenario.Enter("Open resource menu")
-	scenario.Key("x", "Navigate to remove")
+	scenario.Key("d", "Navigate to delete")
 	output := scenario.Record()
 	snapshot.Match(t, t.Name(), output)
 }

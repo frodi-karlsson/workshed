@@ -41,6 +41,7 @@ func NewInfoMenuView(s workspace.Store, ctx context.Context, handle string) Info
 		InfoMenuItem{key: "p", title: "[p] Path", description: "Copy path to clipboard"},
 		InfoMenuItem{key: "u", title: "[u] Update", description: "Edit purpose"},
 		InfoMenuItem{key: "h", title: "[h] Health", description: "Check workspace health"},
+		InfoMenuItem{key: "e", title: "[e] Export", description: "Export workspace configuration"},
 	}
 
 	l := list.New(items, list.NewDefaultDelegate(), 30, MaxListHeight)
@@ -141,6 +142,9 @@ func (v *InfoMenuView) handleInfoAction(item InfoMenuItem) ViewResult {
 	case "h":
 		healthView := NewHealthView(v.store, v.ctx, v.handle)
 		return ViewResult{NextView: healthView}
+	case "e":
+		exportView := NewExportView(v.store, v.ctx, v.handle)
+		return ViewResult{NextView: &exportView}
 	}
 	return ViewResult{}
 }

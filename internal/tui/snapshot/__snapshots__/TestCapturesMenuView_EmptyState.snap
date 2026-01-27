@@ -20,7 +20,7 @@ TestCapturesMenuView_EmptyState
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "empty-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },

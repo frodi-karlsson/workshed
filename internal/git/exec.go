@@ -71,6 +71,30 @@ func (RealGit) CurrentBranch(ctx context.Context, dir string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+func (RealGit) DefaultBranch(ctx context.Context, url string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", "ls-remote", "--symref", url, "+HEAD")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", ClassifyError("default-branch", err, output)
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "ref: ") {
+			// Line format: "ref: refs/heads/<branch>  HEAD"
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				ref := parts[1]
+				if strings.HasPrefix(ref, "refs/heads/") {
+					return strings.TrimPrefix(ref, "refs/heads/"), nil
+				}
+			}
+		}
+	}
+
+	return "", nil
+}
+
 func (RealGit) RevParse(ctx context.Context, dir, ref string) (string, error) {
 	absDir, err := filepath.Abs(dir)
 	if err != nil {

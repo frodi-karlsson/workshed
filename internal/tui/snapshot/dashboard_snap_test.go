@@ -355,7 +355,7 @@ func TestDashboardView_ResourceMenuActions(t *testing.T) {
 			}),
 		})
 		scenario.Enter("Open resource menu")
-		scenario.Key("x", "Select remove")
+		scenario.Key("d", "Select delete")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
 	})
@@ -369,7 +369,7 @@ func TestDashboardView_ResourceMenuModals(t *testing.T) {
 			}),
 		})
 		scenario.Enter("Open resource menu")
-		scenario.Key("x", "Select remove")
+		scenario.Key("d", "Select delete")
 		scenario.Key("n", "Dismiss removal")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)
@@ -382,7 +382,7 @@ func TestDashboardView_ResourceMenuModals(t *testing.T) {
 			}),
 		})
 		scenario.Enter("Open resource menu")
-		scenario.Key("x", "Select remove")
+		scenario.Key("d", "Select delete")
 		scenario.Key("y", "Confirm removal")
 		output := scenario.Record()
 		snapshot.Match(t, t.Name(), output)

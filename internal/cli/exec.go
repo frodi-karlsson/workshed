@@ -30,6 +30,7 @@ func (r *Runner) Exec(args []string) {
 
 	fs.Usage = func() {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed exec [<handle>] -- <command>... [flags]\n\n")
+		logger.SafeFprintf(r.Stderr, "Run a command in all repositories of a workspace.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
@@ -42,6 +43,13 @@ func (r *Runner) Exec(args []string) {
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
 		r.ExitFunc(1)
+	}
+
+	if err := ValidateFormat(Format(*format), "exec"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
+		r.ExitFunc(1)
+		return
 	}
 
 	sepIdx := -1
@@ -69,7 +77,7 @@ func (r *Runner) Exec(args []string) {
 	ctx := context.Background()
 
 	providedHandle := ""
-	if fs.NArg() >= 1 {
+	if sepIdx > 0 && fs.NArg() >= 1 {
 		providedHandle = fs.Arg(0)
 	}
 	handle := r.ResolveHandle(ctx, providedHandle, l)

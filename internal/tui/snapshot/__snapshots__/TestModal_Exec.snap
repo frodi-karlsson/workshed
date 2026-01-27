@@ -19,7 +19,7 @@ TestModal_Exec/view
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "multi-repo-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },
@@ -67,7 +67,7 @@ TestModal_Exec/dismiss_esc
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "test-ws",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },

@@ -115,13 +115,15 @@ Commands:
   captures   List captures
   capture    Create a capture
   apply      Apply a captured state
-  derive     Derive workspace context
+  export     Export workspace configuration
   remove     Remove a workspace
   update     Update workspace purpose
+  health     Check workspace health
+  completion Generate shell completion
 
 Flags:
   -h, --help     Show help
-  --format       Output format (table|json) for supported commands
+  --format       Output format (table|json|raw) for supported commands
 
 Environment:
   WORKSHED_ROOT  Root directory for workspaces (default: ~/.workshed/workspaces)
@@ -150,7 +152,10 @@ workshed apply --name "Before changes"
 workshed list --purpose "payment"
 
 # Remove a workspace
-workshed remove
+workshed remove -y
+
+# Generate shell completion
+workshed completion --shell bash >> ~/.bash_completion
 `
 	logger.SafeFprintf(r.Stderr, "%s\n", msg)
 }

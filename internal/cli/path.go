@@ -11,7 +11,7 @@ func (r *Runner) Path(args []string) {
 	l := r.getLogger()
 
 	fs := flag.NewFlagSet("path", flag.ExitOnError)
-	format := fs.String("format", "table", "Output format (table|json)")
+	format := fs.String("format", "raw", "Output format (raw|table|json)")
 
 	fs.Usage = func() {
 		logger.SafeFprintf(r.Stderr, "Usage: workshed path [<handle>] [flags]\n\n")
@@ -23,11 +23,19 @@ func (r *Runner) Path(args []string) {
 		logger.SafeFprintf(r.Stderr, "  workshed path my-workspace\n")
 		logger.SafeFprintf(r.Stderr, "  cd $(workshed path)\n")
 		logger.SafeFprintf(r.Stderr, "  ls $(workshed path)\n")
+		logger.SafeFprintf(r.Stderr, "  workshed path --format table\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		l.Error("failed to parse flags", "error", err)
 		r.ExitFunc(1)
+	}
+
+	if err := ValidateFormat(Format(*format), "path"); err != nil {
+		l.Error(err.Error())
+		fs.Usage()
+		r.ExitFunc(1)
+		return
 	}
 
 	ctx := context.Background()
@@ -43,6 +51,11 @@ func (r *Runner) Path(args []string) {
 	if err != nil {
 		l.Error("failed to get workspace path", "handle", handle, "error", err)
 		r.ExitFunc(1)
+		return
+	}
+
+	if *format == "raw" {
+		logger.SafeFprintln(r.Stdout, path)
 		return
 	}
 

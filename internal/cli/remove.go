@@ -16,17 +16,17 @@ func (r *Runner) Remove(args []string) {
 	l := r.getLogger()
 
 	fs := flag.NewFlagSet("remove", flag.ExitOnError)
-	force := fs.Bool("force", false, "Skip confirmation prompt")
+	yes := fs.BoolP("yes", "y", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
-		logger.SafeFprintf(r.Stderr, "Usage: workshed remove [<handle>] [--force]\n\n")
+		logger.SafeFprintf(r.Stderr, "Usage: workshed remove [<handle>] [--yes]\n\n")
 		logger.SafeFprintf(r.Stderr, "Delete a workspace and all its repositories.\n\n")
 		logger.SafeFprintf(r.Stderr, "Flags:\n")
 		fs.PrintDefaults()
 		logger.SafeFprintf(r.Stderr, "\nExamples:\n")
 		logger.SafeFprintf(r.Stderr, "  workshed remove\n")
 		logger.SafeFprintf(r.Stderr, "  workshed remove my-workspace\n")
-		logger.SafeFprintf(r.Stderr, "  workshed remove --force\n")
+		logger.SafeFprintf(r.Stderr, "  workshed remove -y\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -34,9 +34,9 @@ func (r *Runner) Remove(args []string) {
 		r.ExitFunc(1)
 	}
 
-	if !*force {
+	if !*yes {
 		if !term.IsTerminal(os.Stdin.Fd()) {
-			l.Error("refusing to run interactively in non-terminal; use --force to skip confirmation", "hint", "workshed remove <handle> --force")
+			l.Error("cannot prompt for confirmation in non-interactive mode", "hint", "use --yes or -y to skip confirmation")
 			r.ExitFunc(1)
 			return
 		}
@@ -58,7 +58,7 @@ func (r *Runner) Remove(args []string) {
 		return
 	}
 
-	if !*force {
+	if !*yes {
 		prompt := fmt.Sprintf("Remove workspace %q (%s)? [y/N]: ", ws.Handle, ws.Purpose)
 		if _, err := fmt.Fprint(r.Stdout, prompt); err != nil {
 			l.Error("failed to write prompt", "error", err)
@@ -85,7 +85,7 @@ func (r *Runner) Remove(args []string) {
 		r.ExitFunc(1)
 	}
 
-	if !*force {
+	if !*yes {
 		l.Success("workspace removed", "handle", handle)
 	}
 }

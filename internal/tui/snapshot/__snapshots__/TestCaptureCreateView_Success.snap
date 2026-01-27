@@ -20,7 +20,7 @@ TestCaptureCreateView_Success
       "Data": {
         "Type": "ResourceMenuView",
         "Handle": "my-workspace",
-        "ItemCount": 5,
+        "ItemCount": 6,
         "SelectedIdx": 0
       }
     },
