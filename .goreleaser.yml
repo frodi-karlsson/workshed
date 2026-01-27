@@ -9,7 +9,7 @@ builds:
     goarch:
       - amd64
       - arm64
-    main: ./cmd/workshed
+    main: .
     binary: workshed
 archives:
   - format: tar.gz
