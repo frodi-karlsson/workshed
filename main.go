@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 
-	mcpcmd "github.com/frodi/workshed/cmd/workshed/mcp"
 	"github.com/frodi/workshed/internal/cli"
 	"github.com/frodi/workshed/internal/cli/apply"
 	"github.com/frodi/workshed/internal/cli/capture"
@@ -17,6 +16,7 @@ import (
 	"github.com/frodi/workshed/internal/cli/importcmd"
 	"github.com/frodi/workshed/internal/cli/inspect"
 	"github.com/frodi/workshed/internal/cli/list"
+	mcpcmd "github.com/frodi/workshed/internal/cli/mcp"
 	"github.com/frodi/workshed/internal/cli/path"
 	"github.com/frodi/workshed/internal/cli/remove"
 	"github.com/frodi/workshed/internal/cli/repos"

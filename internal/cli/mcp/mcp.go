@@ -1,4 +1,4 @@
-package workshedmcp
+package mcp
 
 import (
 	"context"
