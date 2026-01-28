@@ -12,11 +12,25 @@ import (
 )
 
 type Server struct {
-	store workspace.Store
+	store        workspace.Store
+	activeHandle *string
 }
 
 func NewServer(store workspace.Store) *Server {
 	return &Server{store: store}
+}
+
+func (s *Server) resolveHandle(ctx context.Context, handle *string) (string, error) {
+	if handle != nil {
+		return *handle, nil
+	}
+	if s.activeHandle == nil {
+		return "", NewToolError("no active workspace. Use enter_workspace({handle: \"...\"}) to set one, or pass handle explicitly to this command.")
+	}
+	if _, err := s.store.Get(ctx, *s.activeHandle); err != nil {
+		return "", err
+	}
+	return *s.activeHandle, nil
 }
 
 func (s *Server) availableWorkspaces(ctx context.Context) ([]string, error) {
@@ -77,12 +91,13 @@ func (s *Server) listWorkspaces(ctx context.Context, req *mcp.CallToolRequest, _
 }
 
 func (s *Server) getWorkspace(ctx context.Context, req *mcp.CallToolRequest, input GetWorkspaceInput) (*mcp.CallToolResult, WorkspaceDetail, error) {
-	if input.Handle == "" {
-		return nil, WorkspaceDetail{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
-	}
-	ws, err := s.store.Get(ctx, input.Handle)
+	handle, err := s.resolveHandle(ctx, input.Handle)
 	if err != nil {
-		return nil, WorkspaceDetail{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, WorkspaceDetail{}, err
+	}
+	ws, err := s.store.Get(ctx, handle)
+	if err != nil {
+		return nil, WorkspaceDetail{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	repos := make([]RepositoryInfo, 0, len(ws.Repositories))
@@ -105,7 +120,7 @@ func (s *Server) getWorkspace(ctx context.Context, req *mcp.CallToolRequest, inp
 
 func (s *Server) createWorkspace(ctx context.Context, req *mcp.CallToolRequest, input CreateWorkspaceInput) (*mcp.CallToolResult, CreateWorkspaceOutput, error) {
 	if input.Purpose == "" {
-		return nil, CreateWorkspaceOutput{}, NewToolError("purpose is required. Example: purpose: \"Debug payment timeout\"")
+		return nil, CreateWorkspaceOutput{}, NewToolError("purpose is required. Provide a brief description of this workspace's purpose.\nExample: {purpose: \"Debug payment timeout\"}")
 	}
 
 	repoOpts := make([]workspace.RepositoryOption, 0, len(input.Repos))
@@ -155,13 +170,14 @@ func (s *Server) createWorkspace(ctx context.Context, req *mcp.CallToolRequest, 
 }
 
 func (s *Server) removeWorkspace(ctx context.Context, req *mcp.CallToolRequest, input RemoveWorkspaceInput) (*mcp.CallToolResult, RemoveWorkspaceOutput, error) {
-	if input.Handle == "" {
-		return nil, RemoveWorkspaceOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, RemoveWorkspaceOutput{}, err
 	}
 
-	ws, err := s.store.Get(ctx, input.Handle)
+	ws, err := s.store.Get(ctx, handle)
 	if err != nil {
-		return nil, RemoveWorkspaceOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, RemoveWorkspaceOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	if input.DryRun {
@@ -169,13 +185,17 @@ func (s *Server) removeWorkspace(ctx context.Context, req *mcp.CallToolRequest, 
 			WouldDelete:   true,
 			ReposCount:    len(ws.Repositories),
 			CapturesCount: 0,
-			Message:       fmt.Sprintf("This will permanently delete workspace %q with %d repositories.", input.Handle, len(ws.Repositories)),
+			Message:       fmt.Sprintf("This will permanently delete workspace %q with %d repositories.", handle, len(ws.Repositories)),
 		}, nil
 	}
 
-	err = s.store.Remove(ctx, input.Handle)
+	if s.activeHandle != nil && *s.activeHandle == handle {
+		s.activeHandle = nil
+	}
+
+	err = s.store.Remove(ctx, handle)
 	if err != nil {
-		return nil, RemoveWorkspaceOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, RemoveWorkspaceOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	return nil, RemoveWorkspaceOutput{
@@ -185,11 +205,12 @@ func (s *Server) removeWorkspace(ctx context.Context, req *mcp.CallToolRequest, 
 }
 
 func (s *Server) execCommand(ctx context.Context, req *mcp.CallToolRequest, input ExecCommandInput) (*mcp.CallToolResult, ExecCommandOutput, error) {
-	if input.Handle == "" {
-		return nil, ExecCommandOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, ExecCommandOutput{}, err
 	}
 	if len(input.Command) == 0 {
-		return nil, ExecCommandOutput{}, NewToolError("command is required. Example: command: [\"make\", \"test\"]")
+		return nil, ExecCommandOutput{}, NewToolError("command is required. Provide an array of command and arguments.\nExample: {command: [\"make\", \"test\"]}")
 	}
 
 	opts := workspace.ExecOptions{
@@ -198,9 +219,9 @@ func (s *Server) execCommand(ctx context.Context, req *mcp.CallToolRequest, inpu
 		Parallel: input.All,
 	}
 
-	results, err := s.store.Exec(ctx, input.Handle, opts)
+	results, err := s.store.Exec(ctx, handle, opts)
 	if err != nil {
-		return nil, ExecCommandOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, ExecCommandOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	maxExitCode := 0
@@ -227,20 +248,21 @@ func (s *Server) execCommand(ctx context.Context, req *mcp.CallToolRequest, inpu
 }
 
 func (s *Server) captureState(ctx context.Context, req *mcp.CallToolRequest, input CaptureStateInput) (*mcp.CallToolResult, CaptureStateOutput, error) {
-	if input.Handle == "" {
-		return nil, CaptureStateOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, CaptureStateOutput{}, err
 	}
 	if input.Name == "" {
-		return nil, CaptureStateOutput{}, NewToolError("name is required. Example: name: \"Before refactoring\"")
+		return nil, CaptureStateOutput{}, NewToolError("name is required. Provide a descriptive name for this state capture.\nExample: {name: \"Before refactoring\"}")
 	}
 
-	capture, err := s.store.CaptureState(ctx, input.Handle, workspace.CaptureOptions{
+	capture, err := s.store.CaptureState(ctx, handle, workspace.CaptureOptions{
 		Name:        input.Name,
 		Description: input.Description,
 		Tags:        input.Tags,
 	})
 	if err != nil {
-		return nil, CaptureStateOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, CaptureStateOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	gitState := make([]GitRefInfo, 0, len(capture.GitState))
@@ -261,14 +283,90 @@ func (s *Server) captureState(ctx context.Context, req *mcp.CallToolRequest, inp
 	}, nil
 }
 
+func (s *Server) enterWorkspace(ctx context.Context, req *mcp.CallToolRequest, input EnterWorkspaceInput) (*mcp.CallToolResult, EnterWorkspaceOutput, error) {
+	if input.Handle == nil {
+		return nil, EnterWorkspaceOutput{}, NewToolError("handle is required. Use list_workspaces() to see available workspaces.")
+	}
+	ws, err := s.store.Get(ctx, *input.Handle)
+	if err != nil {
+		return nil, EnterWorkspaceOutput{}, NewToolError(fmt.Sprintf("workspace %q not found. Use list_workspaces() to see available workspaces.", *input.Handle))
+	}
+	s.activeHandle = input.Handle
+	return nil, EnterWorkspaceOutput{
+		Handle: *input.Handle,
+		Path:   ws.Path,
+	}, nil
+}
+
+func (s *Server) exitWorkspace(ctx context.Context, req *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, ExitWorkspaceOutput, error) {
+	s.activeHandle = nil
+	return nil, ExitWorkspaceOutput{Message: "Exited active workspace"}, nil
+}
+
+func (s *Server) help(ctx context.Context, req *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, HelpOutput, error) {
+	return nil, HelpOutput{
+		Message: `# Workshed Concepts
+
+## Active Workspace
+
+Use enter_workspace({handle: "..."}) to set an active workspace. Once set, you can omit the 'handle' parameter from all commands - they will automatically use the active workspace.
+
+Use exit_workspace() to clear the active workspace when you're done.
+
+## Use Cases
+
+### Create a new workspace with multiple repositories
+
+1. create_workspace({purpose: "My project", repos: ["github.com/org/repo1@main", "github.com/org/repo2@main"]})
+2. enter_workspace({handle: "..."})
+3. exec_command({command: ["make", "setup"]})
+
+### Safely experiment with code (backup and restore)
+
+1. enter_workspace({handle: "..."})
+2. capture_state({name: "Before changes", description: "State before refactoring"})
+3. exec_command({command: ["make", "changes"]})
+4. If failed: apply_capture({capture_id: "..."})
+5. If successful: capture_state({name: "After changes"})
+
+### Run tests across all repositories
+
+1. enter_workspace({handle: "..."})
+2. exec_command({command: ["make", "test"], all: true})
+
+### Run commands in a specific repository
+
+1. enter_workspace({handle: "..."})
+2. exec_command({command: ["npm", "test"], repo: "myrepo"})
+
+### Export and import a workspace (backup/sharing)
+
+1. export_workspace({})
+2. import_workspace({context: {...}, preserve_handle: true})
+
+### Add a repository to an existing workspace
+
+1. enter_workspace({handle: "..."})
+2. add_repository({repo: "github.com/org/newrepo@main"})
+3. exec_command({command: ["git", "submodule", "update", "--init"], repo: "newrepo"})
+
+### Get the workspace path for your IDE
+
+1. enter_workspace({handle: "..."})
+2. get_workspace_path({})
+3. get_workspace_repo_path({repo_name: "myrepo"})`,
+	}, nil
+}
+
 func (s *Server) listCaptures(ctx context.Context, req *mcp.CallToolRequest, input ListCapturesInput) (*mcp.CallToolResult, ListCapturesOutput, error) {
-	if input.Handle == "" {
-		return nil, ListCapturesOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, ListCapturesOutput{}, err
 	}
 
-	captures, err := s.store.ListCaptures(ctx, input.Handle)
+	captures, err := s.store.ListCaptures(ctx, handle)
 	if err != nil {
-		return nil, ListCapturesOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, ListCapturesOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	result := make([]CaptureInfo, 0, len(captures))
@@ -287,18 +385,20 @@ func (s *Server) listCaptures(ctx context.Context, req *mcp.CallToolRequest, inp
 }
 
 func (s *Server) applyCapture(ctx context.Context, req *mcp.CallToolRequest, input ApplyCaptureInput) (*mcp.CallToolResult, ApplyCaptureOutput, error) {
-	if input.Handle == "" {
-		return nil, ApplyCaptureOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, ApplyCaptureOutput{}, err
 	}
+
 	if input.CaptureID == "" {
-		return nil, ApplyCaptureOutput{}, NewToolError("capture_id is required. Use list_captures to see available captures")
+		return nil, ApplyCaptureOutput{}, NewToolError("capture_id is required. Use list_captures() to see available captures.")
 	}
 
 	if input.DryRun {
-		result, err := s.store.PreflightApply(ctx, input.Handle, input.CaptureID)
+		result, err := s.store.PreflightApply(ctx, handle, input.CaptureID)
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
-				return nil, ApplyCaptureOutput{}, s.captureNotFoundError(ctx, input.Handle, input.CaptureID)
+				return nil, ApplyCaptureOutput{}, s.captureNotFoundError(ctx, handle, input.CaptureID)
 			}
 			return nil, ApplyCaptureOutput{}, err
 		}
@@ -319,10 +419,10 @@ func (s *Server) applyCapture(ctx context.Context, req *mcp.CallToolRequest, inp
 		}, nil
 	}
 
-	err := s.store.ApplyCapture(ctx, input.Handle, input.CaptureID)
+	err = s.store.ApplyCapture(ctx, handle, input.CaptureID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			return nil, ApplyCaptureOutput{}, s.captureNotFoundError(ctx, input.Handle, input.CaptureID)
+			return nil, ApplyCaptureOutput{}, s.captureNotFoundError(ctx, handle, input.CaptureID)
 		}
 		return nil, ApplyCaptureOutput{}, err
 	}
@@ -334,13 +434,14 @@ func (s *Server) applyCapture(ctx context.Context, req *mcp.CallToolRequest, inp
 }
 
 func (s *Server) exportWorkspace(ctx context.Context, req *mcp.CallToolRequest, input ExportWorkspaceInput) (*mcp.CallToolResult, ExportWorkspaceOutput, error) {
-	if input.Handle == "" {
-		return nil, ExportWorkspaceOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, ExportWorkspaceOutput{}, err
 	}
 
-	ctxData, err := s.store.ExportContext(ctx, input.Handle)
+	ctxData, err := s.store.ExportContext(ctx, handle)
 	if err != nil {
-		return nil, ExportWorkspaceOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, ExportWorkspaceOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	if input.Compact {
@@ -365,7 +466,7 @@ func (s *Server) exportWorkspace(ctx context.Context, req *mcp.CallToolRequest, 
 
 func (s *Server) importWorkspace(ctx context.Context, req *mcp.CallToolRequest, input ImportWorkspaceInput) (*mcp.CallToolResult, ImportWorkspaceOutput, error) {
 	if input.Context == nil {
-		return nil, ImportWorkspaceOutput{}, NewToolError("context is required. Use export_workspace to get a valid workspace context")
+		return nil, ImportWorkspaceOutput{}, NewToolError("context is required. Use export_workspace() to get a valid workspace context, then pass it here.")
 	}
 
 	ctxBytes, err := json.Marshal(input.Context)
@@ -395,32 +496,32 @@ func (s *Server) importWorkspace(ctx context.Context, req *mcp.CallToolRequest, 
 }
 
 func (s *Server) getWorkspacePath(ctx context.Context, req *mcp.CallToolRequest, input GetWorkspacePathInput) (*mcp.CallToolResult, GetWorkspacePathOutput, error) {
-	if input.Handle == "" {
-		return nil, GetWorkspacePathOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, GetWorkspacePathOutput{}, err
 	}
 
-	path, err := s.store.Path(ctx, input.Handle)
+	path, err := s.store.Path(ctx, handle)
 	if err != nil {
-		return nil, GetWorkspacePathOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, GetWorkspacePathOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	return nil, GetWorkspacePathOutput{Path: path}, nil
 }
 
-func (s *Server) getWorkspaceRepoPath(ctx context.Context, req *mcp.CallToolRequest, input struct {
-	Handle   string `json:"handle"`
-	RepoName string `json:"repo_name"`
-}) (*mcp.CallToolResult, GetWorkspacePathOutput, error) {
-	if input.Handle == "" {
-		return nil, GetWorkspacePathOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
-	}
-	if input.RepoName == "" {
-		return nil, GetWorkspacePathOutput{}, NewToolError("repo_name is required. Use get_workspace to see repository names in a workspace")
+func (s *Server) getWorkspaceRepoPath(ctx context.Context, req *mcp.CallToolRequest, input GetWorkspaceRepoPathInput) (*mcp.CallToolResult, GetWorkspacePathOutput, error) {
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, GetWorkspacePathOutput{}, err
 	}
 
-	ws, err := s.store.Get(ctx, input.Handle)
+	if input.RepoName == "" {
+		return nil, GetWorkspacePathOutput{}, NewToolError("repo_name is required. Use get_workspace() to see available repositories, then provide the repository name.")
+	}
+
+	ws, err := s.store.Get(ctx, handle)
 	if err != nil {
-		return nil, GetWorkspacePathOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, GetWorkspacePathOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	repoPath := ws.Path + "/" + input.RepoName
@@ -428,16 +529,18 @@ func (s *Server) getWorkspaceRepoPath(ctx context.Context, req *mcp.CallToolRequ
 }
 
 func (s *Server) addRepository(ctx context.Context, req *mcp.CallToolRequest, input AddRepositoryInput) (*mcp.CallToolResult, AddRepositoryOutput, error) {
-	if input.Handle == "" {
-		return nil, AddRepositoryOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
-	}
-	if input.Repo == "" {
-		return nil, AddRepositoryOutput{}, NewToolError("repo is required. Use format: url or url@ref or url@ref::depth (e.g., github.com/org/repo@main::10)")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, AddRepositoryOutput{}, err
 	}
 
-	_, err := s.store.Get(ctx, input.Handle)
+	if input.Repo == "" {
+		return nil, AddRepositoryOutput{}, NewToolError("repo is required. Provide a git repository URL with optional @ref.\nExample: {repo: \"github.com/org/repo@main\"}")
+	}
+
+	_, err = s.store.Get(ctx, handle)
 	if err != nil {
-		return nil, AddRepositoryOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, AddRepositoryOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	url, ref, repoDepth := workspace.ParseRepoFlag(input.Repo)
@@ -446,7 +549,7 @@ func (s *Server) addRepository(ctx context.Context, req *mcp.CallToolRequest, in
 		d = repoDepth
 	}
 	invocationCWD := ""
-	err = s.store.AddRepository(ctx, input.Handle, workspace.RepositoryOption{URL: url, Ref: ref, Depth: d}, invocationCWD)
+	err = s.store.AddRepository(ctx, handle, workspace.RepositoryOption{URL: url, Ref: ref, Depth: d}, invocationCWD)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "not a git repository") || strings.Contains(errMsg, "missing .git") {
@@ -458,7 +561,7 @@ func (s *Server) addRepository(ctx context.Context, req *mcp.CallToolRequest, in
 		return nil, AddRepositoryOutput{}, NewToolError(fmt.Sprintf("failed to add repository: %v", err))
 	}
 
-	ws, _ := s.store.Get(ctx, input.Handle)
+	ws, _ := s.store.Get(ctx, handle)
 	var newRepo *workspace.Repository
 	for _, r := range ws.Repositories {
 		if r.URL == url && (ref == "" || r.Ref == ref) {
@@ -480,16 +583,18 @@ func (s *Server) addRepository(ctx context.Context, req *mcp.CallToolRequest, in
 }
 
 func (s *Server) removeRepository(ctx context.Context, req *mcp.CallToolRequest, input RemoveRepositoryInput) (*mcp.CallToolResult, RemoveRepositoryOutput, error) {
-	if input.Handle == "" {
-		return nil, RemoveRepositoryOutput{}, NewToolError("handle is required. Use list_workspaces to see available workspaces")
-	}
-	if input.RepoName == "" {
-		return nil, RemoveRepositoryOutput{}, NewToolError("repo_name is required. Use get_workspace to see repository names")
+	handle, err := s.resolveHandle(ctx, input.Handle)
+	if err != nil {
+		return nil, RemoveRepositoryOutput{}, err
 	}
 
-	ws, err := s.store.Get(ctx, input.Handle)
+	if input.RepoName == "" {
+		return nil, RemoveRepositoryOutput{}, NewToolError("repo_name is required. Use get_workspace() to see available repositories.")
+	}
+
+	ws, err := s.store.Get(ctx, handle)
 	if err != nil {
-		return nil, RemoveRepositoryOutput{}, s.workspaceNotFoundError(ctx, input.Handle)
+		return nil, RemoveRepositoryOutput{}, s.workspaceNotFoundError(ctx, handle)
 	}
 
 	found := false
@@ -504,17 +609,17 @@ func (s *Server) removeRepository(ctx context.Context, req *mcp.CallToolRequest,
 		for _, r := range ws.Repositories {
 			names = append(names, r.Name)
 		}
-		return nil, RemoveRepositoryOutput{}, NewToolError(fmt.Sprintf("repository %q not found in workspace %q. Available: %s", input.RepoName, input.Handle, strings.Join(names, ", ")))
+		return nil, RemoveRepositoryOutput{}, NewToolError(fmt.Sprintf("repository %q not found in workspace %q. Available: %s", input.RepoName, handle, strings.Join(names, ", ")))
 	}
 
-	err = s.store.RemoveRepository(ctx, input.Handle, input.RepoName)
+	err = s.store.RemoveRepository(ctx, handle, input.RepoName)
 	if err != nil {
 		return nil, RemoveRepositoryOutput{}, NewToolError(fmt.Sprintf("failed to remove repository: %v", err))
 	}
 
 	return nil, RemoveRepositoryOutput{
 		Success: true,
-		Message: fmt.Sprintf("Repository %q removed from workspace %q", input.RepoName, input.Handle),
+		Message: fmt.Sprintf("Repository %q removed from workspace %q", input.RepoName, handle),
 	}, nil
 }
 
@@ -533,8 +638,13 @@ func (s *Server) Run(ctx context.Context) error {
 	}, s.listWorkspaces)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "help",
+		Description: "Get example workflows and common use cases for working with Workshed workspaces.",
+	}, s.help)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_workspace",
-		Description: "Get detailed information about a specific workspace, including its purpose, repositories, and creation date. Returns the workspace handle, purpose, list of repositories with their names, URLs, refs, and paths.",
+		Description: "Get detailed information about a workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Returns purpose, repositories, and paths.",
 	}, s.getWorkspace)
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -543,33 +653,43 @@ func (s *Server) Run(ctx context.Context) error {
 	}, s.createWorkspace)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "enter_workspace",
+		Description: "Set the active workspace handle. All subsequent commands will use this workspace unless a handle is explicitly provided. Returns the workspace path.",
+	}, s.enterWorkspace)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "exit_workspace",
+		Description: "Clear the active workspace handle. Subsequent commands will require an explicit handle.",
+	}, s.exitWorkspace)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "remove_workspace",
-		Description: "Delete a Workshed workspace by its handle. This removes the workspace directory and all its repositories. Use with caution as this action cannot be undone.",
+		Description: "Delete a Workshed workspace by its handle. If handle is not provided, uses the active workspace (set with enter_workspace). Use with caution as this action cannot be undone.",
 	}, s.removeWorkspace)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "exec_command",
-		Description: "Execute a shell command in a Workshed workspace. Takes the workspace handle and a command array (e.g., [\"make\", \"test\"]). Optionally specify a repository name with 'repo' or set 'all' to true to run in all repositories. Returns exit code and command output for each repository.",
+		Description: "Execute a shell command in a workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Takes a command array (e.g., [\"make\", \"test\"]). Use 'repo' to run in a specific repository, or 'all: true' to run in all repositories.",
 	}, s.execCommand)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "capture_state",
-		Description: "Create a git state snapshot (capture) for a workspace. Records the current branch, commit, and dirty status for each repository. Useful for documenting state before making changes. Takes a name and optional description and tags.",
+		Description: "Create a git state snapshot (capture) for a workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Records branch, commit, and dirty status. Takes a name and optional description and tags.",
 	}, s.captureState)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_captures",
-		Description: "List all captures for a workspace. Returns capture IDs, names, timestamps, descriptions, tags, and repository counts. Captures document git state at a point in time.",
+		Description: "List all captures for a workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Returns capture IDs, names, timestamps, descriptions, tags, and repo counts.",
 	}, s.listCaptures)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "apply_capture",
-		Description: "Apply (restore) git state from a capture. Takes a workspace handle and capture ID. By default, this will fail if repositories have uncommitted changes. Set dry_run to true to check preflight without applying.",
+		Description: "Apply (restore) git state from a capture. If handle is not provided, uses the active workspace (set with enter_workspace). Takes a capture ID. Set dry_run to true to check preflight without applying.",
 	}, s.applyCapture)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "export_workspace",
-		Description: "Export a workspace to portable JSON format. Includes workspace metadata, repository configuration, and optionally captures. The JSON can be used with import_workspace to recreate the workspace elsewhere. Set compact to exclude captures.",
+		Description: "Export a workspace to portable JSON format. If handle is not provided, uses the active workspace (set with enter_workspace). Includes metadata, repository config, and optionally captures. Set compact to exclude captures.",
 	}, s.exportWorkspace)
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -579,22 +699,22 @@ func (s *Server) Run(ctx context.Context) error {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_workspace_path",
-		Description: "Get the filesystem path for a workspace. Returns the absolute path where the workspace directory is located. Useful for opening the workspace in an IDE or running commands directly.",
+		Description: "Get the filesystem path for a workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Returns the absolute path where the workspace directory is located.",
 	}, s.getWorkspacePath)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_workspace_repo_path",
-		Description: "Get the filesystem path for a specific repository within a workspace. Takes workspace handle and repository name. Returns the absolute path to that repository's directory.",
+		Description: "Get the filesystem path for a specific repository within a workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Takes a repository name and returns its directory path.",
 	}, s.getWorkspaceRepoPath)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "add_repository",
-		Description: "Add a repository to an existing workspace. Takes workspace handle and repo URL with optional @ref (e.g., github.com/org/repo@main). Returns the added repository details.",
+		Description: "Add a repository to an existing workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Takes a repo URL with optional @ref (e.g., github.com/org/repo@main). Returns the added repository details.",
 	}, s.addRepository)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "remove_repository",
-		Description: "Remove a repository from a workspace by name. Takes workspace handle and repository name. Use get_workspace to see available repository names.",
+		Description: "Remove a repository from a workspace by name. If handle is not provided, uses the active workspace (set with enter_workspace). Takes a repository name. Use get_workspace to see available repository names.",
 	}, s.removeRepository)
 
 	return server.Run(ctx, &mcp.StdioTransport{})

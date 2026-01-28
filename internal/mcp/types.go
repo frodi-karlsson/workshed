@@ -37,9 +37,9 @@ type CreateWorkspaceOutput struct {
 }
 
 type RemoveWorkspaceInput struct {
-	Handle string `json:"handle"`
-	DryRun bool   `json:"dry_run,omitempty"`
-	Yes    bool   `json:"yes,omitempty"`
+	Handle *string `json:"handle,omitempty"`
+	DryRun bool    `json:"dry_run,omitempty"`
+	Yes    bool    `json:"yes,omitempty"`
 }
 
 type RemoveWorkspaceOutput struct {
@@ -51,7 +51,7 @@ type RemoveWorkspaceOutput struct {
 }
 
 type ExecCommandInput struct {
-	Handle   string   `json:"handle"`
+	Handle   *string  `json:"handle,omitempty"`
 	Command  []string `json:"command"`
 	Repo     string   `json:"repo,omitempty"`
 	All      bool     `json:"all,omitempty"`
@@ -73,7 +73,7 @@ type ExecCommandOutput struct {
 }
 
 type CaptureStateInput struct {
-	Handle      string   `json:"handle"`
+	Handle      *string  `json:"handle,omitempty"`
 	Name        string   `json:"name"`
 	Description string   `json:"description,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
@@ -94,7 +94,7 @@ type CaptureStateOutput struct {
 }
 
 type ListCapturesInput struct {
-	Handle string `json:"handle"`
+	Handle *string `json:"handle,omitempty"`
 }
 
 type CaptureInfo struct {
@@ -115,9 +115,9 @@ type ListWorkspacesOutput struct {
 }
 
 type ApplyCaptureInput struct {
-	Handle    string `json:"handle"`
-	CaptureID string `json:"capture_id"`
-	DryRun    bool   `json:"dry_run,omitempty"`
+	Handle    *string `json:"handle,omitempty"`
+	CaptureID string  `json:"capture_id"`
+	DryRun    bool    `json:"dry_run,omitempty"`
 }
 
 type ApplyCaptureOutput struct {
@@ -127,8 +127,8 @@ type ApplyCaptureOutput struct {
 }
 
 type ExportWorkspaceInput struct {
-	Handle  string `json:"handle"`
-	Compact bool   `json:"compact,omitempty"`
+	Handle  *string `json:"handle,omitempty"`
+	Compact bool    `json:"compact,omitempty"`
 }
 
 type ExportWorkspaceOutput struct {
@@ -149,9 +149,9 @@ type ImportWorkspaceInput struct {
 }
 
 type AddRepositoryInput struct {
-	Handle string `json:"handle"`
-	Repo   string `json:"repo"`
-	Depth  int    `json:"depth,omitempty"`
+	Handle *string `json:"handle,omitempty"`
+	Repo   string  `json:"repo"`
+	Depth  int     `json:"depth,omitempty"`
 }
 
 type AddRepositoryOutput struct {
@@ -162,8 +162,8 @@ type AddRepositoryOutput struct {
 }
 
 type RemoveRepositoryInput struct {
-	Handle   string `json:"handle"`
-	RepoName string `json:"repo_name"`
+	Handle   *string `json:"handle,omitempty"`
+	RepoName string  `json:"repo_name"`
 }
 
 type RemoveRepositoryOutput struct {
@@ -179,15 +179,37 @@ type ImportWorkspaceOutput struct {
 }
 
 type GetWorkspacePathInput struct {
-	Handle string `json:"handle"`
+	Handle *string `json:"handle,omitempty"`
 }
 
 type GetWorkspacePathOutput struct {
 	Path string `json:"path"`
 }
 
+type GetWorkspaceRepoPathInput struct {
+	Handle   *string `json:"handle,omitempty"`
+	RepoName string  `json:"repo_name"`
+}
+
 type GetWorkspaceInput struct {
+	Handle *string `json:"handle,omitempty"`
+}
+
+type EnterWorkspaceInput struct {
+	Handle *string `json:"handle,omitempty"`
+}
+
+type EnterWorkspaceOutput struct {
 	Handle string `json:"handle"`
+	Path   string `json:"path"`
+}
+
+type ExitWorkspaceOutput struct {
+	Message string `json:"message"`
+}
+
+type HelpOutput struct {
+	Message string `json:"message"`
 }
 
 type ToolError struct {

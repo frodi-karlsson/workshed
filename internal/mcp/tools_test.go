@@ -9,10 +9,18 @@ import (
 	"github.com/frodi/workshed/internal/workspace"
 )
 
+func strPtr(s string) *string {
+	return &s
+}
+
+func newTestServer(store workspace.Store) *Server {
+	return NewServer(store)
+}
+
 func TestListWorkspaces(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 
 	t.Run("empty list", func(t *testing.T) {
@@ -42,7 +50,7 @@ func TestListWorkspaces(t *testing.T) {
 func TestGetWorkspace(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 
 	t.Run("handle required", func(t *testing.T) {
@@ -53,7 +61,7 @@ func TestGetWorkspace(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, _, err := server.getWorkspace(ctx, nil, GetWorkspaceInput{Handle: "nonexistent"})
+		_, _, err := server.getWorkspace(ctx, nil, GetWorkspaceInput{Handle: strPtr("nonexistent")})
 		if err == nil {
 			t.Error("expected error for nonexistent handle")
 		}
@@ -61,7 +69,7 @@ func TestGetWorkspace(t *testing.T) {
 
 	t.Run("valid handle", func(t *testing.T) {
 		_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "test purpose"})
-		_, getOut, err := server.getWorkspace(ctx, nil, GetWorkspaceInput{Handle: createOut.Handle})
+		_, getOut, err := server.getWorkspace(ctx, nil, GetWorkspaceInput{Handle: &createOut.Handle})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -77,7 +85,7 @@ func TestGetWorkspace(t *testing.T) {
 func TestCreateWorkspace(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 
 	t.Run("purpose required", func(t *testing.T) {
@@ -181,7 +189,7 @@ func TestCreateWorkspace(t *testing.T) {
 func TestRemoveWorkspace(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 
 	t.Run("handle required", func(t *testing.T) {
@@ -193,7 +201,7 @@ func TestRemoveWorkspace(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "to remove"})
-		_, out, err := server.removeWorkspace(ctx, nil, RemoveWorkspaceInput{Handle: createOut.Handle})
+		_, out, err := server.removeWorkspace(ctx, nil, RemoveWorkspaceInput{Handle: &createOut.Handle})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -203,7 +211,7 @@ func TestRemoveWorkspace(t *testing.T) {
 		if out.Message == "" {
 			t.Error("expected message")
 		}
-		_, _, err = server.getWorkspace(ctx, nil, GetWorkspaceInput{Handle: createOut.Handle})
+		_, _, err = server.getWorkspace(ctx, nil, GetWorkspaceInput{Handle: &createOut.Handle})
 		if err == nil {
 			t.Error("workspace should be removed after success")
 		}
@@ -212,7 +220,7 @@ func TestRemoveWorkspace(t *testing.T) {
 	t.Run("dry run", func(t *testing.T) {
 		_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "dry run test"})
 		ws, _ := server.store.Get(ctx, createOut.Handle)
-		_, out, err := server.removeWorkspace(ctx, nil, RemoveWorkspaceInput{Handle: createOut.Handle, DryRun: true})
+		_, out, err := server.removeWorkspace(ctx, nil, RemoveWorkspaceInput{Handle: &createOut.Handle, DryRun: true})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -223,14 +231,14 @@ func TestRemoveWorkspace(t *testing.T) {
 			t.Errorf("expected repos_count=%d, got %d", len(ws.Repositories), out.ReposCount)
 		}
 		// Verify workspace still exists after dry run
-		_, _, err = server.getWorkspace(ctx, nil, GetWorkspaceInput{Handle: createOut.Handle})
+		_, _, err = server.getWorkspace(ctx, nil, GetWorkspaceInput{Handle: &createOut.Handle})
 		if err != nil {
 			t.Error("workspace should still exist after dry run")
 		}
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, _, err := server.removeWorkspace(ctx, nil, RemoveWorkspaceInput{Handle: "nonexistent-workspace"})
+		_, _, err := server.removeWorkspace(ctx, nil, RemoveWorkspaceInput{Handle: strPtr("nonexistent-workspace")})
 		if err == nil {
 			t.Error("expected error for nonexistent handle")
 		}
@@ -240,7 +248,7 @@ func TestRemoveWorkspace(t *testing.T) {
 func TestExecCommand(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	localRepo := workspace.CreateLocalGitRepo(t, "exectestrepo", map[string]string{"file.txt": "content"})
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{
@@ -256,7 +264,7 @@ func TestExecCommand(t *testing.T) {
 	})
 
 	t.Run("command required", func(t *testing.T) {
-		_, _, err := server.execCommand(ctx, nil, ExecCommandInput{Handle: createOut.Handle})
+		_, _, err := server.execCommand(ctx, nil, ExecCommandInput{Handle: &createOut.Handle})
 		if err == nil {
 			t.Error("expected error for empty command")
 		}
@@ -264,7 +272,7 @@ func TestExecCommand(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		_, out, err := server.execCommand(ctx, nil, ExecCommandInput{
-			Handle:  createOut.Handle,
+			Handle:  &createOut.Handle,
 			Command: []string{"echo", "hello"},
 		})
 		if err != nil {
@@ -277,7 +285,7 @@ func TestExecCommand(t *testing.T) {
 
 	t.Run("with target repo", func(t *testing.T) {
 		_, out, err := server.execCommand(ctx, nil, ExecCommandInput{
-			Handle:  createOut.Handle,
+			Handle:  &createOut.Handle,
 			Command: []string{"echo", "targeted"},
 			Repo:    "exectestrepo",
 		})
@@ -293,7 +301,7 @@ func TestExecCommand(t *testing.T) {
 func TestCaptureState(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{
 		Purpose: "capture test",
@@ -307,7 +315,7 @@ func TestCaptureState(t *testing.T) {
 	})
 
 	t.Run("name required", func(t *testing.T) {
-		_, _, err := server.captureState(ctx, nil, CaptureStateInput{Handle: createOut.Handle})
+		_, _, err := server.captureState(ctx, nil, CaptureStateInput{Handle: &createOut.Handle})
 		if err == nil {
 			t.Error("expected error for empty name")
 		}
@@ -315,7 +323,7 @@ func TestCaptureState(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		_, out, err := server.captureState(ctx, nil, CaptureStateInput{
-			Handle:      createOut.Handle,
+			Handle:      &createOut.Handle,
 			Name:        "test snapshot",
 			Description: "a test capture",
 			Tags:        []string{"test"},
@@ -335,15 +343,15 @@ func TestCaptureState(t *testing.T) {
 func TestListCaptures(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	localRepo := workspace.CreateLocalGitRepo(t, "capturetestrepo", map[string]string{"file.txt": "content"})
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{
 		Purpose: "list captures test",
 		Repos:   []string{localRepo},
 	})
-	_, _, _ = server.captureState(ctx, nil, CaptureStateInput{Handle: createOut.Handle, Name: "capture 1", Description: "first capture"})
-	_, _, _ = server.captureState(ctx, nil, CaptureStateInput{Handle: createOut.Handle, Name: "capture 2", Description: "second capture"})
+	_, _, _ = server.captureState(ctx, nil, CaptureStateInput{Handle: &createOut.Handle, Name: "capture 1", Description: "first capture"})
+	_, _, _ = server.captureState(ctx, nil, CaptureStateInput{Handle: &createOut.Handle, Name: "capture 2", Description: "second capture"})
 
 	t.Run("handle required", func(t *testing.T) {
 		_, _, err := server.listCaptures(ctx, nil, ListCapturesInput{})
@@ -353,7 +361,7 @@ func TestListCaptures(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		_, out, err := server.listCaptures(ctx, nil, ListCapturesInput{Handle: createOut.Handle})
+		_, out, err := server.listCaptures(ctx, nil, ListCapturesInput{Handle: &createOut.Handle})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -366,11 +374,11 @@ func TestListCaptures(t *testing.T) {
 func TestApplyCapture(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "apply test"})
 	_, captureOut, err := server.captureState(ctx, nil, CaptureStateInput{
-		Handle:      createOut.Handle,
+		Handle:      &createOut.Handle,
 		Name:        "to apply",
 		Description: "test capture for apply",
 	})
@@ -386,7 +394,7 @@ func TestApplyCapture(t *testing.T) {
 	})
 
 	t.Run("capture_id required", func(t *testing.T) {
-		_, _, err := server.applyCapture(ctx, nil, ApplyCaptureInput{Handle: createOut.Handle})
+		_, _, err := server.applyCapture(ctx, nil, ApplyCaptureInput{Handle: &createOut.Handle})
 		if err == nil {
 			t.Error("expected error for empty capture_id")
 		}
@@ -394,7 +402,7 @@ func TestApplyCapture(t *testing.T) {
 
 	t.Run("dry run success", func(t *testing.T) {
 		_, out, err := server.applyCapture(ctx, nil, ApplyCaptureInput{
-			Handle:    createOut.Handle,
+			Handle:    &createOut.Handle,
 			CaptureID: captureOut.ID,
 			DryRun:    true,
 		})
@@ -408,7 +416,7 @@ func TestApplyCapture(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		_, out, err := server.applyCapture(ctx, nil, ApplyCaptureInput{
-			Handle:    createOut.Handle,
+			Handle:    &createOut.Handle,
 			CaptureID: captureOut.ID,
 		})
 		if err != nil {
@@ -424,7 +432,7 @@ func TestApplyCapture(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		_, _, err := server.applyCapture(ctx, nil, ApplyCaptureInput{
-			Handle:    createOut.Handle,
+			Handle:    &createOut.Handle,
 			CaptureID: "nonexistent-capture",
 		})
 		if err == nil {
@@ -436,7 +444,7 @@ func TestApplyCapture(t *testing.T) {
 func TestExportWorkspace(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "export test"})
 
@@ -448,14 +456,14 @@ func TestExportWorkspace(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, _, err := server.exportWorkspace(ctx, nil, ExportWorkspaceInput{Handle: "nonexistent"})
+		_, _, err := server.exportWorkspace(ctx, nil, ExportWorkspaceInput{Handle: strPtr("nonexistent")})
 		if err == nil {
 			t.Error("expected error for nonexistent handle")
 		}
 	})
 
 	t.Run("success", func(t *testing.T) {
-		_, out, err := server.exportWorkspace(ctx, nil, ExportWorkspaceInput{Handle: createOut.Handle})
+		_, out, err := server.exportWorkspace(ctx, nil, ExportWorkspaceInput{Handle: &createOut.Handle})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -469,7 +477,7 @@ func TestExportWorkspace(t *testing.T) {
 
 	t.Run("compact", func(t *testing.T) {
 		_, out, err := server.exportWorkspace(ctx, nil, ExportWorkspaceInput{
-			Handle:  createOut.Handle,
+			Handle:  &createOut.Handle,
 			Compact: true,
 		})
 		if err != nil {
@@ -482,7 +490,7 @@ func TestExportWorkspace(t *testing.T) {
 func TestImportWorkspace(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 
 	t.Run("context required", func(t *testing.T) {
@@ -539,7 +547,7 @@ func TestImportWorkspace(t *testing.T) {
 func TestGetWorkspacePath(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "path test"})
 
@@ -551,14 +559,14 @@ func TestGetWorkspacePath(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, _, err := server.getWorkspacePath(ctx, nil, GetWorkspacePathInput{Handle: "nonexistent"})
+		_, _, err := server.getWorkspacePath(ctx, nil, GetWorkspacePathInput{Handle: strPtr("nonexistent")})
 		if err == nil {
 			t.Error("expected error for nonexistent handle")
 		}
 	})
 
 	t.Run("success", func(t *testing.T) {
-		_, out, err := server.getWorkspacePath(ctx, nil, GetWorkspacePathInput{Handle: createOut.Handle})
+		_, out, err := server.getWorkspacePath(ctx, nil, GetWorkspacePathInput{Handle: &createOut.Handle})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -571,7 +579,7 @@ func TestGetWorkspacePath(t *testing.T) {
 func TestGetWorkspaceRepoPath(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	localRepo := workspace.CreateLocalGitRepo(t, "repopathrepo", map[string]string{"file.txt": "content"})
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{
@@ -580,30 +588,21 @@ func TestGetWorkspaceRepoPath(t *testing.T) {
 	})
 
 	t.Run("handle required", func(t *testing.T) {
-		_, _, err := server.getWorkspaceRepoPath(ctx, nil, struct {
-			Handle   string `json:"handle"`
-			RepoName string `json:"repo_name"`
-		}{RepoName: "repopathrepo"})
+		_, _, err := server.getWorkspaceRepoPath(ctx, nil, GetWorkspaceRepoPathInput{RepoName: "repopathrepo"})
 		if err == nil {
 			t.Error("expected error for empty handle")
 		}
 	})
 
 	t.Run("repo_name required", func(t *testing.T) {
-		_, _, err := server.getWorkspaceRepoPath(ctx, nil, struct {
-			Handle   string `json:"handle"`
-			RepoName string `json:"repo_name"`
-		}{Handle: createOut.Handle})
+		_, _, err := server.getWorkspaceRepoPath(ctx, nil, GetWorkspaceRepoPathInput{Handle: &createOut.Handle})
 		if err == nil {
 			t.Error("expected error for empty repo_name")
 		}
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, out, err := server.getWorkspaceRepoPath(ctx, nil, struct {
-			Handle   string `json:"handle"`
-			RepoName string `json:"repo_name"`
-		}{Handle: createOut.Handle, RepoName: "nonexistent"})
+		_, out, err := server.getWorkspaceRepoPath(ctx, nil, GetWorkspaceRepoPathInput{Handle: &createOut.Handle, RepoName: "nonexistent"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -614,10 +613,7 @@ func TestGetWorkspaceRepoPath(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		_, out, err := server.getWorkspaceRepoPath(ctx, nil, struct {
-			Handle   string `json:"handle"`
-			RepoName string `json:"repo_name"`
-		}{Handle: createOut.Handle, RepoName: "repopathrepo"})
+		_, out, err := server.getWorkspaceRepoPath(ctx, nil, GetWorkspaceRepoPathInput{Handle: &createOut.Handle, RepoName: "repopathrepo"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -630,7 +626,7 @@ func TestGetWorkspaceRepoPath(t *testing.T) {
 func TestAddRepository(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "add repo test"})
 	localRepo := workspace.CreateLocalGitRepo(t, "newrepo", map[string]string{"file.txt": "content"})
@@ -643,7 +639,7 @@ func TestAddRepository(t *testing.T) {
 	})
 
 	t.Run("repo required", func(t *testing.T) {
-		_, _, err := server.addRepository(ctx, nil, AddRepositoryInput{Handle: createOut.Handle})
+		_, _, err := server.addRepository(ctx, nil, AddRepositoryInput{Handle: &createOut.Handle})
 		if err == nil {
 			t.Error("expected error for empty repo")
 		}
@@ -651,7 +647,7 @@ func TestAddRepository(t *testing.T) {
 
 	t.Run("workspace not found", func(t *testing.T) {
 		_, _, err := server.addRepository(ctx, nil, AddRepositoryInput{
-			Handle: "nonexistent",
+			Handle: strPtr("nonexistent"),
 			Repo:   localRepo,
 		})
 		if err == nil {
@@ -661,7 +657,7 @@ func TestAddRepository(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		_, out, err := server.addRepository(ctx, nil, AddRepositoryInput{
-			Handle: createOut.Handle,
+			Handle: &createOut.Handle,
 			Repo:   localRepo,
 		})
 		if err != nil {
@@ -681,7 +677,7 @@ func TestAddRepository(t *testing.T) {
 	t.Run("with ref", func(t *testing.T) {
 		anotherRepo := workspace.CreateLocalGitRepo(t, "refrepo"+createOut.Handle[:4], map[string]string{"file.txt": "content"})
 		_, out, err := server.addRepository(ctx, nil, AddRepositoryInput{
-			Handle: createOut.Handle,
+			Handle: &createOut.Handle,
 			Repo:   anotherRepo + "@main",
 		})
 		if err != nil {
@@ -695,7 +691,7 @@ func TestAddRepository(t *testing.T) {
 	t.Run("with depth in repo string", func(t *testing.T) {
 		depthRepo := workspace.CreateLocalGitRepo(t, "depthrepo"+createOut.Handle[:4], map[string]string{"file.txt": "content"})
 		_, out, err := server.addRepository(ctx, nil, AddRepositoryInput{
-			Handle: createOut.Handle,
+			Handle: &createOut.Handle,
 			Repo:   depthRepo + "::5",
 		})
 		if err != nil {
@@ -709,7 +705,7 @@ func TestAddRepository(t *testing.T) {
 	t.Run("with depth field", func(t *testing.T) {
 		depthRepo2 := workspace.CreateLocalGitRepo(t, "depthrepo2"+createOut.Handle[:4], map[string]string{"file.txt": "content"})
 		_, out, err := server.addRepository(ctx, nil, AddRepositoryInput{
-			Handle: createOut.Handle,
+			Handle: &createOut.Handle,
 			Repo:   depthRepo2,
 			Depth:  10,
 		})
@@ -724,7 +720,7 @@ func TestAddRepository(t *testing.T) {
 	t.Run("repo depth overrides input depth", func(t *testing.T) {
 		depthRepo3 := workspace.CreateLocalGitRepo(t, "depthrepo3"+createOut.Handle[:4], map[string]string{"file.txt": "content"})
 		_, out, err := server.addRepository(ctx, nil, AddRepositoryInput{
-			Handle: createOut.Handle,
+			Handle: &createOut.Handle,
 			Repo:   depthRepo3 + "::7",
 			Depth:  99,
 		})
@@ -740,7 +736,7 @@ func TestAddRepository(t *testing.T) {
 func TestRemoveRepository(t *testing.T) {
 	t.Parallel()
 	store, _ := workspace.CreateTestStore(t)
-	server := NewServer(store)
+	server := newTestServer(store)
 	ctx := context.Background()
 	localRepo := workspace.CreateLocalGitRepo(t, "toremoverepo", map[string]string{"file.txt": "content"})
 	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{
@@ -756,7 +752,7 @@ func TestRemoveRepository(t *testing.T) {
 	})
 
 	t.Run("repo_name required", func(t *testing.T) {
-		_, _, err := server.removeRepository(ctx, nil, RemoveRepositoryInput{Handle: createOut.Handle})
+		_, _, err := server.removeRepository(ctx, nil, RemoveRepositoryInput{Handle: &createOut.Handle})
 		if err == nil {
 			t.Error("expected error for empty repo_name")
 		}
@@ -764,7 +760,7 @@ func TestRemoveRepository(t *testing.T) {
 
 	t.Run("workspace not found", func(t *testing.T) {
 		_, _, err := server.removeRepository(ctx, nil, RemoveRepositoryInput{
-			Handle:   "nonexistent",
+			Handle:   strPtr("nonexistent"),
 			RepoName: "toremoverepo",
 		})
 		if err == nil {
@@ -774,7 +770,7 @@ func TestRemoveRepository(t *testing.T) {
 
 	t.Run("repo not found", func(t *testing.T) {
 		_, _, err := server.removeRepository(ctx, nil, RemoveRepositoryInput{
-			Handle:   createOut.Handle,
+			Handle:   &createOut.Handle,
 			RepoName: "nonexistent-repo",
 		})
 		if err == nil {
@@ -784,7 +780,7 @@ func TestRemoveRepository(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		_, out, err := server.removeRepository(ctx, nil, RemoveRepositoryInput{
-			Handle:   createOut.Handle,
+			Handle:   &createOut.Handle,
 			RepoName: "toremoverepo",
 		})
 		if err != nil {
@@ -797,4 +793,154 @@ func TestRemoveRepository(t *testing.T) {
 			t.Error("expected message")
 		}
 	})
+}
+
+func TestEnterWorkspace(t *testing.T) {
+	t.Parallel()
+	store, _ := workspace.CreateTestStore(t)
+	server := newTestServer(store)
+	ctx := context.Background()
+
+	t.Run("handle required", func(t *testing.T) {
+		_, _, err := server.enterWorkspace(ctx, nil, EnterWorkspaceInput{})
+		if err == nil {
+			t.Error("expected error for empty handle")
+		}
+		if !strings.Contains(err.Error(), "handle") {
+			t.Errorf("error should mention 'handle', got: %v", err)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		_, _, err := server.enterWorkspace(ctx, nil, EnterWorkspaceInput{Handle: strPtr("nonexistent")})
+		if err == nil {
+			t.Error("expected error for nonexistent handle")
+		}
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("error should mention 'not found', got: %v", err)
+		}
+	})
+
+	t.Run("success", func(t *testing.T) {
+		_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "test"})
+		_, out, err := server.enterWorkspace(ctx, nil, EnterWorkspaceInput{Handle: &createOut.Handle})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if out.Handle != createOut.Handle {
+			t.Errorf("expected handle %s, got %s", createOut.Handle, out.Handle)
+		}
+		if out.Path == "" {
+			t.Error("output should have path")
+		}
+		if out.Path != createOut.Path {
+			t.Errorf("expected path %s, got %s", createOut.Path, out.Path)
+		}
+	})
+}
+
+func TestExitWorkspace(t *testing.T) {
+	t.Parallel()
+	store, _ := workspace.CreateTestStore(t)
+	server := newTestServer(store)
+	ctx := context.Background()
+
+	t.Run("clears active workspace", func(t *testing.T) {
+		_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "test"})
+		if _, _, err := server.enterWorkspace(ctx, nil, EnterWorkspaceInput{Handle: &createOut.Handle}); err != nil {
+			t.Fatalf("enterWorkspace failed: %v", err)
+		}
+		_, out, err := server.exitWorkspace(ctx, nil, struct{}{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if out.Message != "Exited active workspace" {
+			t.Errorf("expected 'Exited active workspace', got '%s'", out.Message)
+		}
+		_, _, err = server.getWorkspace(ctx, nil, GetWorkspaceInput{})
+		if err == nil {
+			t.Error("expected error after exit with no handle")
+		}
+	})
+
+	t.Run("success when no active workspace", func(t *testing.T) {
+		_, out, err := server.exitWorkspace(ctx, nil, struct{}{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if out.Message != "Exited active workspace" {
+			t.Errorf("expected 'Exited active workspace', got '%s'", out.Message)
+		}
+	})
+}
+
+func TestActiveWorkspaceOptionalHandle(t *testing.T) {
+	t.Parallel()
+	store, _ := workspace.CreateTestStore(t)
+	server := newTestServer(store)
+	ctx := context.Background()
+	localRepo := workspace.CreateLocalGitRepo(t, "activerepo", map[string]string{"file.txt": "content"})
+	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{
+		Purpose: "active handle test",
+		Repos:   []string{localRepo},
+	})
+
+	t.Run("get_workspace uses active handle", func(t *testing.T) {
+		if _, _, err := server.enterWorkspace(ctx, nil, EnterWorkspaceInput{Handle: &createOut.Handle}); err != nil {
+			t.Fatalf("enterWorkspace failed: %v", err)
+		}
+		_, out, err := server.getWorkspace(ctx, nil, GetWorkspaceInput{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if out.Handle != createOut.Handle {
+			t.Errorf("expected handle %s, got %s", createOut.Handle, out.Handle)
+		}
+	})
+
+	t.Run("list_captures uses active handle", func(t *testing.T) {
+		if _, _, err := server.enterWorkspace(ctx, nil, EnterWorkspaceInput{Handle: &createOut.Handle}); err != nil {
+			t.Fatalf("enterWorkspace failed: %v", err)
+		}
+		_, out, err := server.listCaptures(ctx, nil, ListCapturesInput{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(out.Captures) != 0 {
+			t.Errorf("expected 0 captures, got %d", len(out.Captures))
+		}
+	})
+
+	t.Run("get_workspace_path uses active handle", func(t *testing.T) {
+		if _, _, err := server.enterWorkspace(ctx, nil, EnterWorkspaceInput{Handle: &createOut.Handle}); err != nil {
+			t.Fatalf("enterWorkspace failed: %v", err)
+		}
+		_, out, err := server.getWorkspacePath(ctx, nil, GetWorkspacePathInput{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if out.Path == "" {
+			t.Error("expected path to be set")
+		}
+	})
+}
+
+func TestRemoveWorkspaceUsesActiveHandle(t *testing.T) {
+	t.Parallel()
+	store, _ := workspace.CreateTestStore(t)
+	server := newTestServer(store)
+	ctx := context.Background()
+
+	_, createOut, _ := server.createWorkspace(ctx, nil, CreateWorkspaceInput{Purpose: "test"})
+	if _, _, err := server.enterWorkspace(ctx, nil, EnterWorkspaceInput{Handle: &createOut.Handle}); err != nil {
+		t.Fatalf("enterWorkspace failed: %v", err)
+	}
+
+	_, out, err := server.removeWorkspace(ctx, nil, RemoveWorkspaceInput{DryRun: true})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !out.WouldDelete {
+		t.Error("expected WouldDelete=true when removing active workspace")
+	}
 }
