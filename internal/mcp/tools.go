@@ -521,7 +521,7 @@ func (s *Server) Run(ctx context.Context) error {
 	server := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "workshed",
-			Version: "0.6.0",
+			Version: "0.7.0",
 		},
 		nil,
 	)
