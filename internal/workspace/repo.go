@@ -28,11 +28,13 @@ func ParseRepoFlag(repo string) (url, ref string, depth int) {
 			if gitAtIdx != -1 {
 				url = baseRepo[:atIdx+1+gitAtIdx]
 				ref = afterAt[gitAtIdx+1:]
+				url = strings.TrimSuffix(url, ".git")
 				return url, ref, depth
 			}
 		}
 		url = baseRepo
 		ref = ""
+		url = strings.TrimSuffix(url, ".git")
 		return url, ref, depth
 	}
 
@@ -45,5 +47,6 @@ func ParseRepoFlag(repo string) (url, ref string, depth int) {
 		ref = ""
 	}
 
+	url = strings.TrimSuffix(url, ".git")
 	return url, ref, depth
 }

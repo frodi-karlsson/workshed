@@ -82,6 +82,55 @@ func TestParseRepoFlag(t *testing.T) {
 			wantRef:   "",
 			wantDepth: 10,
 		},
+		{
+			name:      "github shorthand without scheme",
+			repo:      "github.com/user/repo",
+			wantURL:   "github.com/user/repo",
+			wantRef:   "",
+			wantDepth: 0,
+		},
+		{
+			name:      "github shorthand with ref",
+			repo:      "github.com/user/repo@main",
+			wantURL:   "github.com/user/repo",
+			wantRef:   "main",
+			wantDepth: 0,
+		},
+		{
+			name:      "github shorthand with depth",
+			repo:      "github.com/user/repo::5",
+			wantURL:   "github.com/user/repo",
+			wantRef:   "",
+			wantDepth: 5,
+		},
+		{
+			name:      "github shorthand with ref and depth",
+			repo:      "github.com/user/repo@feature::3",
+			wantURL:   "github.com/user/repo",
+			wantRef:   "feature",
+			wantDepth: 3,
+		},
+		{
+			name:      "github shorthand with .git suffix",
+			repo:      "github.com/user/repo.git",
+			wantURL:   "github.com/user/repo",
+			wantRef:   "",
+			wantDepth: 0,
+		},
+		{
+			name:      "github shorthand with .git suffix and ref",
+			repo:      "github.com/user/repo.git@main",
+			wantURL:   "github.com/user/repo",
+			wantRef:   "main",
+			wantDepth: 0,
+		},
+		{
+			name:      "github shorthand with org and repo",
+			repo:      "github.com/my-org/my-repo@feature-branch::10",
+			wantURL:   "github.com/my-org/my-repo",
+			wantRef:   "feature-branch",
+			wantDepth: 10,
+		},
 	}
 
 	for _, tt := range tests {

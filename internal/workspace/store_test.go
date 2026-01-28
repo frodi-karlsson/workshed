@@ -116,6 +116,9 @@ func TestValidateRepoURL(t *testing.T) {
 		"git://github.com/org/repo",
 		"ssh://git@github.com/org/repo",
 		"git@github.com:org/repo",
+		"github.com/user/repo",
+		"github.com/org/repo.git",
+		"github.com/user/repo@main",
 	}
 
 	for _, url := range validURLs {
@@ -168,6 +171,8 @@ func TestIsLocalPath(t *testing.T) {
 		"git@github.com:org/repo",
 		"ssh://git@github.com/org/repo",
 		"git://github.com/org/repo",
+		"github.com/user/repo",
+		"github.com/org/repo.git",
 	}
 
 	for _, url := range remoteURLs {
@@ -1044,6 +1049,113 @@ func TestCloneRepo_PropagatesDefaultBranchError(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "specify @branch explicitly") {
 			t.Errorf("Expected suggestion to specify @branch explicitly, got: %v", err)
+		}
+	})
+}
+
+func TestSelectGitProtocol(t *testing.T) {
+	origAuthSock := os.Getenv("SSH_AUTH_SOCK")
+	origProtocol := os.Getenv(envGitProtocol)
+	defer func() {
+		_ = os.Setenv("SSH_AUTH_SOCK", origAuthSock)
+		_ = os.Setenv(envGitProtocol, origProtocol)
+	}()
+
+	t.Run("should convert github.com to https by default when no SSH", func(t *testing.T) {
+		_ = os.Unsetenv("SSH_AUTH_SOCK")
+		_ = os.Unsetenv(envGitProtocol)
+		url := selectGitProtocol("github.com/user/repo")
+		if url != "https://github.com/user/repo" {
+			t.Errorf("Expected https URL, got: %s", url)
+		}
+	})
+
+	t.Run("should convert github.com to ssh when SSH_AUTH_SOCK set", func(t *testing.T) {
+		_ = os.Setenv("SSH_AUTH_SOCK", "/tmp/ssh-agent.sock")
+		_ = os.Unsetenv(envGitProtocol)
+		url := selectGitProtocol("github.com/user/repo")
+		if url != "git@github.com:user/repo" {
+			t.Errorf("Expected SSH URL, got: %s", url)
+		}
+	})
+
+	t.Run("should respect WORKSHED_GIT_PROTOCOL=ssh", func(t *testing.T) {
+		_ = os.Unsetenv("SSH_AUTH_SOCK")
+		_ = os.Setenv(envGitProtocol, "ssh")
+		url := selectGitProtocol("github.com/user/repo")
+		if url != "git@github.com:user/repo" {
+			t.Errorf("Expected SSH URL, got: %s", url)
+		}
+	})
+
+	t.Run("should respect WORKSHED_GIT_PROTOCOL=https", func(t *testing.T) {
+		_ = os.Setenv("SSH_AUTH_SOCK", "/tmp/ssh-agent.sock")
+		_ = os.Setenv(envGitProtocol, "https")
+		url := selectGitProtocol("github.com/user/repo")
+		if url != "https://github.com/user/repo" {
+			t.Errorf("Expected https URL, got: %s", url)
+		}
+	})
+
+	t.Run("should pass through non-github.com URLs unchanged", func(t *testing.T) {
+		_ = os.Setenv("SSH_AUTH_SOCK", "/tmp/ssh-agent.sock")
+		_ = os.Unsetenv(envGitProtocol)
+		tests := []string{
+			"https://gitlab.com/user/repo",
+			"git@gitlab.com:user/repo",
+			"/path/to/local/repo",
+			"./relative/repo",
+		}
+		for _, input := range tests {
+			url := selectGitProtocol(input)
+			if url != input {
+				t.Errorf("Expected URL unchanged for %q, got: %s", input, url)
+			}
+		}
+	})
+
+	t.Run("should preserve ref and depth in URL", func(t *testing.T) {
+		_ = os.Unsetenv("SSH_AUTH_SOCK")
+		_ = os.Unsetenv(envGitProtocol)
+		url := selectGitProtocol("github.com/user/repo")
+		if url != "https://github.com/user/repo" {
+			t.Errorf("Expected https URL, got: %s", url)
+		}
+	})
+}
+
+func TestSshAgentAvailable(t *testing.T) {
+	origAuthSock := os.Getenv("SSH_AUTH_SOCK")
+	origHome := os.Getenv("HOME")
+	defer func() {
+		_ = os.Setenv("SSH_AUTH_SOCK", origAuthSock)
+		if origHome != "" {
+			_ = os.Setenv("HOME", origHome)
+		} else {
+			_ = os.Unsetenv("HOME")
+		}
+	}()
+
+	t.Run("should return false when SSH_AUTH_SOCK not set", func(t *testing.T) {
+		_ = os.Unsetenv("SSH_AUTH_SOCK")
+		if sshAgentAvailable() {
+			t.Error("Expected false when SSH_AUTH_SOCK not set")
+		}
+	})
+
+	t.Run("should return false when HOME not set", func(t *testing.T) {
+		_ = os.Setenv("SSH_AUTH_SOCK", "/tmp/ssh-agent.sock")
+		_ = os.Unsetenv("HOME")
+		if sshAgentAvailable() {
+			t.Error("Expected false when HOME not set")
+		}
+	})
+
+	t.Run("should return false when .ssh directory does not exist", func(t *testing.T) {
+		_ = os.Setenv("SSH_AUTH_SOCK", "/tmp/ssh-agent.sock")
+		_ = os.Setenv("HOME", "/nonexistent-home")
+		if sshAgentAvailable() {
+			t.Error("Expected false when .ssh directory does not exist")
 		}
 	})
 }

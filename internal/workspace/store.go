@@ -563,7 +563,7 @@ func isLocalPath(path string) bool {
 		return false
 	}
 
-	return !strings.HasPrefix(path, "git@") && !strings.Contains(path, "://")
+	return !strings.HasPrefix(path, "git@") && !strings.Contains(path, "://") && !strings.HasPrefix(path, "github.com/")
 }
 
 func resolveLocalPath(url, invocationCWD string) (string, error) {
@@ -618,6 +618,12 @@ func validateRepoURL(url, invocationCWD string) error {
 		return errors.New("repository URL cannot be empty")
 	}
 
+	url = strings.TrimSuffix(url, ".git")
+
+	if strings.HasPrefix(url, "github.com/") {
+		url = "https://" + url
+	}
+
 	if isLocalPath(url) {
 		return validateLocalRepository(url, invocationCWD)
 	}
@@ -636,7 +642,7 @@ func validateRepoURL(url, invocationCWD string) error {
 		}
 	}
 
-	return fmt.Errorf("unsupported URL (expected https://, git@, ssh://, git://, or a local path)")
+	return fmt.Errorf("unsupported URL (expected https://, git@, ssh://, git://, github.com/, or a local path)")
 }
 
 func validateTemplatePath(path string) error {
@@ -698,8 +704,51 @@ func (s *FSStore) writeMetadataToDir(ws *Workspace, dir string) error {
 	return nil
 }
 
+const envGitProtocol = "WORKSHED_GIT_PROTOCOL"
+
+func selectGitProtocol(url string) string {
+	if !strings.HasPrefix(url, "github.com/") {
+		return url
+	}
+
+	pref := os.Getenv(envGitProtocol)
+	switch pref {
+	case "ssh":
+		return "git@github.com:" + strings.TrimPrefix(url, "github.com/")
+	case "https":
+		return "https://" + url
+	case "auto", "":
+		if sshAgentAvailable() {
+			return "git@github.com:" + strings.TrimPrefix(url, "github.com/")
+		}
+		return "https://" + url
+	default:
+		return url
+	}
+}
+
+func sshAgentAvailable() bool {
+	if os.Getenv("SSH_AUTH_SOCK") == "" {
+		return false
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+	sshDir := filepath.Join(home, ".ssh")
+	if _, err := os.Stat(sshDir); os.IsNotExist(err) {
+		return false
+	}
+	for _, key := range []string{"id_rsa", "id_ed25519", "id_ecdsa"} {
+		if _, err := os.Stat(filepath.Join(sshDir, key)); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir, invocationCWD string) (string, error) {
-	url := repo.URL
+	url := selectGitProtocol(repo.URL)
 	ref := repo.Ref
 
 	// Convert relative local paths to absolute for git clone
