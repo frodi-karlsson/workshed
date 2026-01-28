@@ -22,10 +22,9 @@ import (
 	"github.com/frodi/workshed/internal/cli/repos"
 	"github.com/frodi/workshed/internal/cli/update"
 	"github.com/frodi/workshed/internal/tui"
+	"github.com/frodi/workshed/internal/version"
 	"github.com/spf13/cobra"
 )
-
-var version = "0.7.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -35,7 +34,7 @@ func main() {
 
 	root := &cobra.Command{
 		Use:     "workshed",
-		Version: version,
+		Version: version.Version,
 		Short:   "Intent-scoped local development workspaces",
 		Long: `workshed - Intent-scoped local development workspaces
 

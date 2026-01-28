@@ -17,6 +17,7 @@ import (
 	"github.com/frodi/workshed/internal/fs"
 	"github.com/frodi/workshed/internal/git"
 	"github.com/frodi/workshed/internal/handle"
+	"github.com/frodi/workshed/internal/version"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -1313,7 +1314,7 @@ func (s *FSStore) ExportContext(ctx context.Context, handle string) (*WorkspaceC
 		Repositories: repos,
 		Captures:     contextCaptures,
 		Metadata: ContextMetadata{
-			WorkshedVersion: "0.5.1",
+			WorkshedVersion: version.Version,
 			ExecutionsCount: len(executions),
 			CapturesCount:   len(captures),
 			LastExecutedAt:  lastExecuted,

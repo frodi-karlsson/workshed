@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/frodi/workshed/internal/version"
 	"github.com/frodi/workshed/internal/workspace"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -521,7 +522,7 @@ func (s *Server) Run(ctx context.Context) error {
 	server := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "workshed",
-			Version: "0.7.0",
+			Version: version.Version,
 		},
 		nil,
 	)

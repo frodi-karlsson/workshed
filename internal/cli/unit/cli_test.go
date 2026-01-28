@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/frodi/workshed/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -82,7 +83,7 @@ func TestVersionFlag(t *testing.T) {
 	var buf bytes.Buffer
 	root := &cobra.Command{
 		Use:     "workshed",
-		Version: "0.5.1",
+		Version: version.Version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.Println("Version: " + cmd.Version)
 			return nil
@@ -97,7 +98,7 @@ func TestVersionFlag(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !bytes.Contains(buf.Bytes(), []byte("0.5.1")) {
+	if !bytes.Contains(buf.Bytes(), []byte(version.Version)) {
 		t.Errorf("Version output should contain version, got: %s", output)
 	}
 }
