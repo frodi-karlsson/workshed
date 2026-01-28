@@ -82,7 +82,7 @@ func (RealGit) CurrentBranch(ctx context.Context, dir string) (string, error) {
 }
 
 func (RealGit) DefaultBranch(ctx context.Context, url string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", "ls-remote", "--symref", url, "+HEAD")
+	cmd := exec.CommandContext(ctx, "git", "ls-remote", "--symref", url, "HEAD")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", ClassifyError("default-branch", err, output)

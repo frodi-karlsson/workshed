@@ -28,7 +28,7 @@ type AddRepoView struct {
 
 func NewAddRepoView(s workspace.Store, ctx context.Context, handle string, invocationCtx workspace.InvocationContext) AddRepoView {
 	ti := textinput.New()
-	ti.Placeholder = "Repository URL (e.g., https://github.com/org/repo@branch)"
+	ti.Placeholder = "Repository URL (e.g., https://github.com/org/repo@branch::10)"
 	ti.CharLimit = 500
 	ti.Prompt = ""
 	ti.Focus()
@@ -96,7 +96,7 @@ func (v *AddRepoView) addRepo() (ViewResult, tea.Cmd) {
 		}
 		return ViewResult{}, nil
 	}
-	url, ref := workspace.ParseRepoFlag(url)
+	url, ref, _ := workspace.ParseRepoFlag(url)
 	v.repos = append(v.repos, workspace.RepositoryOption{
 		URL: url,
 		Ref: ref,
@@ -180,7 +180,7 @@ func (v *AddRepoView) View() string {
 			"\n",
 			lipgloss.NewStyle().
 				Foreground(components.ColorVeryMuted).
-				Render("Enter repository URL with optional @ref (branch or tag)"),
+				Render("Enter repository URL with optional @ref and ::depth"),
 			"\n",
 		) + "\n" +
 			lipgloss.NewStyle().

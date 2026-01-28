@@ -206,3 +206,20 @@ func TestGitErrorInterface(t *testing.T) {
 		}
 	})
 }
+
+func TestRealGit_DefaultBranch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network test in short mode")
+	}
+
+	t.Run("should detect main as default branch", func(t *testing.T) {
+		git := RealGit{}
+		branch, err := git.DefaultBranch(t.Context(), "https://github.com/prettier/prettier")
+		if err != nil {
+			t.Fatalf("DefaultBranch failed: %v", err)
+		}
+		if branch != "main" {
+			t.Errorf("Expected 'main', got: %q", branch)
+		}
+	})
+}

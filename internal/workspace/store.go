@@ -111,9 +111,10 @@ func (s *FSStore) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 		}
 
 		clonedRepos[i] = Repository{
-			URL:  url,
-			Ref:  opt.Ref,
-			Name: extractRepoName(opt.URL, opts.InvocationCWD),
+			URL:   url,
+			Ref:   opt.Ref,
+			Name:  extractRepoName(opt.URL, opts.InvocationCWD),
+			Depth: opt.Depth,
 		}
 	}
 
@@ -320,9 +321,10 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 		}
 
 		clonedRepos[i] = Repository{
-			URL:  url,
-			Ref:  opt.Ref,
-			Name: extractRepoName(opt.URL, invocationCWD),
+			URL:   url,
+			Ref:   opt.Ref,
+			Name:  extractRepoName(opt.URL, invocationCWD),
+			Depth: opt.Depth,
 		}
 	}
 
@@ -339,12 +341,16 @@ func (s *FSStore) AddRepositories(ctx context.Context, handle string, repos []Re
 		}
 	}()
 
-	for _, repo := range clonedRepos {
-		if err := s.cloneRepo(ctx, repo, ws.Path, invocationCWD); err != nil {
+	for i := range clonedRepos {
+		detectedRef, err := s.cloneRepo(ctx, clonedRepos[i], ws.Path, invocationCWD)
+		if err != nil {
 			if cleanupErr != nil {
-				return fmt.Errorf("failed to clone %s: %w; %v", repo.Name, err, cleanupErr)
+				return fmt.Errorf("failed to clone %s: %w; %v", clonedRepos[i].Name, err, cleanupErr)
 			}
-			return fmt.Errorf("failed to clone %s: %w", repo.Name, err)
+			return fmt.Errorf("failed to clone %s: %w", clonedRepos[i].Name, err)
+		}
+		if detectedRef != "" && clonedRepos[i].Ref == "" {
+			clonedRepos[i].Ref = detectedRef
 		}
 	}
 
@@ -691,7 +697,7 @@ func (s *FSStore) writeMetadataToDir(ws *Workspace, dir string) error {
 	return nil
 }
 
-func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir, invocationCWD string) error {
+func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir, invocationCWD string) (string, error) {
 	url := repo.URL
 	ref := repo.Ref
 
@@ -699,14 +705,14 @@ func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir, invocat
 	if isLocalPath(url) {
 		absPath, err := resolveLocalPath(url, invocationCWD)
 		if err != nil {
-			return fmt.Errorf("resolving local path: %w", err)
+			return "", fmt.Errorf("resolving local path: %w", err)
 		}
 
 		// Auto-detect current branch for local repos when no ref specified
 		if ref == "" {
 			branch, err := s.git.CurrentBranch(ctx, absPath)
 			if err != nil {
-				return fmt.Errorf("detecting current branch: %w", err)
+				return "", fmt.Errorf("detecting current branch: %w", err)
 			}
 			ref = branch
 		}
@@ -714,37 +720,44 @@ func (s *FSStore) cloneRepo(ctx context.Context, repo Repository, wsDir, invocat
 		url = absPath
 	}
 
-	// Fallback to "main" for remote repos or if branch detection failed
-	if ref == "" {
-		if isLocalPath(url) {
-			ref = "main"
-		} else {
-			defaultBranch, err := s.git.DefaultBranch(ctx, url)
-			if err == nil && defaultBranch != "" {
-				ref = defaultBranch
-			} else {
-				ref = "main"
-			}
+	// Detect default branch for remote repos when no ref specified
+	if ref == "" && !isLocalPath(url) {
+		defaultBranch, err := s.git.DefaultBranch(ctx, url)
+		if err != nil {
+			return "", fmt.Errorf("detecting default branch: %w", err)
 		}
+		if defaultBranch == "" {
+			return "", fmt.Errorf("could not detect default branch for %s; specify @branch explicitly (e.g., github.com/org/repo@master)", url)
+		}
+		ref = defaultBranch
+	}
+
+	// For local repos with no ref and no current branch detected, require explicit ref
+	if ref == "" {
+		return "", fmt.Errorf("could not detect current branch for local repo %s; specify @branch explicitly", url)
 	}
 
 	repoDir := filepath.Join(wsDir, repo.Name)
 
-	if err := s.git.Clone(ctx, url, repoDir, git.CloneOptions{}); err != nil {
-		return err
+	if err := s.git.Clone(ctx, url, repoDir, git.CloneOptions{Depth: repo.Depth}); err != nil {
+		return "", err
 	}
 
 	if err := s.git.Checkout(ctx, repoDir, ref); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return ref, nil
 }
 
 func (s *FSStore) cloneRepositories(ctx context.Context, repos []Repository, wsDir, invocationCWD string) error {
-	for _, repo := range repos {
-		if err := s.cloneRepo(ctx, repo, wsDir, invocationCWD); err != nil {
-			return fmt.Errorf("failed to clone %s: %w", repo.Name, err)
+	for i := range repos {
+		detectedRef, err := s.cloneRepo(ctx, repos[i], wsDir, invocationCWD)
+		if err != nil {
+			return fmt.Errorf("failed to clone %s: %w", repos[i].Name, err)
+		}
+		if detectedRef != "" && repos[i].Ref == "" {
+			repos[i].Ref = detectedRef
 		}
 	}
 	return nil

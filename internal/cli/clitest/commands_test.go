@@ -324,7 +324,8 @@ func TestCreateCommand(t *testing.T) {
 	defer env.Cleanup()
 
 	t.Run("with --purpose", func(t *testing.T) {
-		err := env.Run(create.Command(), []string{"--purpose", "my purpose"})
+		localRepo := workspace.CreateLocalGitRepo(t, "testrepo", map[string]string{"README.md": "# Test"})
+		err := env.Run(create.Command(), []string{"--purpose", "my purpose", "--repo", localRepo + "@main"})
 		if err != nil {
 			t.Errorf("create with --purpose should work: %v", err)
 		}
@@ -335,7 +336,8 @@ func TestCreateCommand(t *testing.T) {
 	})
 
 	t.Run("format json", func(t *testing.T) {
-		err := env.Run(create.Command(), []string{"--purpose", "json format test", "--format", "json"})
+		localRepo := workspace.CreateLocalGitRepo(t, "testrepo2", map[string]string{"README.md": "# Test"})
+		err := env.Run(create.Command(), []string{"--purpose", "json format test", "--repo", localRepo + "@main", "--format", "json"})
 		if err != nil {
 			t.Errorf("create --format json should work: %v", err)
 		}

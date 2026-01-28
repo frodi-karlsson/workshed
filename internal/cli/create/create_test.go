@@ -2,6 +2,14 @@ package create
 
 import "testing"
 
+func TestCommand_HasDepthFlag(t *testing.T) {
+	cmd := Command()
+	flag := cmd.Flags().Lookup("depth")
+	if flag == nil {
+		t.Error("create command should have --depth flag")
+	}
+}
+
 func TestValidateRepoFlag_Protocols(t *testing.T) {
 	tests := []struct {
 		name    string

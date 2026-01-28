@@ -18,6 +18,10 @@ type Repository struct {
 
 	// Name is a human-readable identifier for the repository.
 	Name string `json:"name"`
+
+	// Depth is the clone depth used during initial clone.
+	// This is not persisted to JSON.
+	Depth int `json:"-"`
 }
 
 // RepositoryOption specifies a repository to add during workspace creation.
@@ -27,6 +31,9 @@ type RepositoryOption struct {
 
 	// Ref is the optional git reference to check out.
 	Ref string
+
+	// Depth specifies shallow clone depth. Zero means full history.
+	Depth int
 }
 
 // Workspace represents a collection of repositories managed together.

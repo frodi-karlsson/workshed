@@ -24,6 +24,7 @@ func Command() *cobra.Command {
 	var localMap []string
 	var template string
 	var templateVars []string
+	var depth int
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -33,6 +34,8 @@ func Command() *cobra.Command {
 Examples:
   workshed create --purpose "Debug payment timeout" --repo github.com/org/api@main
   workshed create -r github.com/org/frontend@feature -r github.com/org/backend@feature
+  workshed create --purpose "Shallow clone" --repo github.com/org/large-repo::10
+  workshed create --purpose "Shallow with ref" --repo github.com/org/repo@main::5
   workshed create --purpose "New feature" --template ~/templates/react-app --map name=myapp
   workshed create --purpose "Local exploration"`,
 		Args: cobra.NoArgs,
@@ -84,10 +87,15 @@ Examples:
 						continue
 					}
 
-					url, ref := workspace.ParseRepoFlag(repo)
+					url, ref, repoDepth := workspace.ParseRepoFlag(repo)
+					d := depth
+					if repoDepth > 0 {
+						d = repoDepth
+					}
 					repoOpts = append(repoOpts, workspace.RepositoryOption{
-						URL: url,
-						Ref: ref,
+						URL:   url,
+						Ref:   ref,
+						Depth: d,
 					})
 				}
 			}
@@ -162,11 +170,12 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&purpose, "purpose", "", "Workspace purpose")
-	cmd.Flags().StringSliceVarP(&repos, "repo", "r", nil, "Repository URL with optional ref")
+	cmd.Flags().StringSliceVarP(&repos, "repo", "r", nil, "Repository URL with optional @ref and ::depth")
 	cmd.Flags().StringSliceVar(&reposAlias, "repos", nil, "Alias for --repo (can be specified multiple times)")
 	cmd.Flags().StringSliceVar(&localMap, "local-map", nil, "Map a local directory as a repository")
 	cmd.Flags().StringVar(&template, "template", "", "Template name or path")
 	cmd.Flags().StringSliceVar(&templateVars, "map", nil, "Template variable (key=value)")
+	cmd.Flags().IntVar(&depth, "depth", 0, "Default clone depth (overridden by ::depth in repo URL)")
 	cmd.Flags().String("format", "table", "Output format (table|json)")
 	_ = cmd.MarkFlagRequired("purpose")
 

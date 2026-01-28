@@ -188,7 +188,7 @@ func (v *WizardView) addRepo() (ViewResult, tea.Cmd) {
 		v.loadingType = "create"
 		return ViewResult{}, createWorkspaceCmd(v.ctx, v.store, v.purpose, v.template, v.templateVars, v.repos)
 	}
-	url, ref := workspace.ParseRepoFlag(repoInput)
+	url, ref, _ := workspace.ParseRepoFlag(repoInput)
 	v.repos = append(v.repos, workspace.RepositoryOption{URL: url, Ref: ref})
 	v.repoInput.SetValue("")
 	return ViewResult{}, textinput.Blink

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	mcpcmd "github.com/frodi/workshed/cmd/workshed/mcp"
 	"github.com/frodi/workshed/internal/cli"
 	"github.com/frodi/workshed/internal/cli/apply"
 	"github.com/frodi/workshed/internal/cli/capture"
@@ -24,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.5.1"
+var version = "0.6.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -65,6 +66,8 @@ Examples:
 	root.AddCommand(health.Command())
 
 	root.AddCommand(completion.NewCommand(root))
+
+	root.AddCommand(mcpcmd.Command())
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

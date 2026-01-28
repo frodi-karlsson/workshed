@@ -6,6 +6,7 @@ package workspace
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -509,6 +510,7 @@ func TestListCaptures(t *testing.T) {
 		mockGit.SetRevParseResult("abc123")
 		mockGit.SetCurrentBranchResult("main")
 		mockGit.SetStatusPorcelainResult("")
+		mockGit.SetDefaultBranchResult("main")
 		store, err := NewFSStore(root, mockGit)
 		if err != nil {
 			t.Fatalf("NewFSStore failed: %v", err)
@@ -544,6 +546,36 @@ func TestListCaptures(t *testing.T) {
 		}
 		if captures[0].Name != "Second" {
 			t.Errorf("Expected first capture to be 'Second', got: %s", captures[0].Name)
+		}
+	})
+}
+
+func TestCloneRepo_AutoDetectsDefaultBranch(t *testing.T) {
+	t.Run("should use DefaultBranch result when no ref specified", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetDefaultBranchResult("develop")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/org/repo"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		if len(ws.Repositories) != 1 {
+			t.Fatalf("Expected 1 repository, got %d", len(ws.Repositories))
+		}
+		if ws.Repositories[0].Ref != "develop" {
+			t.Errorf("Expected ref 'develop' from auto-detection, got: %q", ws.Repositories[0].Ref)
 		}
 	})
 }
@@ -642,6 +674,7 @@ func TestCaptureKind(t *testing.T) {
 		mockGit.SetRevParseResult("abc123")
 		mockGit.SetCurrentBranchResult("main")
 		mockGit.SetStatusPorcelainResult("")
+		mockGit.SetDefaultBranchResult("main")
 		store, err := NewFSStore(root, mockGit)
 		if err != nil {
 			t.Fatalf("NewFSStore failed: %v", err)
@@ -676,6 +709,7 @@ func TestCaptureKind(t *testing.T) {
 		mockGit.SetRevParseResult("abc123")
 		mockGit.SetCurrentBranchResult("main")
 		mockGit.SetStatusPorcelainResult("")
+		mockGit.SetDefaultBranchResult("main")
 		store, err := NewFSStore(root, mockGit)
 		if err != nil {
 			t.Fatalf("NewFSStore failed: %v", err)
@@ -709,6 +743,7 @@ func TestCaptureKind(t *testing.T) {
 		mockGit.SetRevParseResult("abc123")
 		mockGit.SetCurrentBranchResult("main")
 		mockGit.SetStatusPorcelainResult("")
+		mockGit.SetDefaultBranchResult("main")
 		store, err := NewFSStore(root, mockGit)
 		if err != nil {
 			t.Fatalf("NewFSStore failed: %v", err)
@@ -743,6 +778,7 @@ func TestCaptureKind(t *testing.T) {
 		mockGit.SetRevParseResult("abc123")
 		mockGit.SetCurrentBranchResult("main")
 		mockGit.SetStatusPorcelainResult("")
+		mockGit.SetDefaultBranchResult("main")
 		store, err := NewFSStore(root, mockGit)
 		if err != nil {
 			t.Fatalf("NewFSStore failed: %v", err)
@@ -868,6 +904,7 @@ func TestExportContext_RefHandling(t *testing.T) {
 		root := t.TempDir()
 		mockGit := &git.MockGit{}
 		mockGit.SetCurrentBranchResult("feature-branch")
+		mockGit.SetDefaultBranchResult("main")
 		store, err := NewFSStore(root, mockGit)
 		if err != nil {
 			t.Fatalf("NewFSStore failed: %v", err)
@@ -954,6 +991,59 @@ func TestImportContext_RefHandling(t *testing.T) {
 
 		if imported.Handle == "original-handle" {
 			t.Error("Expected new handle to be generated")
+		}
+	})
+}
+
+func TestCloneRepo_PropagatesDefaultBranchError(t *testing.T) {
+	t.Run("should return error when DefaultBranch fails for remote repo", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetDefaultBranchErr(errors.New("network timeout"))
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/org/repo"},
+			},
+		})
+		if err == nil {
+			t.Fatalf("Expected error, got workspace %s", ws.Handle)
+		}
+		if !strings.Contains(err.Error(), "detecting default branch") {
+			t.Errorf("Expected 'detecting default branch' error, got: %v", err)
+		}
+	})
+
+	t.Run("should return error when DefaultBranch returns empty for remote repo", func(t *testing.T) {
+		root := t.TempDir()
+		mockGit := &git.MockGit{}
+		mockGit.SetDefaultBranchResult("")
+		store, err := NewFSStore(root, mockGit)
+		if err != nil {
+			t.Fatalf("NewFSStore failed: %v", err)
+		}
+
+		ctx := context.Background()
+		ws, err := store.Create(ctx, CreateOptions{
+			Purpose: "Test workspace",
+			Repositories: []RepositoryOption{
+				{URL: "https://github.com/org/repo"},
+			},
+		})
+		if err == nil {
+			t.Fatalf("Expected error, got workspace %s", ws.Handle)
+		}
+		if !strings.Contains(err.Error(), "could not detect default branch") {
+			t.Errorf("Expected 'could not detect default branch' error, got: %v", err)
+		}
+		if !strings.Contains(err.Error(), "specify @branch explicitly") {
+			t.Errorf("Expected suggestion to specify @branch explicitly, got: %v", err)
 		}
 	})
 }

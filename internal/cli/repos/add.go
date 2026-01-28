@@ -14,15 +14,17 @@ import (
 func AddCommand() *cobra.Command {
 	var repos []string
 	var reposAlias []string
+	var depth int
 
 	cmd := &cobra.Command{
-		Use:   "add [<handle>] --repo url[@ref]...",
+		Use:   "add [<handle>] --repo url[@ref][::depth]...",
 		Short: "Add repositories to a workspace",
 		Long: `Add repositories to a workspace.
 
 Examples:
   workshed repos add --repo github.com/org/repo@main
   workshed repos add -r github.com/org/repo1 -r github.com/org/repo2
+  workshed repos add --repo github.com/org/large-repo::10
   workshed repos add my-workspace --repo ./local-lib`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -47,10 +49,15 @@ Examples:
 				if repo == "" {
 					continue
 				}
-				url, ref := workspace.ParseRepoFlag(repo)
+				url, ref, repoDepth := workspace.ParseRepoFlag(repo)
+				d := depth
+				if repoDepth > 0 {
+					d = repoDepth
+				}
 				repoOpts = append(repoOpts, workspace.RepositoryOption{
-					URL: url,
-					Ref: ref,
+					URL:   url,
+					Ref:   ref,
+					Depth: d,
 				})
 			}
 
@@ -82,8 +89,9 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&repos, "repo", "r", nil, "Repository URL with optional ref")
+	cmd.Flags().StringSliceVarP(&repos, "repo", "r", nil, "Repository URL with optional @ref and ::depth")
 	cmd.Flags().StringSliceVar(&reposAlias, "repos", nil, "Alias for --repo (can be specified multiple times)")
+	cmd.Flags().IntVar(&depth, "depth", 0, "Default clone depth (overridden by ::depth in repo URL)")
 	cmd.Flags().String("format", "table", "Output format (table|json|raw)")
 	_ = cmd.MarkFlagRequired("repo")
 

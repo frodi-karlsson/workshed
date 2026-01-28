@@ -66,4 +66,17 @@ func TestReposCommand(t *testing.T) {
 		}
 		t.Error("repos remove subcommand not found")
 	})
+
+	t.Run("add has --depth flag", func(t *testing.T) {
+		cmd := Command()
+		for _, c := range cmd.Commands() {
+			if c.Name() == "add" {
+				if !flagExists(c, "depth") {
+					t.Error("repos add should have --depth flag")
+				}
+				return
+			}
+		}
+		t.Error("repos add subcommand not found")
+	})
 }
