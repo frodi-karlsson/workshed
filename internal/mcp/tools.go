@@ -4,12 +4,29 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/frodi/workshed/internal/version"
 	"github.com/frodi/workshed/internal/workspace"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+func detectShell() (string, error) {
+	if shell := os.Getenv("SHELL"); shell != "" {
+		if _, err := os.Stat(shell); err == nil {
+			return shell, nil
+		}
+	}
+
+	for _, shell := range []string{"/bin/bash", "/bin/zsh", "/bin/sh"} {
+		if _, err := os.Stat(shell); err == nil {
+			return shell, nil
+		}
+	}
+
+	return "", fmt.Errorf("no suitable shell found")
+}
 
 type Server struct {
 	store        workspace.Store
@@ -213,15 +230,25 @@ func (s *Server) execCommand(ctx context.Context, req *mcp.CallToolRequest, inpu
 		return nil, ExecCommandOutput{}, NewToolError("command is required. Provide an array of command and arguments.\nExample: {command: [\"make\", \"test\"]}")
 	}
 
+	shellPath, shellErr := detectShell()
+	if shellErr != nil {
+		fmt.Fprintf(os.Stderr, "workshed: warning: %v, falling back to /bin/sh\n", shellErr)
+		shellPath = "/bin/sh"
+	} else {
+		fmt.Fprintf(os.Stderr, "workshed: using shell %s\n", shellPath)
+	}
+
+	command := []string{shellPath, "-c", strings.Join(input.Command, " ")}
+
 	opts := workspace.ExecOptions{
-		Command:  input.Command,
+		Command:  command,
 		Target:   input.Repo,
 		Parallel: input.All,
 	}
 
 	results, err := s.store.Exec(ctx, handle, opts)
 	if err != nil {
-		return nil, ExecCommandOutput{}, s.workspaceNotFoundError(ctx, handle)
+		return nil, ExecCommandOutput{}, err
 	}
 
 	maxExitCode := 0
@@ -262,7 +289,7 @@ func (s *Server) captureState(ctx context.Context, req *mcp.CallToolRequest, inp
 		Tags:        input.Tags,
 	})
 	if err != nil {
-		return nil, CaptureStateOutput{}, s.workspaceNotFoundError(ctx, handle)
+		return nil, CaptureStateOutput{}, err
 	}
 
 	gitState := make([]GitRefInfo, 0, len(capture.GitState))
@@ -307,9 +334,16 @@ func (s *Server) help(ctx context.Context, req *mcp.CallToolRequest, _ struct{})
 	return nil, HelpOutput{
 		Message: `# Workshed Concepts
 
-## Active Workspace
+## Key Parameters
 
-Use enter_workspace({handle: "..."}) to set an active workspace. Once set, you can omit the 'handle' parameter from all commands - they will automatically use the active workspace.
+### handle (Workspace Identifier)
+A unique random identifier for a workspace (e.g., "aquatic-fish-motion"). Use list_workspaces() to see available workspaces.
+
+### repo (Repository Name)
+The name of a repository within a workspace (not the full URL). Find available repos via get_workspace().
+
+### Active Workspace
+Call enter_workspace({handle: "..."}) once to set an active workspace. Subsequent commands can omit the 'handle' parameter.
 
 Use exit_workspace() to clear the active workspace when you're done.
 
@@ -366,7 +400,7 @@ func (s *Server) listCaptures(ctx context.Context, req *mcp.CallToolRequest, inp
 
 	captures, err := s.store.ListCaptures(ctx, handle)
 	if err != nil {
-		return nil, ListCapturesOutput{}, s.workspaceNotFoundError(ctx, handle)
+		return nil, ListCapturesOutput{}, err
 	}
 
 	result := make([]CaptureInfo, 0, len(captures))
@@ -441,7 +475,7 @@ func (s *Server) exportWorkspace(ctx context.Context, req *mcp.CallToolRequest, 
 
 	ctxData, err := s.store.ExportContext(ctx, handle)
 	if err != nil {
-		return nil, ExportWorkspaceOutput{}, s.workspaceNotFoundError(ctx, handle)
+		return nil, ExportWorkspaceOutput{}, err
 	}
 
 	if input.Compact {
@@ -503,7 +537,7 @@ func (s *Server) getWorkspacePath(ctx context.Context, req *mcp.CallToolRequest,
 
 	path, err := s.store.Path(ctx, handle)
 	if err != nil {
-		return nil, GetWorkspacePathOutput{}, s.workspaceNotFoundError(ctx, handle)
+		return nil, GetWorkspacePathOutput{}, err
 	}
 
 	return nil, GetWorkspacePathOutput{Path: path}, nil
@@ -644,12 +678,12 @@ func (s *Server) Run(ctx context.Context) error {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_workspace",
-		Description: "Get detailed information about a workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Returns purpose, repositories, and paths.",
+		Description: "Get workspace details. Parameters: handle (workspace identifier, e.g., \"aquatic-fish-motion\"). If not provided, uses active workspace. Returns purpose, list of repositories (with their names, URLs, refs, and paths).",
 	}, s.getWorkspace)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "create_workspace",
-		Description: "Create a new workspace with purpose and optional repositories. Use format 'url' or 'url@ref' (e.g., github.com/org/repo@main). Template variables use key=value pairs. Returns handle, path, and repository details.",
+		Description: "Create a new workspace. Parameters: purpose (required, brief description), repos (array of git URLs with optional @ref, e.g., \"github.com/org/repo@main\"), template, template_vars. Returns a new workspace handle (random identifier like \"aquatic-fish-motion\"), path, and repository details.",
 	}, s.createWorkspace)
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -669,7 +703,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "exec_command",
-		Description: "Execute a shell command in a workspace. If handle is not provided, uses the active workspace (set with enter_workspace). Takes a command array (e.g., [\"make\", \"test\"]). Use 'repo' to run in a specific repository, or 'all: true' to run in all repositories.",
+		Description: "Execute a command in a workspace. Parameters: handle (workspace identifier, e.g., \"aquatic-fish-motion\"), repo (repository name within the workspace), all (run in all repos). Command runs in a shell with detected $SHELL, falling back to /bin/sh.",
 	}, s.execCommand)
 
 	mcp.AddTool(server, &mcp.Tool{
