@@ -44,6 +44,10 @@ Example MCP config:
 }
 ```
 
+![Demo](./media/demo.gif)
+
+Fixing an upstream dependency with zero fuzz and no impact on the current diff.
+
 ## Quick Start
 
 ```bash

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/frodi/workshed/internal/version"
 	"github.com/frodi/workshed/internal/workspace"
@@ -230,15 +231,15 @@ func (s *Server) execCommand(ctx context.Context, req *mcp.CallToolRequest, inpu
 		return nil, ExecCommandOutput{}, NewToolError("command is required. Provide an array of command and arguments.\nExample: {command: [\"make\", \"test\"]}")
 	}
 
-	shellPath, shellErr := detectShell()
-	if shellErr != nil {
-		fmt.Fprintf(os.Stderr, "workshed: warning: %v, falling back to /bin/sh\n", shellErr)
-		shellPath = "/bin/sh"
-	} else {
-		fmt.Fprintf(os.Stderr, "workshed: using shell %s\n", shellPath)
-	}
-
+	shellPath, _ := detectShell()
 	command := []string{shellPath, "-c", strings.Join(input.Command, " ")}
+
+	execCtx := ctx
+	var cancel context.CancelFunc
+	if input.Timeout > 0 {
+		execCtx, cancel = context.WithTimeout(ctx, time.Duration(input.Timeout)*time.Millisecond)
+		defer cancel()
+	}
 
 	opts := workspace.ExecOptions{
 		Command:  command,
@@ -246,7 +247,7 @@ func (s *Server) execCommand(ctx context.Context, req *mcp.CallToolRequest, inpu
 		Parallel: input.All,
 	}
 
-	results, err := s.store.Exec(ctx, handle, opts)
+	results, err := s.store.Exec(execCtx, handle, opts)
 	if err != nil {
 		return nil, ExecCommandOutput{}, err
 	}
@@ -258,6 +259,9 @@ func (s *Server) execCommand(ctx context.Context, req *mcp.CallToolRequest, inpu
 			maxExitCode = r.ExitCode
 		}
 		output := strings.TrimSpace(string(r.Output))
+		if input.OutputLimit > 0 && len(output) > input.OutputLimit {
+			output = output[:input.OutputLimit] + "\n... (output truncated)"
+		}
 		resultInfos = append(resultInfos, ExecResultInfo{
 			Repository: r.Repository,
 			ExitCode:   r.ExitCode,
@@ -703,7 +707,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "exec_command",
-		Description: "Execute a command in a workspace. Parameters: handle (workspace identifier, e.g., \"aquatic-fish-motion\"), repo (repository name within the workspace), all (run in all repos). Command runs in a shell with detected $SHELL, falling back to /bin/sh.",
+		Description: "Execute a command in a workspace. Parameters: handle (workspace identifier), repo (repository name), all (run in all repos), timeout (max milliseconds), output_limit (max output characters). Command runs in a shell with detected $SHELL, falling back to /bin/sh.",
 	}, s.execCommand)
 
 	mcp.AddTool(server, &mcp.Tool{

@@ -296,6 +296,52 @@ func TestExecCommand(t *testing.T) {
 			t.Errorf("expected 1 result for targeted repo, got %d", len(out.Results))
 		}
 	})
+
+	t.Run("with timeout", func(t *testing.T) {
+		_, out, err := server.execCommand(ctx, nil, ExecCommandInput{
+			Handle:  &createOut.Handle,
+			Command: []string{"echo", "quick"},
+			Timeout: 5000,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !out.Success {
+			t.Error("expected success with timeout")
+		}
+	})
+
+	t.Run("with timeout expiration", func(t *testing.T) {
+		_, _, err := server.execCommand(ctx, nil, ExecCommandInput{
+			Handle:  &createOut.Handle,
+			Command: []string{"sleep", "10"},
+			Timeout: 100,
+		})
+		if err == nil {
+			t.Error("expected error for expired timeout")
+		}
+	})
+
+	t.Run("with output limit", func(t *testing.T) {
+		longOutput := make([]string, 100)
+		for i := range longOutput {
+			longOutput[i] = "line"
+		}
+		_, out, err := server.execCommand(ctx, nil, ExecCommandInput{
+			Handle:      &createOut.Handle,
+			Command:     []string{"printf", strings.Join(longOutput, "\\n")},
+			OutputLimit: 50,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(out.Results) == 0 {
+			t.Fatal("expected results")
+		}
+		if !strings.Contains(out.Results[0].Output, "... (output truncated)") {
+			t.Error("expected output to be truncated")
+		}
+	})
 }
 
 func TestCaptureState(t *testing.T) {

@@ -51,11 +51,13 @@ type RemoveWorkspaceOutput struct {
 }
 
 type ExecCommandInput struct {
-	Handle   *string  `json:"handle,omitempty"`
-	Command  []string `json:"command"`
-	Repo     string   `json:"repo,omitempty"`
-	All      bool     `json:"all,omitempty"`
-	NoRecord bool     `json:"no_record,omitempty"`
+	Handle      *string  `json:"handle,omitempty"`
+	Command     []string `json:"command"`
+	Repo        string   `json:"repo,omitempty"`
+	All         bool     `json:"all,omitempty"`
+	NoRecord    bool     `json:"no_record,omitempty"`
+	Timeout     int      `json:"timeout,omitempty"`
+	OutputLimit int      `json:"output_limit,omitempty"`
 }
 
 type ExecResultInfo struct {
