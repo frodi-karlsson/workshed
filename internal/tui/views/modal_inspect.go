@@ -110,25 +110,19 @@ func (v *modal_InspectView) View() string {
 }
 
 type InspectViewSnapshot struct {
-	Type        string
-	Handle      string
-	Purpose     string
-	Path        string
-	RepoCount   int
-	CreatedDate string
+	Type      string
+	Handle    string
+	Purpose   string
+	Path      string
+	RepoCount int
 }
 
 func (v *modal_InspectView) Snapshot() interface{} {
-	createdDate := ""
-	if v.workspace != nil {
-		createdDate = v.workspace.CreatedAt.Format("Jan 2, 2006")
-	}
 	return InspectViewSnapshot{
-		Type:        "InspectView",
-		Handle:      v.handle,
-		Purpose:     v.workspace.Purpose,
-		Path:        v.workspace.Path,
-		RepoCount:   len(v.workspace.Repositories),
-		CreatedDate: createdDate,
+		Type:      "InspectView",
+		Handle:    v.handle,
+		Purpose:   v.workspace.Purpose,
+		Path:      v.workspace.Path,
+		RepoCount: len(v.workspace.Repositories),
 	}
 }

@@ -40,8 +40,7 @@ TestHealthView_AfterCleanup
         "Handle": "test-ws",
         "Purpose": "Test workspace",
         "Path": "",
-        "RepoCount": 0,
-        "CreatedDate": "Jan 28, 2026"
+        "RepoCount": 0
       }
     }
   ]
