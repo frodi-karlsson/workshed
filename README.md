@@ -44,9 +44,13 @@ Example MCP config:
 }
 ```
 
-![Demo](./media/demo.gif)
+Watch an agent fix an upstream dependency with Workshed MCP. No impact on the current diff, zero friction:
 
-Fixing an upstream dependency with zero fuzz and no impact on the current diff.
+<img src="./media/demo.gif" width="300" alt="Demo showing Workshed MCP usage">
+
+The Workshed TUI for local development. Keyboard-driven, focused, and fast:
+
+<img src="./media/example_1.gif" width="300" alt="TUI Demo">
 
 ## Quick Start
 
